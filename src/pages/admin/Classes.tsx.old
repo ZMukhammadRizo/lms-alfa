@@ -1,0 +1,1839 @@
+import React, { useState } from 'react';
+import styled from 'styled-components';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiSearch, FiGrid, FiList, FiPlus, FiCalendar, FiClock, FiUsers, FiBook, FiEdit, FiTrash2, FiMoreHorizontal, FiChevronRight, FiUserCheck, FiLayers, FiX, FiMail, FiPhone, FiInfo, FiCheckCircle, FiChevronDown, FiFilter, FiArrowLeft, FiMapPin, FiDownload, FiEye } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+
+// Mock data for students
+const mockStudents = [
+  {
+    id: "s1",
+    name: "Emma Johnson",
+    email: "emma.j@example.com",
+    phone: "+1 (555) 123-4567",
+    grade: "10",
+    section: "A",
+    attendance: 95,
+    performance: 88,
+    subjects: ["Mathematics", "English", "Science"]
+  },
+  {
+    id: "s2",
+    name: "Ryan Smith",
+    email: "ryan.s@example.com",
+    phone: "+1 (555) 234-5678",
+    grade: "10", 
+    section: "B",
+    attendance: 92,
+    performance: 78,
+    subjects: ["Mathematics", "History", "Physics"]
+  },
+  {
+    id: "s3",
+    name: "Sophia Williams",
+    email: "sophia.w@example.com",
+    phone: "+1 (555) 345-6789",
+    grade: "11",
+    section: "A",
+    attendance: 98,
+    performance: 95,
+    subjects: ["Chemistry", "English", "Computer Science"]
+  },
+  {
+    id: "s4",
+    name: "Daniel Brown",
+    email: "daniel.b@example.com",
+    phone: "+1 (555) 456-7890",
+    grade: "11",
+    section: "B",
+    attendance: 85,
+    performance: 82,
+    subjects: ["Physics", "Mathematics", "Geography"]
+  },
+  {
+    id: "s5",
+    name: "Olivia Davis",
+    email: "olivia.d@example.com",
+    phone: "+1 (555) 567-8901",
+    grade: "12",
+    section: "A",
+    attendance: 96,
+    performance: 91,
+    subjects: ["Biology", "Chemistry", "Literature"]
+  },
+  {
+    id: "s6",
+    name: "Liam Miller",
+    email: "liam.m@example.com",
+    phone: "+1 (555) 678-9012",
+    grade: "12",
+    section: "B",
+    attendance: 88,
+    performance: 84,
+    subjects: ["History", "Economics", "Mathematics"]
+  }
+];
+
+// Interface for grade level data
+interface GradeLevel {
+  level: string;
+  students: number;
+  sections: number;
+  averagePerformance: number;
+}
+
+// Mock data for grade levels
+const mockGradeLevels: GradeLevel[] = [
+  {
+    level: "10",
+    students: 24,
+    sections: 3,
+    averagePerformance: 83
+  },
+  {
+    level: "11",
+    students: 18,
+    sections: 3,
+    averagePerformance: 77
+  },
+  {
+    level: "12",
+    students: 16,
+    sections: 3,
+    averagePerformance: 82
+  }
+];
+
+// Interface for section data
+interface Section {
+  id: string;
+  name: string;
+  room: string;
+  students: number;
+  teacher: string;
+  performance: number;
+}
+
+// Mock data for sections
+const mockSections: Record<string, Section[]> = {
+  "10": [
+    {
+      id: "10A",
+      name: "10-A",
+      room: "Room 101",
+      students: 3,
+      teacher: "John Smith",
+      performance: 80
+    },
+    {
+      id: "10B",
+      name: "10-B",
+      room: "Room 102",
+      students: 1,
+      teacher: "Jane Doe",
+      performance: 88
+    },
+    {
+      id: "10C",
+      name: "10-C",
+      room: "Room 103",
+      students: 0,
+      teacher: "David Thomas",
+      performance: 78
+    }
+  ],
+  "11": [
+    {
+      id: "11A",
+      name: "11-A",
+      room: "Room 201",
+      students: 5,
+      teacher: "Michael Brown",
+      performance: 85
+    },
+    {
+      id: "11B",
+      name: "11-B",
+      room: "Room 202",
+      students: 4,
+      teacher: "Sarah Johnson",
+      performance: 79
+    }
+  ],
+  "12": [
+    {
+      id: "12A",
+      name: "12-A",
+      room: "Room 301",
+      students: 6,
+      teacher: "Robert Wilson",
+      performance: 90
+    },
+    {
+      id: "12B",
+      name: "12-B",
+      room: "Room 302",
+      students: 4,
+      teacher: "Emily Davis",
+      performance: 84
+    }
+  ]
+};
+
+// Updated Class interface without subject-related fields
+interface Class {
+  id: string;
+  name: string;
+  teacher: string;
+  schedule: string;
+  time: string;
+  room: string;
+  students: number;
+  status: string;
+  color: string;
+}
+
+// Mock data for development - updated to represent grades instead of subjects
+const mockClasses: Class[] = [
+  {
+    id: '1',
+    name: 'Grade 10',
+    teacher: 'John Smith',
+    schedule: 'Mon-Fri',
+    time: '08:00 - 14:30',
+    room: 'Floor 1',
+    students: 24,
+    status: 'active',
+    color: '#4F46E5'
+  },
+  {
+    id: '2',
+    name: 'Grade 11',
+    teacher: 'Michael Brown',
+    schedule: 'Mon-Fri',
+    time: '08:00 - 15:30',
+    room: 'Floor 2',
+    students: 18,
+    status: 'active',
+    color: '#0EA5E9'
+  },
+  {
+    id: '3',
+    name: 'Grade 12',
+    teacher: 'Robert Wilson',
+    schedule: 'Mon-Fri',
+    time: '08:00 - 16:30',
+    room: 'Floor 3',
+    students: 16,
+    status: 'active',
+    color: '#F59E0B'
+  }
+];
+
+// Add back the interface before the section selector
+interface SectionPerformanceBarProps {
+  $percentage: number;
+  $color: string;
+}
+
+const Classes: React.FC = () => {
+  const navigate = useNavigate();
+  // State for search, filters, and view mode
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState<string | null>(null);
+  
+  // State for showing sections
+  const [showSections, setShowSections] = useState(false);
+  const [selectedGradeForSections, setSelectedGradeForSections] = useState<string | null>(null);
+  const [sectionSearchTerm, setSectionSearchTerm] = useState('');
+  
+  // State for student view
+  const [showStudents, setShowStudents] = useState(false);
+  const [selectedGrade, setSelectedGrade] = useState<string | null>(null);
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
+
+  // Filter classes based on search term and filters
+  const filteredClasses = mockClasses.filter(cls => {
+    const matchesSearch = 
+      cls.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      cls.teacher.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = filterStatus ? cls.status === filterStatus : true;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  // Filter sections based on search term
+  const filteredSections = selectedGradeForSections && mockSections[selectedGradeForSections] ? 
+    mockSections[selectedGradeForSections].filter(section => 
+      section.name.toLowerCase().includes(sectionSearchTerm.toLowerCase()) ||
+      section.teacher.toLowerCase().includes(sectionSearchTerm.toLowerCase()) ||
+      section.room.toLowerCase().includes(sectionSearchTerm.toLowerCase())
+    ) : [];
+
+  // Filter students based on selected grade and section
+  const filteredStudents = mockStudents.filter(student => {
+    const matchesGrade = selectedGrade ? student.grade === selectedGrade : true;
+    const matchesSection = selectedSection ? student.section === selectedSection : true;
+    return matchesGrade && matchesSection;
+  });
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Handle section search input change
+  const handleSectionSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSectionSearchTerm(e.target.value);
+  };
+
+  // Handle status filter change
+  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFilterStatus(e.target.value);
+  };
+
+  // Toggle actions menu
+  const toggleActionsMenu = (classId: string) => {
+    if (isActionsMenuOpen === classId) {
+      setIsActionsMenuOpen(null);
+    } else {
+      setIsActionsMenuOpen(classId);
+    }
+  };
+
+  // Handle edit class
+  const handleEditClass = (cls: Class) => {
+    setSelectedClass(cls);
+    console.log('Edit class:', cls);
+    // Implement edit class functionality here
+  };
+
+  // Handle delete class
+  const handleDeleteClass = (classId: string) => {
+    console.log(`Delete class with ID: ${classId}`);
+    // Implement delete functionality here
+  };
+
+  // Handle back button click
+  const handleBackToClasses = () => {
+    if (showStudents) {
+      setShowStudents(false);
+      setShowSections(true);
+    } else if (showSections) {
+      setShowSections(false);
+    }
+  };
+
+  // Handle view sections click
+  const handleViewSections = (grade: string) => {
+    setSelectedGradeForSections(grade);
+    setShowSections(true);
+    setShowStudents(false);
+  };
+
+  // Handle view students click - updated to navigate to students view
+  const handleViewStudents = (grade: string, section: string | null = null) => {
+    setSelectedGrade(grade);
+    setSelectedSection(section);
+    setShowStudents(true);
+    setShowSections(false);
+  };
+
+  // Handle section selection
+  const handleSectionSelect = (section: string) => {
+    setSelectedSection(section);
+  };
+
+  // Close all action menus when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = () => {
+      setIsActionsMenuOpen(null);
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
+
+  const handleCardClick = (cls: Class) => {
+    // Extract the grade number from the class name (e.g., "Grade 10" -> "10")
+    const gradeNumber = cls.name.split(' ')[1];
+    setSelectedGradeForSections(gradeNumber);
+    setShowSections(true);
+  };
+
+  return (
+    <ClassesContainer>
+      <HeaderSection>
+        <div>
+          {showStudents ? (
+            <>
+              <PageTitleWithBack>
+                <BackButton onClick={handleBackToClasses}>
+                  <FiArrowLeft />
+                  Back to Sections
+                </BackButton>
+              </PageTitleWithBack>
+              <PageTitle>
+                {selectedGrade}-{selectedSection} Students
+              </PageTitle>
+              <PageDescription>
+                {filteredStudents.length} students in {selectedGrade}-{selectedSection}
+              </PageDescription>
+            </>
+          ) : showSections ? (
+            <>
+              <PageTitleWithBack>
+                <BackButton onClick={handleBackToClasses}>
+                  <FiArrowLeft />
+                  Back to Grades
+                </BackButton>
+                <PageTitle>Grade {selectedGradeForSections} Sections</PageTitle>
+              </PageTitleWithBack>
+              <PageDescription>{mockSections[selectedGradeForSections!].length} sections in Grade {selectedGradeForSections}</PageDescription>
+            </>
+          ) : (
+            <>
+              <PageTitle>Grades</PageTitle>
+              <PageDescription>Manage school grades and their sections</PageDescription>
+            </>
+          )}
+        </div>
+
+        {(showSections || showStudents) && (
+          <ExportDataButton>
+            <FiDownload />
+            <span>Export Data</span>
+          </ExportDataButton>
+        )}
+
+        {!showSections && !showStudents && (
+          <AddClassButton>
+            <FiPlus />
+            <span>Create New Grade</span>
+          </AddClassButton>
+        )}
+      </HeaderSection>
+
+      {showStudents ? (
+        // Students View - Updated to match the screenshot more precisely
+        <StudentsView>
+          {/* Search and Filter Controls */}
+          <StudentsControls>
+            <SearchContainer>
+              <FiSearch />
+              <SearchInput 
+                type="text"
+                placeholder="Search students..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+              />
+            </SearchContainer>
+            
+            <StudentsFilterGroup>
+              <FilterButton>
+                <FiFilter />
+                <span>Filter</span>
+                <FiChevronDown />
+              </FilterButton>
+              
+              <CourseFilterButton>
+                <FiBook />
+                <span>Course Filter</span>
+                <FiChevronDown />
+              </CourseFilterButton>
+            </StudentsFilterGroup>
+          </StudentsControls>
+
+          {/* Students Table */}
+          <StudentsTable>
+            <StudentsTableHeader>
+              <StudentsTableHeaderCell style={{ width: '25%' }}>
+                <span>Student</span>
+                <FiChevronDown />
+              </StudentsTableHeaderCell>
+              <StudentsTableHeaderCell style={{ width: '8%' }}>Grade</StudentsTableHeaderCell>
+              <StudentsTableHeaderCell style={{ width: '25%' }}>Courses</StudentsTableHeaderCell>
+              <StudentsTableHeaderCell style={{ width: '10%' }}>Attendance</StudentsTableHeaderCell>
+              <StudentsTableHeaderCell style={{ width: '14%' }}>Performance</StudentsTableHeaderCell>
+              <StudentsTableHeaderCell style={{ width: '8%' }}>Status</StudentsTableHeaderCell>
+              <StudentsTableHeaderCell style={{ width: '10%' }}>Actions</StudentsTableHeaderCell>
+            </StudentsTableHeader>
+            
+            <StudentsTableBody>
+              {filteredStudents.map(student => (
+                <StudentsTableRow key={student.id}>
+                  <StudentsTableCell style={{ width: '25%' }}>
+                    <StudentProfile>
+                      <StudentAvatar>
+                        {student.name.substr(0, 2)}
+                      </StudentAvatar>
+                      <StudentDetails>
+                        <StudentName>{student.name}</StudentName>
+                        <StudentEmail>{student.email}</StudentEmail>
+                      </StudentDetails>
+                    </StudentProfile>
+                  </StudentsTableCell>
+                  
+                  <StudentsTableCell style={{ width: '8%' }}>{student.grade}-{student.section}</StudentsTableCell>
+                  
+                  <StudentsTableCell style={{ width: '25%' }}>
+                    <CourseTags>
+                      {student.subjects.map((subject, index) => (
+                        <CourseTag key={index}>{subject}</CourseTag>
+                      ))}
+                    </CourseTags>
+                  </StudentsTableCell>
+                  
+                  <StudentsTableCell style={{ width: '10%', color: '#f59e0b', fontWeight: 'bold' }}>
+                    {student.attendance}%
+                  </StudentsTableCell>
+                  
+                  <StudentsTableCell style={{ width: '14%' }}>
+                    <PerformanceWrapper>
+                      <PercentageValue>{student.performance}%</PercentageValue>
+                      <PerformanceBar>
+                        <PerformanceFill 
+                          $percentage={student.performance} 
+                          $color={getPerformanceColor(student.performance)} 
+                        />
+                      </PerformanceBar>
+                    </PerformanceWrapper>
+                  </StudentsTableCell>
+                  
+                  <StudentsTableCell style={{ width: '8%' }}>
+                    <StatusIndicator>
+                      <StatusDot $active={true} />
+                      <span>Active</span>
+                    </StatusIndicator>
+                  </StudentsTableCell>
+                  
+                  <StudentsTableCell style={{ width: '10%' }}>
+                    <StudentActionButtons>
+                      <ActionIconButton>
+                        <FiEye />
+                      </ActionIconButton>
+                      <ActionIconButton>
+                        <FiEdit />
+                      </ActionIconButton>
+                      <ActionIconButton>
+                        <FiMail />
+                      </ActionIconButton>
+                    </StudentActionButtons>
+                  </StudentsTableCell>
+                </StudentsTableRow>
+              ))}
+            </StudentsTableBody>
+          </StudentsTable>
+          
+          {filteredStudents.length === 0 && (
+            <EmptyState>
+              <EmptyStateText>No students found in this section.</EmptyStateText>
+            </EmptyState>
+          )}
+        </StudentsView>
+      ) : showSections ? (
+        <SectionsComponent 
+          sections={filteredSections} 
+          searchTerm={sectionSearchTerm} 
+          grade={selectedGradeForSections!}
+          onSearchChange={handleSectionSearchChange}
+          onViewStudents={handleViewStudents}
+        />
+      ) : (
+        // Original classes view
+        <>
+          <FiltersContainer>
+            <SearchAndFilters>
+              <SearchContainer>
+                <FiSearch />
+                <SearchInput 
+                  type="text"
+                  placeholder="Search for grades..."
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                />
+              </SearchContainer>
+
+              <FilterDropdown>
+                <select value={filterStatus} onChange={handleStatusFilterChange}>
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </FilterDropdown>
+            </SearchAndFilters>
+
+            <ViewToggle>
+              <ViewButton 
+                $isActive={viewMode === 'grid'} 
+                onClick={() => setViewMode('grid')}
+              >
+                <FiGrid />
+              </ViewButton>
+              <ViewButton 
+                $isActive={viewMode === 'list'} 
+                onClick={() => setViewMode('list')}
+              >
+                <FiList />
+              </ViewButton>
+            </ViewToggle>
+          </FiltersContainer>
+
+          {viewMode === 'grid' ? (
+            <ClassGrid>
+              {filteredClasses.map(cls => (
+                <ClassCard key={cls.id} $color={cls.color} onClick={() => handleCardClick(cls)}>
+                  <CardHeader $color={cls.color}>
+                    <ClassName>{cls.name}</ClassName>
+                    <CardActions onClick={(e) => {
+                      e.stopPropagation();
+                      toggleActionsMenu(cls.id);
+                    }}>
+                      <FiMoreHorizontal />
+                      <AnimatePresence>
+                        {isActionsMenuOpen === cls.id && (
+                          <ActionsMenu
+                            as={motion.div}
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ActionButton $isPrimary={true} onClick={() => handleEditClass(cls)}>
+                              <FiEdit />
+                              <span>Edit</span>
+                            </ActionButton>
+                            <ActionButton $isPrimary={false} onClick={() => handleDeleteClass(cls.id)}>
+                              <FiTrash2 />
+                              <span>Delete</span>
+                            </ActionButton>
+                          </ActionsMenu>
+                        )}
+                      </AnimatePresence>
+                    </CardActions>
+                  </CardHeader>
+
+                  <ClassDetails>
+                    <DetailItem>
+                      <FiUserCheck />
+                      <span>{cls.teacher}</span>
+                    </DetailItem>
+
+                    <DetailItem>
+                      <FiCalendar />
+                      <span>{cls.schedule}</span>
+                    </DetailItem>
+
+                    <DetailItem>
+                      <FiClock />
+                      <span>{cls.time}</span>
+                    </DetailItem>
+
+                    <DetailItem>
+                      <FiUsers />
+                      <span>{cls.students} students</span>
+                    </DetailItem>
+
+                    <ClassStatus $status={cls.status}>
+                      {cls.status === 'active' ? 'Active' : 'Inactive'}
+                    </ClassStatus>
+                  </ClassDetails>
+                </ClassCard>
+              ))}
+            </ClassGrid>
+          ) : (
+            <ClassTable>
+              <TableHeader>
+                <ListHeaderCell style={{ width: '25%' }}>Grade Name</ListHeaderCell>
+                <ListHeaderCell style={{ width: '15%' }}>Teacher</ListHeaderCell>
+                <ListHeaderCell style={{ width: '15%' }}>Schedule</ListHeaderCell>
+                <ListHeaderCell style={{ width: '10%' }}>Students</ListHeaderCell>
+                <ListHeaderCell style={{ width: '10%' }}>Status</ListHeaderCell>
+                <ListHeaderCell style={{ width: '10%' }}>Actions</ListHeaderCell>
+              </TableHeader>
+              <TableBody>
+                {filteredClasses.map(cls => (
+                  <TableRow key={cls.id} onClick={() => handleCardClick(cls)}>
+                    <ClassNameCell $color={cls.color}>{cls.name}</ClassNameCell>
+                    <TableCell>{cls.teacher}</TableCell>
+                    <TableCell>{cls.schedule}<br />{cls.time}</TableCell>
+                    <TableCell>{cls.students}</TableCell>
+                    <TableCell>
+                      <StatusBadge $status={cls.status}>
+                        {cls.status === 'active' ? 'Active' : 'Inactive'}
+                      </StatusBadge>
+                    </TableCell>
+                    <TableCell>
+                      <ActionIconsContainer>
+                        <ActionIcon onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditClass(cls);
+                        }}>
+                          <FiEdit />
+                        </ActionIcon>
+                        <ActionIcon onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClass(cls.id);
+                        }}>
+                          <FiTrash2 />
+                        </ActionIcon>
+                      </ActionIconsContainer>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </ClassTable>
+          )}
+        </>
+      )}
+    </ClassesContainer>
+  );
+};
+
+// Sections Component
+interface SectionsProps {
+  sections: Section[];
+  searchTerm: string;
+  grade: string;
+  onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onViewStudents: (grade: string, section: string | null) => void;
+}
+
+const SectionsComponent: React.FC<SectionsProps> = ({ 
+  sections, 
+  searchTerm, 
+  grade,
+  onSearchChange,
+  onViewStudents 
+}) => {
+  return (
+    <>
+      <FiltersContainer>
+        <SearchAndFilters>
+          <SearchContainer>
+            <FiSearch />
+            <SearchInput
+              type="text"
+              placeholder="Search sections..."
+              value={searchTerm}
+              onChange={onSearchChange}
+            />
+          </SearchContainer>
+        </SearchAndFilters>
+      </FiltersContainer>
+
+      <SectionsGrid>
+        {sections.map((section, index) => (
+          <SectionCard 
+            key={section.id}
+            as={motion.div}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
+            onClick={() => onViewStudents(grade, section.name.split('-')[1])}
+          >
+            <SectionLabel>{section.name}</SectionLabel>
+            
+            <SectionDetail>
+              <SectionIcon>
+                <FiMapPin />
+              </SectionIcon>
+              <span>{section.room}</span>
+            </SectionDetail>
+            
+            <SectionRow>
+              <SectionIconLabel>
+                <FiUsers />
+                <span>Students</span>
+              </SectionIconLabel>
+              <SectionValue>{section.students}</SectionValue>
+            </SectionRow>
+            
+            <SectionRow>
+              <SectionIconLabel>
+                <FiUserCheck />
+                <span>Teacher</span>
+              </SectionIconLabel>
+              <SectionValue>{section.teacher}</SectionValue>
+            </SectionRow>
+            
+            <SectionPerformance>
+              <SectionPerformanceLabel>Section Performance</SectionPerformanceLabel>
+              <SectionPerformanceValue>{section.performance}%</SectionPerformanceValue>
+              <SectionPerformanceBar>
+                <SectionPerformanceFill $percentage={section.performance} $color={getPerformanceColor(section.performance)} />
+              </SectionPerformanceBar>
+            </SectionPerformance>
+            
+            <button 
+              style={{
+                width: '100%',
+                padding: '14px',
+                backgroundColor: '#f9fafb',
+                color: '#4338ca',
+                border: 'none',
+                borderTop: '1px solid #e5e7eb',
+                fontSize: '15px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.3s ease'
+              }}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent triggering the card's onClick
+                onViewStudents(grade, section.name.split('-')[1]);
+              }}
+              onMouseOver={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.currentTarget.style.backgroundColor = '#4338ca';
+                e.currentTarget.style.color = 'white';
+                const icon = e.currentTarget.querySelector('svg');
+                if (icon) icon.style.transform = 'translateX(4px)';
+              }}
+              onMouseOut={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.currentTarget.style.backgroundColor = '#f9fafb';
+                e.currentTarget.style.color = '#4338ca';
+                const icon = e.currentTarget.querySelector('svg');
+                if (icon) icon.style.transform = 'translateX(0)';
+              }}
+            >
+              <span>View Students</span>
+              <FiChevronRight style={{ transition: 'transform 0.3s ease' }} />
+            </button>
+          </SectionCard>
+        ))}
+
+        {sections.length === 0 && (
+          <EmptyState>
+            <EmptyStateText>No sections found for Grade {grade}.</EmptyStateText>
+          </EmptyState>
+        )}
+      </SectionsGrid>
+    </>
+  );
+};
+
+const getPerformanceColor = (percentage: number) => {
+  if (percentage >= 85) return '#10b981';
+  if (percentage >= 70) return '#f59e0b';
+  return '#ef4444';
+};
+
+// Styled Components
+const ClassesContainer = styled.div`
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+`;
+
+const HeaderSection = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+`;
+
+const PageTitle = styled.h1`
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+`;
+
+const PageTitleWithBack = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+`;
+
+const BackButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: #4F46E5;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const PageDescription = styled.p`
+  font-size: 14px;
+  color: #6B7280;
+  margin: 4px 0 0;
+`;
+
+const AddClassButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #4F46E5;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background-color: #4338CA;
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const ExportDataButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f9fafb;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: #f3f4f6;
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const FiltersContainer = styled.div`
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 24px;
+`;
+
+const SearchAndFilters = styled.div`
+  display: flex;
+  gap: 10px;
+  flex: 1;
+`;
+
+const SearchContainer = styled.div`
+  display: flex;
+  align-items: center;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0 12px;
+  flex: 1;
+  max-width: 400px;
+  
+  svg {
+    color: #9CA3AF;
+    width: 18px;
+    height: 18px;
+  }
+`;
+
+const SearchInput = styled.input`
+  border: none;
+  padding: 10px 12px;
+  font-size: 14px;
+  width: 100%;
+  outline: none;
+  
+  &::placeholder {
+    color: #9CA3AF;
+  }
+`;
+
+const FilterDropdown = styled.div`
+  select {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    background-color: white;
+    cursor: pointer;
+    min-width: 150px;
+    
+    &:focus {
+      outline: none;
+      border-color: #a5b4fc;
+      box-shadow: 0 0 0 3px rgba(165, 180, 252, 0.5);
+    }
+  }
+`;
+
+const ViewToggle = styled.div`
+  display: flex;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+`;
+
+interface ViewButtonProps {
+  $isActive: boolean;
+}
+
+const ViewButton = styled.button<ViewButtonProps>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: none;
+  background-color: ${props => props.$isActive ? '#f3f4f6' : 'white'};
+  color: ${props => props.$isActive ? '#4F46E5' : '#6B7280'};
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.$isActive ? '#f3f4f6' : '#f9fafb'};
+  }
+  
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+`;
+
+const ClassGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+`;
+
+interface ClassCardProps {
+  $color: string;
+}
+
+const ClassCard = styled.div<ClassCardProps>`
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+`;
+
+const CardHeader = styled.div<{ $color: string }>`
+  background-color: ${props => props.$color};
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+`;
+
+const ClassName = styled.h3`
+  margin: 0;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+`;
+
+const CardActions = styled.div`
+  position: relative;
+  z-index: 10;
+  
+  svg {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 4px;
+    width: 24px;
+    height: 24px;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+    }
+  }
+`;
+
+const ActionsMenu = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 8px;
+  width: 120px;
+  z-index: 100;
+`;
+
+interface ActionButtonProps {
+  $isPrimary: boolean;
+}
+
+const ActionButton = styled.button<ActionButtonProps>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  background-color: white;
+  color: ${props => props.$isPrimary ? '#4F46E5' : '#EF4444'};
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  text-align: left;
+  
+  &:hover {
+    background-color: ${props => props.$isPrimary ? '#EEF2FF' : '#FEF2F2'};
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const ClassDetails = styled.div`
+  padding: 16px;
+`;
+
+const DetailItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  
+  svg {
+    color: #6B7280;
+    min-width: 16px;
+    min-height: 16px;
+  }
+  
+  span {
+    color: #374151;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+`;
+
+interface StatusProps {
+  $status: string;
+}
+
+const ClassStatus = styled.div<StatusProps>`
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 4px;
+  background-color: ${props => props.$status === 'active' ? '#ECFDF5' : '#FEF2F2'};
+  color: ${props => props.$status === 'active' ? '#059669' : '#DC2626'};
+`;
+
+const ClassTable = styled.div`
+  background-color: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+`;
+
+const TableHeader = styled.div`
+  display: flex;
+  padding: 12px 20px;
+  background-color: #F9FAFB;
+  border-bottom: 1px solid #E5E7EB;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+`;
+
+const TableBody = styled.div`
+  max-height: 600px;
+  overflow-y: auto;
+`;
+
+const ListHeaderCell = styled.div`
+  padding: 0 8px;
+`;
+
+const TableRow = styled.div`
+  display: flex;
+  padding: 16px 20px;
+  border-bottom: 1px solid #E5E7EB;
+  align-items: center;
+  transition: background-color 0.2s;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: #F9FAFB;
+  }
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const TableCell = styled.div`
+  padding: 0 8px;
+  font-size: 14px;
+  color: #374151;
+`;
+
+const ClassNameCell = styled(TableCell)<{ $color: string }>`
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  &::before {
+    content: '';
+    display: block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    background-color: ${props => props.$color};
+  }
+`;
+
+const StatusBadge = styled.span<StatusProps>`
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  background-color: ${props => props.$status === 'active' ? '#ECFDF5' : '#FEF2F2'};
+  color: ${props => props.$status === 'active' ? '#059669' : '#DC2626'};
+`;
+
+const ActionIconsContainer = styled.div`
+  display: flex;
+  gap: 12px;
+`;
+
+const ActionIcon = styled.button`
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #6B7280;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background-color: #F3F4F6;
+    color: #4F46E5;
+  }
+  
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  &:last-child:hover {
+    color: #EF4444;
+  }
+`;
+
+// Sections grid styling
+const SectionsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  margin-top: 20px;
+`;
+
+const SectionCard = styled.div`
+  background-color: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+`;
+
+const SectionLabel = styled.h3`
+  background-color: #4f46e5;
+  color: white;
+  margin: 0;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: 600;
+`;
+
+const SectionRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+`;
+
+const SectionIconLabel = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 14px;
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const SectionValue = styled.div`
+  font-weight: 600;
+  color: #111827;
+`;
+
+const SectionDetail = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  font-size: 14px;
+`;
+
+const SectionIcon = styled.div`
+  color: #6b7280;
+  display: flex;
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const SectionPerformance = styled.div`
+  padding: 16px;
+  border-bottom: 1px solid #f3f4f6;
+`;
+
+const SectionPerformanceLabel = styled.div`
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 8px;
+`;
+
+const SectionPerformanceValue = styled.div`
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 8px;
+`;
+
+// Add after SectionPerformanceValue
+const SectionPerformanceBar = styled.div`
+  width: 100%;
+  height: 8px;
+  background-color: #f3f4f6;
+  border-radius: 4px;
+  overflow: hidden;
+`;
+
+const SectionPerformanceFill = styled.div<SectionPerformanceBarProps>`
+  width: ${props => `${props.$percentage}%`};
+  height: 100%;
+  background-color: ${props => props.$color};
+  border-radius: 4px;
+`;
+
+// Section selector in student modal
+const SectionSelect = styled.div`
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
+const SectionSelectorLabel = styled.div`
+  font-weight: 600;
+  color: #374151;
+`;
+
+interface SectionOptionProps {
+  $isActive: boolean;
+}
+
+const SectionOption = styled.div<SectionOptionProps>`
+  padding: 6px 12px;
+  border-radius: 6px;
+  background-color: ${props => props.$isActive ? '#EEF2FF' : '#F9FAFB'};
+  color: ${props => props.$isActive ? '#4F46E5' : '#6B7280'};
+  font-weight: ${props => props.$isActive ? '600' : '500'};
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.$isActive ? '#EEF2FF' : '#F3F4F6'};
+  }
+`;
+
+// Student list in modal
+const StudentsList = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+`;
+
+const StudentCard = styled.div`
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+`;
+
+const StudentInfo = styled.div`
+  padding: 16px;
+`;
+
+const StudentHeader = styled.div`
+  margin-bottom: 12px;
+`;
+
+const StudentId = styled.div`
+  font-size: 12px;
+  color: #6B7280;
+`;
+
+const StudentContactInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+`;
+
+const ContactItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #374151;
+  
+  svg {
+    color: #6B7280;
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const GradeInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  background-color: #f3f4f6;
+  padding: 8px 12px;
+  border-radius: 6px;
+`;
+
+const GradeLabel = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #6B7280;
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const GradeValue = styled.div`
+  font-weight: 600;
+  color: #111827;
+`;
+
+const StudentPerformance = styled.div`
+  margin-bottom: 16px;
+`;
+
+const PerformanceItem = styled.div`
+  margin-bottom: 12px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const PerformanceLabel = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #6B7280;
+  margin-bottom: 4px;
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const PerformanceValue = styled.div`
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+`;
+
+const StudentSubjects = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+`;
+
+const SubjectPill = styled.div`
+  background-color: #f3f4f6;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 999px;
+`;
+
+const StudentActions = styled.div`
+  display: flex;
+  gap: 10px;
+`;
+
+// Empty state for no data
+const EmptyState = styled.div`
+  grid-column: 1 / -1;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px dashed #e5e7eb;
+`;
+
+const EmptyStateText = styled.p`
+  font-size: 16px;
+  color: #6B7280;
+  margin: 0;
+`;
+
+// Add a new styled component for the students view
+const StudentsView = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+`;
+
+// Students Controls
+const StudentsControls = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+`;
+
+const StudentsFilterGroup = styled.div`
+  display: flex;
+  gap: 0.75rem;
+`;
+
+const FilterButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: #374151;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: #f3f4f6;
+  }
+  
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+`;
+
+const CourseFilterButton = styled(FilterButton)``;
+
+// Students Table
+const StudentsTable = styled.div`
+  width: 100%;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+`;
+
+const StudentsTableHeader = styled.div`
+  display: flex;
+  background-color: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 16px;
+`;
+
+const StudentsTableHeaderCell = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #6b7280;
+  
+  svg {
+    width: 16px;
+    height: 16px;
+    color: #9ca3af;
+  }
+`;
+
+const StudentsTableBody = styled.div`
+  max-height: 600px;
+  overflow-y: auto;
+`;
+
+const StudentsTableRow = styled.div`
+  display: flex;
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+  
+  &:hover {
+    background-color: #f9fafb;
+  }
+`;
+
+const StudentsTableCell = styled.div`
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #374151;
+`;
+
+// Student Avatar styled to match the screenshot
+const StudentAvatar = styled.div`
+  width: 40px;
+  height: 40px;
+  background-color: #7c3aed;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+`;
+
+// Updated StudentName to match the font weight in the screenshot
+const StudentName = styled.h3`
+  margin: 0;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 600;
+`;
+
+// Update CourseTag to match the design in the screenshot
+const CourseTag = styled.span`
+  background-color: #eef2ff;
+  color: #4f46e5;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 4px;
+`;
+
+// Update PerformanceBar and Fill to match the screenshot
+const PerformanceBar = styled.div`
+  width: 100%;
+  height: 6px;
+  background-color: #f3f4f6;
+  border-radius: 9999px;
+  overflow: hidden;
+`;
+
+// Update StatusDot to match the size in the screenshot
+const StatusDot = styled.span<StatusDotProps>`
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: ${props => props.$active ? '#10b981' : '#ef4444'};
+`;
+
+// Action Buttons
+const StudentActionButtons = styled.div`
+  display: flex;
+  gap: 0.5rem;
+`;
+
+// Updated StudentName to match the font weight in the screenshot
+const StudentName = styled.h3`
+  margin: 0;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 600;
+`;
+
+// Update CourseTag to match the design in the screenshot
+const CourseTag = styled.span`
+  background-color: #eef2ff;
+  color: #4f46e5;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 4px;
+`;
+
+// Performance Elements
+const PerformanceWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+`;
+
+const PercentageValue = styled.span`
+  font-weight: 600;
+  color: #111827;
+`;
+
+// Define interface for performance bar
+interface PerformanceBarProps {
+  $percentage: number;
+  $color: string;
+}
+
+// Update PerformanceBar and Fill to match the screenshot
+const PerformanceFill = styled.div<PerformanceBarProps>`
+  width: ${props => `${props.$percentage}%`};
+  height: 100%;
+  background-color: ${props => props.$color};
+  border-radius: 9999px;
+`;
+
+// Status Indicator
+const StatusIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+// Keep only one StatusDotProps interface 
+interface StatusDotProps {
+  $active: boolean;
+}
+
+// Action Buttons
+const StudentActionButtons = styled.div`
+  display: flex;
+  gap: 0.5rem;
+`;
+
+// Update ActionIconButton to match the style in the screenshot
+const ActionIconButton = styled.button`
+  background: none;
+  border: none;
+  color: #6b7280;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: #f3f4f6;
+    color: #4f46e5;
+  }
+  
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+`;
+
+// Student Profile
+const StudentProfile = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+`;
+
+const StudentDetails = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const StudentEmail = styled.span`
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-top: 0.125rem;
+`;
+
+// Course Tags
+const CourseTags = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+`;
+
+export default Classes; 
