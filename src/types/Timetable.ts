@@ -14,7 +14,7 @@ export interface TimeSlot {
   day_date?: string;
   start_minute?: number;
   end_minute?: number;
-  classes?: { classname: string | null };
+  classes?: { classname: string | null }[];
 }
 
 export interface TimetableDay {

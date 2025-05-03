@@ -5,6 +5,7 @@ import {
 	GradeLevelOverview,
 	JournalTable,
 	LevelCategoryOverview,
+	Subject,
 } from '../types/grades'
 import supabase from '../config/supabaseClient'
 import { toast } from 'react-toastify'
@@ -801,3 +802,90 @@ export function getMockGrades(): SubjectGrade[] {
 		};
 	});
 }
+
+// Define structure for detailed grade info
+export interface AssignmentGradeDetail {
+	assignmentId: string;
+	assignmentTitle: string;
+	score: number | string | null;
+	maxScore: number | null; // Assuming assignments have max points
+	gradedAt: string | null; // Or Date
+}
+
+export interface SubjectGradeDetails {
+	subjectName: string;
+	grades: AssignmentGradeDetail[];
+}
+
+// Fetches detailed grades for a specific subject for a student
+export const getSubjectGradeDetails = async (studentId: string, subjectId: string): Promise<SubjectGradeDetails> => {
+	console.log(`[gradesService] Fetching grade details for student ${studentId}, subject ${subjectId}`);
+	try {
+		// 1. Fetch Subject Name
+		const { data: subjectData, error: subjectError } = await supabase
+			.from('subjects')
+			.select('subjectname')
+			.eq('id', subjectId)
+			.single();
+
+		if (subjectError) {
+			console.error('[gradesService] Error fetching subject name:', subjectError);
+			throw new Error(`Failed to fetch subject name: ${subjectError.message}`);
+		}
+		const subjectName = subjectData?.subjectname || 'Unknown Subject';
+		console.log(`[gradesService] Subject Name: ${subjectName}`);
+
+		// 2. Fetch Assignments for the subject
+		const { data: assignments, error: assignmentsError } = await supabase
+			.from('assignments')
+			.select('id, title, points') // Assuming 'points' holds max score
+			.eq('subjectid', subjectId);
+
+		if (assignmentsError) {
+			console.error('[gradesService] Error fetching assignments:', assignmentsError);
+			throw new Error(`Failed to fetch assignments: ${assignmentsError.message}`);
+		}
+		if (!assignments || assignments.length === 0) {
+			console.log('[gradesService] No assignments found for this subject.');
+			return { subjectName, grades: [] };
+		}
+		console.log(`[gradesService] Found ${assignments.length} assignments.`);
+
+		const assignmentIds = assignments.map(a => a.id);
+
+		// 3. Fetch Scores for these assignments for the student
+		// Using 'grades' table based on previous edits, assuming columns: assignmentid, studentid, score, created_at/updated_at
+		const { data: scores, error: scoresError } = await supabase
+			.from('grades') 
+			.select('assignmentid, score, updated_at') // Select score and timestamp
+			.eq('studentid', studentId)
+			.in('assignmentid', assignmentIds);
+
+		if (scoresError) {
+			console.error('[gradesService] Error fetching scores:', scoresError);
+			throw new Error(`Failed to fetch scores: ${scoresError.message}`);
+		}
+		console.log(`[gradesService] Found ${scores?.length || 0} score entries.`);
+
+		// 4. Combine data
+		const gradeDetails = assignments.map((assignment): AssignmentGradeDetail => {
+			const scoreEntry = scores?.find(s => s.assignmentid === assignment.id);
+			return {
+				assignmentId: assignment.id,
+				assignmentTitle: assignment.title || 'Untitled Assignment',
+				score: scoreEntry?.score ?? 'N/A', // Default to N/A if no score
+				maxScore: assignment.points || null, // Use points from assignment
+				gradedAt: scoreEntry?.updated_at ? new Date(scoreEntry.updated_at).toLocaleDateString() : '-',
+			};
+		});
+
+		console.log('[gradesService] Combined grade details:', gradeDetails);
+		return { subjectName, grades: gradeDetails };
+
+	} catch (error) {
+		console.error('[gradesService] Error in getSubjectGradeDetails:', error);
+		// Return a structure indicating error but maybe still provide subject name if fetched
+		// For simplicity, re-throwing or returning empty might be okay depending on UI needs
+		throw error; 
+	}
+};

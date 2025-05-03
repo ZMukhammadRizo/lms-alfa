@@ -19,7 +19,71 @@ interface ClassEvent {
 // Helper to get day of week (0=Monday, 6=Sunday) from Date object
 const getDayOfWeek = (date: Date): number => {
 	const day = date.getDay()
-	return day === 0 ? 6 : day - 1 // Adjust Sunday (0) to 6, shift others
+	// JS Sunday=0, Monday=1, .. Saturday=6 -> Target Monday=0, ..., Sunday=6
+	const result = day === 0 ? 6 : day - 1;
+	// console.log(`[getDayOfWeek] Input Date: ${date.toDateString()}, JS Day: ${day}, Result (Mon=0): ${result}`);
+	return result
+}
+
+// Helper to convert various day formats (0-6, 1-7, "mon"-"sun") to 0-6 (Mon-Sun)
+const normalizeDayOfWeek = (dayValue: any, entryId: string | number): number | null => {
+	if (dayValue === null || dayValue === undefined) {
+		console.log(`[NormalizeDay - ID: ${entryId}] Day value is null/undefined.`);
+		return null;
+	}
+
+	const dayStr = String(dayValue).toLowerCase().trim();
+	console.log(`[NormalizeDay - ID: ${entryId}] Normalizing day: '${dayStr}' (Original: '${dayValue}')`);
+
+	// Handle string names
+	const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+	const dayShort = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+	let index = dayNames.indexOf(dayStr);
+	if (index !== -1) {
+		console.log(`[NormalizeDay - ID: ${entryId}] Matched full name '${dayStr}' to index ${index}`);
+		return index; // Returns 0-6 (Mon-Sun)
+	}
+	index = dayShort.indexOf(dayStr);
+	if (index !== -1) {
+		console.log(`[NormalizeDay - ID: ${entryId}] Matched short name '${dayStr}' to index ${index}`);
+		return index; // Returns 0-6 (Mon-Sun)
+	}
+
+	// Handle numeric values
+	const dayNum = parseInt(dayStr, 10);
+	if (!isNaN(dayNum)) {
+		console.log(`[NormalizeDay - ID: ${entryId}] Parsed as number: ${dayNum}`);
+		
+		// Case 1: Database uses 1-7 where 1=Monday, 7=Sunday
+		if (dayNum >= 1 && dayNum <= 7) {
+			const result = dayNum - 1;
+			console.log(`[NormalizeDay - ID: ${entryId}] Assuming 1-7 (Mon-Sun) DB format. Result: ${result}`);
+			return result; // Converts to 0-6 (Mon-Sun)
+		}
+
+		// Case 2: Database uses 0-6 where 0=Sunday, 6=Saturday (Standard JS getDay())
+		// OR database uses 0-6 where 0=Monday, 6=Sunday
+		if (dayNum >= 0 && dayNum <= 6) {
+			 // We need Mon=0, ..., Sun=6 for the calendar
+			 // If DB uses 0 for Monday, the number is already correct.
+			 // If DB uses 0 for Sunday (JS style), we need to adjust.
+			 // Let's PRIORITIZE the 0=Monday assumption based on user request.
+			 const result = dayNum; 
+			 console.log(`[NormalizeDay - ID: ${entryId}] Assuming 0-6 (Mon-Sun) DB format. Result: ${result}`);
+			 return result;
+			 
+			 // Original JS-style conversion (commented out):
+			 // const result = dayNum === 0 ? 6 : dayNum - 1; 
+			 // console.log(`[NormalizeDay - ID: ${entryId}] Assuming 0-6 (Sun-Sat) DB format. Result: ${result}`);
+			 // return result;
+		}
+		console.log(`[NormalizeDay - ID: ${entryId}] Numeric value ${dayNum} out of recognized range (0-6 or 1-7).`);
+	} else {
+		console.log(`[NormalizeDay - ID: ${entryId}] Could not parse '${dayStr}' as a number.`);
+	}
+
+	console.warn(`[NormalizeDay - ID: ${entryId}] Unrecognized day format: '${dayValue}'. Cannot normalize.`);
+	return null; // Return null if format is unrecognized
 }
 
 // Helper to convert HH:MM or hour number to decimal hours
@@ -59,6 +123,7 @@ export async function fetchAllTimetableEvents(): Promise<ClassEvent[]> {
         id,
         title,
         location,
+        day,
         day_date,
         start_time,
         end_time,
@@ -82,6 +147,19 @@ export async function fetchAllTimetableEvents(): Promise<ClassEvent[]> {
 		const events: ClassEvent[] = data
 			.map((entry: any) => {
 				const entryDate = entry.day_date ? new Date(entry.day_date) : new Date()
+				let normalizedDay: number | null = normalizeDayOfWeek(entry.day, entry.id)
+
+				// If 'day' is not valid or missing, fallback to day_date
+				if (normalizedDay === null && entry.day_date) {
+					console.log(`[FetchEvents - ID: ${entry.id}] Day normalization failed or 'day' missing. Falling back to day_date: ${entry.day_date}`);
+					normalizedDay = getDayOfWeek(entryDate);
+					console.log(`[FetchEvents - ID: ${entry.id}] Day calculated from day_date: ${normalizedDay}`);
+				} else if (normalizedDay === null) {
+					console.warn(`[FetchEvents - ID: ${entry.id}] Missing valid day information ('day' and 'day_date'). Skipping entry.`);
+					// Decide on a default or skip? Skipping for now.
+					return null
+				}
+
 				const startTimeDecimal = timeToDecimal(entry.start_time)
 				const endTimeDecimal = timeToDecimal(entry.end_time)
 				const subjectName = entry.subjects?.subjectname || entry.title || 'Untitled Event'
@@ -93,7 +171,7 @@ export async function fetchAllTimetableEvents(): Promise<ClassEvent[]> {
 					course: subjectName,
 					startTime: startTimeDecimal,
 					endTime: endTimeDecimal,
-					day: getDayOfWeek(entryDate),
+					day: normalizedDay,
 					location: entry.location || 'N/A',
 					color: entry.color || '#3182CE',
 					classId: entry.classId,
@@ -101,6 +179,7 @@ export async function fetchAllTimetableEvents(): Promise<ClassEvent[]> {
 					teacher: teacherName,
 				}
 			})
+			.filter(event => event !== null)
 			.filter(event => event.startTime < event.endTime)
 		return events
 	} catch (err) {
@@ -108,7 +187,7 @@ export async function fetchAllTimetableEvents(): Promise<ClassEvent[]> {
 		// Fallback attempt inside catch block
 		try {
 			const { data: fallbackData, error: fallbackError } = await supabase.from('timetable').select(`
-           id, title, location, day_date, start_time, end_time, color, classId, subjectId,
+           id, title, location, day, day_date, start_time, end_time, color, classId, subjectId,
            subjects ( subjectname ),
            teacher:teacherId ( firstName, lastName ),
            classes:classId ( classname )
@@ -126,6 +205,17 @@ export async function fetchAllTimetableEvents(): Promise<ClassEvent[]> {
 			const fallbackEvents: ClassEvent[] = fallbackData
 				.map((entry: any) => {
 					const entryDate = entry.day_date ? new Date(entry.day_date) : new Date()
+					let normalizedDay: number | null = normalizeDayOfWeek(entry.day, entry.id)
+
+					if (normalizedDay === null && entry.day_date) {
+						console.log(`[FetchEvents Fallback - ID: ${entry.id}] Day normalization failed or 'day' missing. Falling back to day_date: ${entry.day_date}`);
+						normalizedDay = getDayOfWeek(entryDate);
+						console.log(`[FetchEvents Fallback - ID: ${entry.id}] Day calculated from day_date: ${normalizedDay}`);
+					} else if (normalizedDay === null) {
+						console.warn(`[FetchEvents Fallback - ID: ${entry.id}] Missing valid day information ('day' and 'day_date'). Skipping entry.`);
+						return null
+					}
+
 					const startTimeDecimal = timeToDecimal(entry.start_time)
 					const endTimeDecimal = timeToDecimal(entry.end_time)
 					const subjectName = entry.subjects?.subjectname || entry.title || 'Untitled Event'
@@ -138,7 +228,7 @@ export async function fetchAllTimetableEvents(): Promise<ClassEvent[]> {
 						course: subjectName,
 						startTime: startTimeDecimal,
 						endTime: endTimeDecimal,
-						day: getDayOfWeek(entryDate),
+						day: normalizedDay,
 						location: entry.location || 'N/A',
 						color: entry.color || '#3182CE',
 						classId: entry.classId,
@@ -146,6 +236,7 @@ export async function fetchAllTimetableEvents(): Promise<ClassEvent[]> {
 						teacher: teacherName,
 					}
 				})
+				.filter(event => event !== null)
 				.filter(event => event.startTime < event.endTime)
 			return fallbackEvents
 		} catch (finalError) {

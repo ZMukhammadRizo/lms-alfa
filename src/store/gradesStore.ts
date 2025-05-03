@@ -99,15 +99,72 @@ const useGradesStore = create<GradesState>((set, get) => ({
 			const userResponse = await supabase.auth.getUser()
 			const userId = userResponse.data.user?.id
 
-			const { data, error } = await supabase.rpc('get_teacher_levels', {
-				teacher_uuid: userId,
-			})
+			if (!userId) {
+				throw new Error("User not logged in.");
+			}
+			
+			console.log(`[GradesStore] Fetching levels for teacher: ${userId}`);
 
-			if (error) throw error
+			// 1. Get classes taught by this teacher
+			const { data: teacherClasses, error: classesError } = await supabase
+				.from('classes')
+				.select('id, level_id') // Select level_id directly
+				.eq('teacherid', userId);
 
-			set({ levels: data || [] })
+			if (classesError) {
+				console.error('[GradesStore] Error fetching teacher classes:', classesError);
+				throw classesError;
+			}
+			
+			if (!teacherClasses || teacherClasses.length === 0) {
+				console.log('[GradesStore] No classes found for this teacher.');
+				set({ levels: [] });
+				return; // Exit early if no classes
+			}
+			
+			console.log(`[GradesStore] Found ${teacherClasses.length} classes for teacher.`);
+
+			// 2. Get distinct level IDs from these classes
+			const distinctLevelIds = [...new Set(teacherClasses.map(c => c.level_id))].filter(id => id != null);
+
+			if (distinctLevelIds.length === 0) {
+				console.log('[GradesStore] No distinct levels found for teacher classes.');
+				set({ levels: [] });
+				return; // Exit early if no levels
+			}
+			
+			console.log(`[GradesStore] Found distinct level IDs: ${distinctLevelIds.join(', ')}`);
+
+			// 3. Fetch details for these levels (assuming a 'levels' table)
+			// TODO: Confirm the actual name of the levels table (e.g., 'levels', 'grade_levels')
+			const { data: levelsData, error: levelsError } = await supabase
+				.from('levels') // Confirm this table name
+				.select('id, name') // Assuming 'id' and 'name' columns
+				.in('id', distinctLevelIds);
+
+			if (levelsError) {
+				console.error('[GradesStore] Error fetching level details:', levelsError);
+				throw levelsError;
+			}
+			
+			console.log(`[GradesStore] Fetched details for ${levelsData?.length || 0} levels.`);
+
+			// 4. Format the data into GradeLevelOverview (needs counts)
+			// For now, we'll just set the basic level info. Counts are handled in the component or another function
+			const formattedLevels = levelsData?.map((level): GradeLevelOverview => ({
+				levelId: level.id, // Use the actual ID from the levels table
+				levelName: level.name || `Level ${level.id}`, // Use the name from the levels table
+				// Counts will be added later by the component or another function
+				classCount: 0, 
+				studentCount: 0,
+				subjectCount: 0,
+			})) || [];
+			
+			console.log('[GradesStore] Setting formatted levels:', formattedLevels);
+			set({ levels: formattedLevels })
 		} catch (error) {
 			console.error('Error fetching teacher levels:', error)
+			set({ levels: [] }); // Clear levels on error
 		} finally {
 			set({ isLoadingLevels: false })
 		}

@@ -1,58 +1,45 @@
-import { motion } from 'framer-motion'
-import React, { useEffect, useState } from 'react'
-import { FiAward, FiBarChart2, FiBookOpen, FiChevronRight, FiSearch, FiUsers } from 'react-icons/fi'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
-import { PageTitle } from '../../../components/common'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { FiAward, FiBarChart2, FiBookOpen, FiChevronRight, FiSearch, FiUsers, FiAlertCircle } from 'react-icons/fi'
 import { Card, Container, Input } from '../../../components/ui'
-import { useAuth } from '../../../contexts/AuthContext'
-import useGradesStore from '../../../store/gradesStore'
-import { CardProps } from '../../../types/grades'
+import { PageTitle } from '../../../components/common'
+import { getGradeLevelSummaries, GradeLevelSummary } from '../../../api/grades'
 
 const GradeLevelSelect: React.FC = () => {
 	const navigate = useNavigate()
 	const [searchTerm, setSearchTerm] = useState('')
-	const [hoveredCard, setHoveredCard] = useState<string | null>(null)
-	const { user } = useAuth()
-	const [loading, setLoading] = useState(true)
+	const [gradeSummaries, setGradeSummaries] = useState<GradeLevelSummary[]>([])
+	const [isLoading, setIsLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
-	const [initialized, setInitialized] = useState(false)
-
-	// Use the gradesStore instead of direct service calls
-	const gradeLevels = useGradesStore(state => state.levels)
-	const isLoadingLevels = useGradesStore(state => state.isLoadingLevels)
-	const fetchAllLevels = useGradesStore(state => state.fetchAllLevels)
+	const [hoveredCard, setHoveredCard] = useState<number | null>(null)
 
 	useEffect(() => {
-		const fetchGradeLevels = async () => {
-			if (initialized) return
-
+		const fetchData = async () => {
+			setIsLoading(true)
+			setError(null)
 			try {
-				setLoading(true)
-				await fetchAllLevels()
-				setInitialized(true)
+				const summaries = await getGradeLevelSummaries()
+				setGradeSummaries(summaries)
 			} catch (err) {
-				console.error('Error fetching grade levels:', err)
-				setError('Failed to load grade levels. Please try again later.')
+				console.error('Failed to fetch grade summaries:', err)
+				setError('Could not load grade level data. Please try again later.')
 			} finally {
-				setLoading(false)
+				setIsLoading(false)
 			}
 		}
+		fetchData()
+	}, [])
 
-		fetchGradeLevels()
-	}, [fetchAllLevels, initialized])
-
-	// Filter grade levels based on search term
-	const filteredGradeLevels = gradeLevels.filter(level =>
-		level.levelName.toLowerCase().includes(searchTerm.toLowerCase())
+	const filteredGradeLevels = gradeSummaries.filter(level =>
+		level.name.toLowerCase().includes(searchTerm.toLowerCase())
 	)
 
-	// Handle card click - navigate to class selection
-	const handleGradeLevelClick = (levelId: string) => {
-		navigate(`/admin/grades/levels/${levelId}/classes`)
+	const handleGradeLevelClick = (gradeLevelId: number) => {
+		navigate(`/admin/grades/levels/${gradeLevelId}/classes`)
 	}
 
-	// Animation variants
 	const containerVariants = {
 		hidden: { opacity: 0 },
 		show: {
@@ -68,28 +55,12 @@ const GradeLevelSelect: React.FC = () => {
 		show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 	}
 
-	if (loading || isLoadingLevels) {
-		return (
-			<PageContainer>
-				<LoadingMessage>Loading grade levels...</LoadingMessage>
-			</PageContainer>
-		)
-	}
-
-	if (error) {
-		return (
-			<PageContainer>
-				<ErrorMessage>{error}</ErrorMessage>
-			</PageContainer>
-		)
-	}
-
 	return (
 		<PageContainer>
 			<PageHeaderWrapper>
 				<PageHeader>
 					<HeaderContent>
-						<PageTitle>Grade Management</PageTitle>
+						<PageTitle>Kundalik</PageTitle>
 						<SubTitle>Select a grade level to view and manage student grades</SubTitle>
 					</HeaderContent>
 					<HeaderRight>
@@ -106,102 +77,124 @@ const GradeLevelSelect: React.FC = () => {
 			</PageHeaderWrapper>
 
 			<ContentContainer>
-				<GradeLevelGrid
-					as={motion.div}
-					variants={containerVariants}
-					initial='hidden'
-					animate='show'
-				>
-					{filteredGradeLevels.length > 0 ? (
-						filteredGradeLevels.map(level => (
-							<GradeLevelCard
-								key={level.levelId}
-								as={motion.div}
-								variants={itemVariants}
-								whileHover={{ scale: 1.02, y: -5 }}
-								onHoverStart={() => setHoveredCard(level.levelId)}
-								onHoverEnd={() => setHoveredCard(null)}
-								onClick={() => handleGradeLevelClick(level.levelId)}
-								$isHovered={hoveredCard === level.levelId}
-							>
-								<CardTop $gradelevel={parseInt(level.levelName, 10) || 1}>
-									<GradeLevelIcon>
-										<FiBookOpen />
-									</GradeLevelIcon>
-									<GradeLevelName>{level.levelName}th Grade</GradeLevelName>
-								</CardTop>
-								<CardContent>
-									<GradeMetricRow>
-										<GradeMetric>
-											<GradeMetricIcon>
-												<FiUsers />
-											</GradeMetricIcon>
-											<GradeMetricContent>
-												<GradeMetricValue>{level.studentCount}</GradeMetricValue>
-												<GradeMetricLabel>Students</GradeMetricLabel>
-											</GradeMetricContent>
-										</GradeMetric>
-										<GradeMetric>
-											<GradeMetricIcon>
-												<FiAward />
-											</GradeMetricIcon>
-											<GradeMetricContent>
-												<GradeMetricValue>{level.classCount}</GradeMetricValue>
-												<GradeMetricLabel>Classes</GradeMetricLabel>
-											</GradeMetricContent>
-										</GradeMetric>
-										<GradeMetric>
-											<GradeMetricIcon>
-												<FiBarChart2 />
-											</GradeMetricIcon>
-											<GradeMetricContent>
-												<GradeMetricValue>{level.subjectCount}</GradeMetricValue>
-												<GradeMetricLabel>Subjects</GradeMetricLabel>
-											</GradeMetricContent>
-										</GradeMetric>
-									</GradeMetricRow>
-									<CardArrow $isHovered={hoveredCard === level.levelId}>
-										<FiChevronRight />
-										<span>View Classes</span>
-									</CardArrow>
-								</CardContent>
-							</GradeLevelCard>
-						))
-					) : (
-						<NoResults>
-							{searchTerm
-								? `No grade levels found matching "${searchTerm}"`
-								: 'No grade levels available.'}
-						</NoResults>
-					)}
-				</GradeLevelGrid>
+				{isLoading ? (
+					<SkeletonGrid>
+						{[...Array(6)].map((_, index) => (
+							<SkeletonCard key={index} />
+						))}
+					</SkeletonGrid>
+				) : error ? (
+					<ErrorDisplay>
+						<FiAlertCircle size={32} />
+						<p>{error}</p>
+					</ErrorDisplay>
+				) : (
+					<GradeLevelGrid
+						as={motion.div}
+						variants={containerVariants}
+						initial='hidden'
+						animate='show'
+					>
+						{filteredGradeLevels.length > 0 ? (
+							filteredGradeLevels.map((level, index) => (
+								<GradeLevelCard
+									key={level.id}
+									as={motion.div}
+									variants={itemVariants}
+									whileHover={{ y: -3, boxShadow: '0 8px 15px rgba(0, 0, 0, 0.08)' }}
+									onHoverStart={() => setHoveredCard(level.id)}
+									onHoverEnd={() => setHoveredCard(null)}
+									onClick={() => handleGradeLevelClick(level.id)}
+									$isHovered={hoveredCard === level.id}
+									$colorIndex={index}
+								>
+									<CardTop $colorIndex={index}>
+										<GradeLevelIcon>
+											<FiBookOpen />
+										</GradeLevelIcon>
+										<GradeLevelName>{level.name}</GradeLevelName>
+									</CardTop>
+									<CardContent>
+										<GradeMetricRow>
+											<GradeMetric>
+												<GradeMetricIcon>
+													<FiUsers />
+												</GradeMetricIcon>
+												<GradeMetricContent>
+													<GradeMetricValue>{level.studentCount}</GradeMetricValue>
+													<GradeMetricLabel>Students</GradeMetricLabel>
+												</GradeMetricContent>
+											</GradeMetric>
+											<GradeMetric>
+												<GradeMetricIcon>
+													<FiAward />
+												</GradeMetricIcon>
+												<GradeMetricContent>
+													<GradeMetricValue>{level.classCount}</GradeMetricValue>
+													<GradeMetricLabel>Classes</GradeMetricLabel>
+												</GradeMetricContent>
+											</GradeMetric>
+											<GradeMetric>
+												<GradeMetricIcon>
+													<FiBarChart2 />
+												</GradeMetricIcon>
+												<GradeMetricContent>
+													<GradeMetricValue>{level.subjectCount}</GradeMetricValue>
+													<GradeMetricLabel>Subjects</GradeMetricLabel>
+												</GradeMetricContent>
+											</GradeMetric>
+										</GradeMetricRow>
+										<CardArrow>
+											<FiChevronRight />
+											<span>View Classes</span>
+										</CardArrow>
+									</CardContent>
+								</GradeLevelCard>
+							))
+						) : (
+							<NoResults>
+								{gradeSummaries.length === 0
+									? 'No grade levels found.'
+									: `No grade levels found matching "${searchTerm}"`}
+							</NoResults>
+						)}
+					</GradeLevelGrid>
+				)}
 			</ContentContainer>
 		</PageContainer>
 	)
 }
 
-// Styled Components
 const PageContainer = styled(Container)`
-	max-width: 1200px;
+	max-width: 100%;
 	padding: 0;
+	background-color: ${props => props.theme.colors.background.primary};
+	min-height: calc(100vh - 60px);
 `
 
 const PageHeaderWrapper = styled.div`
 	background: ${props => props.theme.colors.background.secondary};
 	border-bottom: 1px solid ${props => props.theme.colors.border.light};
-	padding: 0 24px;
-	margin-bottom: 24px;
+	padding: 0 48px;
+	margin-bottom: 0;
+
+	@media (max-width: ${props => props.theme.breakpoints.md}) {
+		padding: 0 24px;
+	}
 `
 
 const PageHeader = styled.div`
 	display: flex;
 	justify-content: space-between;
-	align-items: flex-start;
-	padding: 32px 0;
+	align-items: center;
+	padding: 24px 0;
+	max-width: 1200px;
+	margin: 0 auto;
 
 	@media (max-width: ${props => props.theme.breakpoints.md}) {
 		flex-direction: column;
-		gap: 24px;
+		align-items: flex-start;
+		gap: 16px;
 	}
 `
 
@@ -209,9 +202,10 @@ const HeaderContent = styled.div`
 	max-width: 600px;
 
 	h1 {
-		margin-bottom: 8px;
-		font-size: 2.2rem;
+		margin-bottom: 4px;
+		font-size: 2rem;
 		color: ${props => props.theme.colors.text.primary};
+		font-weight: 700;
 		line-height: 1.2;
 	}
 `
@@ -220,192 +214,268 @@ const HeaderRight = styled.div`
 	display: flex;
 	align-items: center;
 	justify-content: flex-end;
-	min-width: 300px;
+	min-width: 350px;
+
+	@media (max-width: ${props => props.theme.breakpoints.md}) {
+		width: 100%;
+		min-width: auto;
+		margin-top: 16px;
+	}
+`
+
+const ContentContainer = styled.div`
+	padding: 32px 48px 48px;
+	max-width: 1200px;
+	margin: 0 auto;
+
+	@media (max-width: ${props => props.theme.breakpoints.md}) {
+		padding: 24px;
+	}
+`
+
+const SubTitle = styled.p`
+	color: ${props => props.theme.colors.text.secondary};
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 400;
+`
+
+const SearchWrapper = styled.div`
+	width: 350px;
 
 	@media (max-width: ${props => props.theme.breakpoints.md}) {
 		width: 100%;
 	}
 `
 
-const ContentContainer = styled.div`
-	padding: 0 24px 48px;
-`
-
-const SubTitle = styled.p`
-	color: ${props => props.theme.colors.text.secondary};
-	margin: 8px 0 0;
-	font-size: 1.1rem;
-	font-weight: 300;
-`
-
-const SearchWrapper = styled.div`
-	width: 100%;
-`
-
 const StyledInput = styled(Input)`
 	width: 100%;
-	font-size: 1rem;
-	border-radius: 8px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+	font-size: 0.9rem;
+	border-radius: ${props => props.theme.borderRadius.md};
+	background-color: ${props => props.theme.colors.background.primary};
 
-	&:focus-within {
-		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+	input {
+		padding-left: 36px;
 	}
 `
 
 const GradeLevelGrid = styled.div`
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 	gap: 24px;
 
 	@media (max-width: ${props => props.theme.breakpoints.sm}) {
 		grid-template-columns: 1fr;
+		gap: 16px;
 	}
 `
 
-const GradeLevelCard = styled(Card)<CardProps>`
-	padding: 0;
+const cardColors = [
+	{ background: '#e0f2fe', text: '#0ea5e9', iconBg: 'rgba(14, 165, 233, 0.1)' },
+	{ background: '#fef3c7', text: '#d97706', iconBg: 'rgba(217, 119, 6, 0.1)' }
+]
+
+interface CardStyleProps {
+	$colorIndex: number;
+	$isHovered?: boolean;
+}
+
+const GradeLevelCard = styled(Card)<CardStyleProps>`
+	border-radius: ${props => props.theme.borderRadius.lg};
 	overflow: hidden;
 	cursor: pointer;
-	transition: all 0.3s ease-in-out;
-	border-radius: 16px;
-	border: 1px solid
-		${props =>
-			props.$isHovered ? props.theme.colors.primary[300] : props.theme.colors.border.light};
-	box-shadow: ${props =>
-		props.$isHovered
-			? `0 16px 32px ${props.theme.colors.primary[100]}`
-			: '0 4px 12px rgba(0, 0, 0, 0.06)'};
+	transition: all 0.2s ease-in-out;
+	border: none;
+	background-color: ${props => cardColors[props.$colorIndex % cardColors.length].background};
+	box-shadow: ${props => props.theme.shadows.sm};
 	display: flex;
 	flex-direction: column;
-	background: ${props => props.theme.colors.background.secondary};
+
+	&:hover {
+		transform: translateY(-3px);
+		box-shadow: ${props => props.theme.shadows.md};
+	}
 `
 
-const CardTop = styled.div<{ $gradelevel: number }>`
-	background: ${props => {
-		const hue = (props.$gradelevel * 20) % 360
-		return `linear-gradient(135deg,
-      ${props.theme.mode === 'dark' ? `hsl(${hue}, 70%, 20%)` : `hsl(${hue}, 70%, 80%)`},
-      ${props.theme.mode === 'dark' ? `hsl(${hue}, 60%, 30%)` : `hsl(${hue}, 60%, 90%)`})`
-	}};
-	padding: 24px;
+const CardTop = styled.div<{$colorIndex: number}>`
+	padding: 16px 20px;
 	display: flex;
 	align-items: center;
-	gap: 16px;
+	gap: 12px;
+	border-bottom: 1px solid ${props => props.$colorIndex === 0 ? 'rgba(14, 165, 233, 0.2)' : 'rgba(217, 119, 6, 0.2)'};
 `
 
 const GradeLevelIcon = styled.div`
-	background: rgba(255, 255, 255, 0.25);
-	border-radius: 50%;
-	width: 44px;
-	height: 44px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 1.5rem;
-	color: #fff;
-	backdrop-filter: blur(4px);
+	font-size: 1.2rem;
+	color: ${props => props.theme.colors.text.secondary};
 `
 
 const GradeLevelName = styled.h3`
-	color: #fff;
-	font-size: 1.5rem;
-	font-weight: 600;
-	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 	margin: 0;
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: ${props => props.theme.colors.text.primary};
 `
 
 const CardContent = styled.div`
 	padding: 20px;
+	flex-grow: 1;
 	display: flex;
 	flex-direction: column;
-	flex: 1;
+	justify-content: space-between;
 `
 
 const GradeMetricRow = styled.div`
 	display: flex;
-	justify-content: space-between;
-	align-items: center;
+	justify-content: space-around;
+	align-items: flex-start;
+	margin-bottom: 24px;
 	gap: 16px;
-	margin-bottom: 20px;
 `
 
 const GradeMetric = styled.div`
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 8px;
+	text-align: center;
 	flex: 1;
 `
 
-const GradeMetricIcon = styled.div`
-	font-size: 1.2rem;
-	color: ${props => props.theme.colors.primary[500]};
-	margin-bottom: 4px;
+const GradeMetricIcon = styled.div<{$colorIndex?: number}>`
+	font-size: 1.3rem;
+	color: ${props => props.theme.colors.text.secondary};
+	margin-bottom: 8px;
 `
 
-const GradeMetricContent = styled.div`
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	text-align: center;
-`
+const GradeMetricContent = styled.div``;
 
 const GradeMetricValue = styled.div`
 	font-size: 1.5rem;
-	font-weight: 600;
+	font-weight: 700;
 	color: ${props => props.theme.colors.text.primary};
+	line-height: 1.2;
 `
 
 const GradeMetricLabel = styled.div`
-	font-size: 0.85rem;
+	font-size: 0.75rem;
 	color: ${props => props.theme.colors.text.secondary};
+	margin-top: 2px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 `
 
-const CardArrow = styled.div<{ $isHovered?: boolean }>`
+const CardArrow = styled.div`
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	margin-top: auto;
-	color: ${props =>
-		props.$isHovered ? props.theme.colors.primary[600] : props.theme.colors.text.tertiary};
-	font-size: 0.9rem;
-	transition: all 0.3s ease;
+	justify-content: flex-end;
+	font-size: 0.85rem;
 	font-weight: 500;
-
-	span {
-		transform: translateX(${props => (props.$isHovered ? '4px' : '0')});
-		opacity: ${props => (props.$isHovered ? 1 : 0.7)};
-		transition: all 0.3s ease;
-	}
+	color: ${props => props.theme.colors.text.secondary};
+	margin-top: auto;
+	padding-top: 16px;
 
 	svg {
-		transition: all 0.3s ease;
-		transform: translateX(${props => (props.$isHovered ? '4px' : '0')});
+		margin-left: 4px;
+		transition: transform 0.2s ease;
+	}
+
+	${GradeLevelCard}:hover & {
+		color: ${props => props.theme.colors.primary[600]};
+		svg {
+			transform: translateX(3px);
+		}
 	}
 `
 
 const NoResults = styled.div`
 	grid-column: 1 / -1;
 	text-align: center;
-	padding: 48px 0;
+	padding: 48px;
 	color: ${props => props.theme.colors.text.secondary};
-	font-size: 1.1rem;
 `
 
-const LoadingMessage = styled.div`
-	text-align: center;
-	padding: 48px 0;
-	color: ${props => props.theme.colors.text.secondary};
-	font-size: 1.1rem;
+const SkeletonGrid = styled.div`
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	gap: 24px;
+
+	@media (max-width: ${props => props.theme.breakpoints.sm}) {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
 `
 
-const ErrorMessage = styled.div`
+const SkeletonBase = styled.div<{ width?: string; height?: string; $radius?: string }>`
+	background-color: ${props => props.theme.colors.background.tertiary};
+	border-radius: ${props => props.$radius || props.theme.borderRadius.sm};
+	animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	width: ${props => props.width || '100%'};
+	height: ${props => props.height || '20px'};
+
+	@keyframes pulse {
+		0%, 100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.7;
+		}
+	}
+`
+
+const SkeletonCard = () => (
+	<GradeLevelCard $colorIndex={0} style={{ backgroundColor: '#f1f5f9', cursor: 'default' }}>
+		<CardTop style={{ borderBottomColor: 'rgba(0,0,0,0.05)' }}>
+			<SkeletonBase width="24px" height="20px" />
+			<SkeletonBase width="100px" height="20px" />
+		</CardTop>
+		<CardContent>
+			<GradeMetricRow>
+				<GradeMetric>
+					<SkeletonBase width="24px" height="20px" style={{ marginBottom: '8px' }} />
+					<SkeletonBase width="40px" height="24px" />
+					<SkeletonBase width="60px" height="12px" style={{ marginTop: '4px' }} />
+				</GradeMetric>
+				<GradeMetric>
+					<SkeletonBase width="24px" height="20px" style={{ marginBottom: '8px' }} />
+					<SkeletonBase width="40px" height="24px" />
+					<SkeletonBase width="60px" height="12px" style={{ marginTop: '4px' }} />
+				</GradeMetric>
+				<GradeMetric>
+					<SkeletonBase width="24px" height="20px" style={{ marginBottom: '8px' }} />
+					<SkeletonBase width="40px" height="24px" />
+					<SkeletonBase width="60px" height="12px" style={{ marginTop: '4px' }} />
+				</GradeMetric>
+			</GradeMetricRow>
+			<CardArrow>
+				<SkeletonBase width="100px" height="16px" />
+			</CardArrow>
+		</CardContent>
+	</GradeLevelCard>
+)
+
+const ErrorDisplay = styled.div`
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 48px;
 	text-align: center;
-	padding: 48px 0;
-	color: ${props => props.theme.colors.danger[500]};
-	font-size: 1.1rem;
+	color: ${props => props.theme.colors.danger[700]};
+	background-color: ${props => props.theme.colors.danger[50]};
+	border: 1px solid ${props => props.theme.colors.danger[200]};
+	border-radius: ${props => props.theme.borderRadius.lg};
+	grid-column: 1 / -1;
+
+	svg {
+		margin-bottom: 16px;
+		color: ${props => props.theme.colors.danger[500]};
+	}
+
+	p {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 500;
+	}
 `
 
 export default GradeLevelSelect

@@ -8,6 +8,7 @@ export interface Class {
 	videos?: Video[]
 	students?: User[]
 	subjects?: Subject
+	studentCount?: number
   [key: string]: any
 }
 

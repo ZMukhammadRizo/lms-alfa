@@ -8,6 +8,17 @@ import { Card, Container, Input } from '../../../components/ui'
 import { useAuth } from '../../../contexts/AuthContext'
 import useGradesStore from '../../../store/gradesStore'
 import { CardProps } from '../../../types/grades'
+import { supabase } from '../../../services/supabaseClient'
+
+// Updated interface for grade level with accurate student count
+interface GradeLevel {
+	levelId: string;
+	levelName: string;
+	classCount: number;
+	studentCount: number;
+	subjectCount: number;
+	actualStudentCount?: number;
+}
 
 const GradeLevelSelect: React.FC = () => {
 	const navigate = useNavigate()
@@ -16,30 +27,108 @@ const GradeLevelSelect: React.FC = () => {
 	const { user } = useAuth()
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
+	const [gradeLevelsWithCounts, setGradeLevelsWithCounts] = useState<GradeLevel[]>([])
 
 	// Use the gradesStore instead of direct service calls
 	const gradeLevels = useGradesStore(state => state.levels)
-	const isLoadingLevels = useGradesStore(state => state.isLoadingLevels)
+	const isLoadingStoreLevels = useGradesStore(state => state.isLoadingLevels)
 	const fetchTeacherLevels = useGradesStore(state => state.fetchTeacherLevels)
 
-	useEffect(() => {
-		const fetchGradeLevels = async () => {
-			try {
-				setLoading(true)
-				await fetchTeacherLevels()
-			} catch (err) {
-				console.error('Error fetching grade levels:', err)
-				setError('Failed to load grade levels. Please try again later.')
-			} finally {
-				setLoading(false)
-			}
+	// Get accurate student counts for each grade level
+	const fetchAccurateStudentCounts = async (levels: GradeLevel[]) => {
+		console.log("[GradeLevelSelect] Fetching accurate counts for:", levels);
+		// Ensure levels is an array before mapping
+		if (!Array.isArray(levels)) {
+			console.warn("[GradeLevelSelect] Levels data is not an array, cannot fetch counts.");
+			return [];
 		}
+		
+		const updatedLevels = await Promise.all(
+			levels.map(async (level) => {
+				try {
+					// Get classes for this level
+					const { data: classes, error: classesError } = await supabase
+						.from('classes')
+						.select('id')
+						.eq('level_id', level.levelId);
 
-		fetchGradeLevels()
-	}, [fetchTeacherLevels])
+					if (classesError) throw classesError;
+					
+					const classIds = classes.map(c => c.id);
+					
+					if (classIds.length === 0) {
+						return {
+							...level,
+							actualStudentCount: 0
+						};
+					}
+					
+					// Get unique students from these classes
+					const { data: students, error: studentsError } = await supabase
+						.from('classstudents')
+						.select('studentid')
+						.in('classid', classIds);
+						
+					if (studentsError) throw studentsError;
+					
+					// Count unique students
+					const uniqueStudentIds = new Set(students.map(s => s.studentid));
+					const actualCount = uniqueStudentIds.size;
+					
+					return {
+						...level,
+						actualStudentCount: actualCount
+					};
+				} catch (err) {
+					console.error(`Error fetching student count for level ${level.levelId}:`, err);
+					return level;
+				}
+			})
+		);
+		
+		return updatedLevels;
+	};
+
+	// Effect 1: Fetch initial levels from store on mount
+	useEffect(() => {
+		console.log("[GradeLevelSelect] Initial fetch triggered.");
+		fetchTeacherLevels().catch(err => {
+			console.error('Initial fetchTeacherLevels failed:', err);
+			setError('Failed to load initial grade levels.');
+		});
+	}, [fetchTeacherLevels]); // fetchTeacherLevels should be stable
+
+	// Effect 2: Calculate accurate counts when levels data changes from the store
+	useEffect(() => {
+		const calculateCounts = async () => {
+			// Only run if levels are available from store and not loading
+			if (!isLoadingStoreLevels && gradeLevels && gradeLevels.length > 0) {
+				setLoading(true); // Indicate loading counts
+				setError(null); // Clear previous errors
+				try {
+					console.log("[GradeLevelSelect] Store levels updated, calculating accurate counts...");
+					const levelsWithCounts = await fetchAccurateStudentCounts(gradeLevels as GradeLevel[]);
+					setGradeLevelsWithCounts(levelsWithCounts);
+				} catch (err) {
+					console.error('Error fetching accurate student counts:', err);
+					setError('Failed to load student counts for levels.');
+					setGradeLevelsWithCounts([]); // Clear potentially stale data
+				} finally {
+					setLoading(false);
+				}
+			} else if (!isLoadingStoreLevels && gradeLevels && gradeLevels.length === 0) {
+				// Handle case where fetch completed but returned no levels
+				console.log("[GradeLevelSelect] Store fetch complete, no levels found.");
+				setGradeLevelsWithCounts([]);
+				setLoading(false); // Stop loading if there are no levels
+			}
+		};
+
+		calculateCounts();
+	}, [gradeLevels, isLoadingStoreLevels]); // Depend on store data and its loading state
 
 	// Filter grade levels based on search term
-	const filteredGradeLevels = gradeLevels.filter(level =>
+	const filteredGradeLevels = gradeLevelsWithCounts.filter(level =>
 		level.levelName.toLowerCase().includes(searchTerm.toLowerCase())
 	)
 
@@ -64,10 +153,20 @@ const GradeLevelSelect: React.FC = () => {
 		show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 	}
 
-	if (loading || isLoadingLevels) {
+	if (isLoadingStoreLevels) {
+		// Show initial loading message only when store is fetching levels
 		return (
 			<PageContainer>
 				<LoadingMessage>Loading grade levels...</LoadingMessage>
+			</PageContainer>
+		)
+	} 
+
+	if (loading) {
+		// Show generic loading message if calculating counts (or potentially other loading)
+		return (
+			<PageContainer>
+				<LoadingMessage>Loading data...</LoadingMessage>
 			</PageContainer>
 		)
 	}
@@ -133,7 +232,7 @@ const GradeLevelSelect: React.FC = () => {
 												<FiUsers />
 											</GradeMetricIcon>
 											<GradeMetricContent>
-												<GradeMetricValue>{level.studentCount}</GradeMetricValue>
+												<GradeMetricValue>{level.actualStudentCount !== undefined ? level.actualStudentCount : level.studentCount}</GradeMetricValue>
 												<GradeMetricLabel>Students</GradeMetricLabel>
 											</GradeMetricContent>
 										</GradeMetric>

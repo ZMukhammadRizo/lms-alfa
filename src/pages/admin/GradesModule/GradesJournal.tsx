@@ -298,7 +298,7 @@ const GradesJournal: React.FC = () => {
 			if (result.length > 0 && !selectedQuarterId) {
 				setSelectedQuarterId(result[0].id)
 			}
-		} catch (error) {
+			} catch (error) {
 			console.error('Error fetching quarters:', error)
 		}
 	}
@@ -447,7 +447,7 @@ const GradesJournal: React.FC = () => {
 		} catch (err) {
 			console.error('INIT DATA ERROR:', err)
 			setError('Error loading data. Please try again.')
-		} finally {
+			} finally {
 			setLoading(false)
 			isFetchingRef.current = false
 		}
@@ -660,8 +660,8 @@ const GradesJournal: React.FC = () => {
 
 					if (error) throw error
 
-					// Update local state
-					setGrades(prevGrades =>
+			// Update local state
+			setGrades(prevGrades =>
 						prevGrades.filter(
 							g => !(g.studentId === effectiveStudentId && g.lessonId === effectiveLessonId)
 						)
@@ -801,19 +801,19 @@ const GradesJournal: React.FC = () => {
 	// Return the correct display element based on whether we're editing or not
 	const renderGradeCell = (studentId: string, lessonId: string) => {
 		const currentGrade = getScoreForStudentAndLesson(studentId, lessonId)
-		const isEditing =
+										const isEditing =
 			editingGrade && editingGrade.studentId === studentId && editingGrade.lessonId === lessonId
 
 		if (isEditing) {
-			return (
-				<GradeEditInputWrapper>
-					<GradeInput
+										return (
+														<GradeEditInputWrapper>
+															<GradeInput
 						ref={inputRef}
-						type='text'
+																type='text'
 						value={inputValue}
-						onChange={handleGradeInputChange}
-						onKeyDown={handleKeyDown}
-						autoFocus
+																onChange={handleGradeInputChange}
+																onKeyDown={handleKeyDown}
+																autoFocus
 						placeholder='1-10'
 					/>
 					<EditButton
@@ -823,11 +823,11 @@ const GradesJournal: React.FC = () => {
 						title='Save grade'
 					>
 						<Save size={16} />
-					</EditButton>
+															</EditButton>
 					<EditButton $type='cancel' onClick={handleCancelEdit} disabled={isSaving} title='Cancel'>
 						<X size={16} />
-					</EditButton>
-				</GradeEditInputWrapper>
+															</EditButton>
+														</GradeEditInputWrapper>
 			)
 		}
 
@@ -839,9 +839,9 @@ const GradesJournal: React.FC = () => {
 						onClick={() => handleEditGrade(studentId, lessonId)}
 						title={`Score: ${currentGrade}/10. Click to edit.`}
 					>
-						{getLetterGrade(currentGrade)}
+														{getLetterGrade(currentGrade)}
 						<GradeIndicator>{currentGrade}</GradeIndicator>
-					</GradeBadge>
+													</GradeBadge>
 				</motion.div>
 			)
 		}
@@ -1137,8 +1137,8 @@ const SearchWrapper = styled.div`
 		flex: 1;
 		padding: 8px 12px 8px 40px;
 		border: 1px solid ${props => props.theme.colors.border.light};
-		border-radius: 8px;
-		font-size: 0.9rem;
+	border-radius: 8px;
+	font-size: 0.9rem;
 
 		&:focus {
 			outline: none;
@@ -1257,16 +1257,16 @@ const GradeCell = styled.div`
 	&:empty::after {
 		content: 'Add';
 		position: absolute;
-		display: flex;
-		align-items: center;
-		justify-content: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 		top: 0;
 		left: 0;
 		right: 0;
 		bottom: 0;
 		font-size: 0.8rem;
-		font-weight: 500;
-		color: ${props => props.theme.colors.text.primary};
+	font-weight: 500;
+	color: ${props => props.theme.colors.text.primary};
 		background-color: rgba(0, 0, 0, 0.02);
 		opacity: 0;
 		transition: opacity 0.2s ease;
@@ -1292,34 +1292,34 @@ const GradeBadge = styled.div<{ $color: 'success' | 'primary' | 'warning' | 'dan
 		switch (props.$color) {
 			case 'success':
 				return `
-						background-color: ${props.theme.colors.success[50]};
-						color: ${props.theme.colors.success[700]};
-						border: 1px solid ${props.theme.colors.success[200]};
-					`
+          background-color: ${props.theme.colors.success[50]};
+          color: ${props.theme.colors.success[700]};
+          border: 1px solid ${props.theme.colors.success[200]};
+        `
 			case 'primary':
 				return `
-						background-color: ${props.theme.colors.primary[50]};
-						color: ${props.theme.colors.primary[700]};
-						border: 1px solid ${props.theme.colors.primary[200]};
-					`
+          background-color: ${props.theme.colors.primary[50]};
+          color: ${props.theme.colors.primary[700]};
+          border: 1px solid ${props.theme.colors.primary[200]};
+        `
 			case 'warning':
 				return `
-						background-color: ${props.theme.colors.warning[50]};
-						color: ${props.theme.colors.warning[700]};
-						border: 1px solid ${props.theme.colors.warning[200]};
-					`
+          background-color: ${props.theme.colors.warning[50]};
+          color: ${props.theme.colors.warning[700]};
+          border: 1px solid ${props.theme.colors.warning[200]};
+        `
 			case 'danger':
 				return `
-						background-color: ${props.theme.colors.danger[50]};
-						color: ${props.theme.colors.danger[700]};
-						border: 1px solid ${props.theme.colors.danger[200]};
-					`
+          background-color: ${props.theme.colors.danger[50]};
+          color: ${props.theme.colors.danger[700]};
+          border: 1px solid ${props.theme.colors.danger[200]};
+        `
 			default:
 				return `
-						background-color: ${props.theme.colors.neutral[100]};
-						color: ${props.theme.colors.neutral[600]};
-						border: 1px solid ${props.theme.colors.neutral[200]};
-					`
+          background-color: ${props.theme.colors.neutral[100]};
+          color: ${props.theme.colors.neutral[600]};
+          border: 1px solid ${props.theme.colors.neutral[200]};
+        `
 		}
 	}}
 `
@@ -1361,21 +1361,21 @@ const EditButton = styled.button<EditButtonProps>`
 	${props =>
 		props.$type === 'save'
 			? `
-			background-color: ${props.theme.colors.success[500]};
-			color: white;
+    background-color: ${props.theme.colors.success[500]};
+    color: white;
 
-			&:hover {
-				background-color: ${props.theme.colors.success[600]};
-			}
-		`
+    &:hover {
+      background-color: ${props.theme.colors.success[600]};
+    }
+  `
 			: `
-			background-color: ${props.theme.colors.danger[500]};
-			color: white;
+    background-color: ${props.theme.colors.danger[500]};
+    color: white;
 
-			&:hover {
-				background-color: ${props.theme.colors.danger[600]};
-			}
-		`}
+    &:hover {
+      background-color: ${props.theme.colors.danger[600]};
+    }
+  `}
 `
 
 // Add GradeIndicator styled component back

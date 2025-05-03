@@ -159,8 +159,8 @@ const ChangeSkeleton = styled(Skeleton)`
   width: 40%;
 `;
 
-const StatCard: React.FC<StatCardProps> = ({ icon,importantTextColor, title, value, change, color, isLoading = false }) => {
-	const isPositive = change.startsWith('+')
+const StatCard: React.FC<StatCardProps> = ({ icon,importantTextColor, title, value,  color, isLoading = false }) => {
+	
 
   return (
     <CardContainer $color={color}>
@@ -176,9 +176,6 @@ const StatCard: React.FC<StatCardProps> = ({ icon,importantTextColor, title, val
           <>
             <Value>{value}</Value>
             <Title>{title}</Title>
-            <Change $importantTextColor={importantTextColor} $isPositive={isPositive}>
-              {change}
-            </Change>
           </>
         )}
       </Content>

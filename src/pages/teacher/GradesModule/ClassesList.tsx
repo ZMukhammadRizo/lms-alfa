@@ -6,9 +6,10 @@ import styled from 'styled-components'
 import { PageTitle } from '../../../components/common'
 import { Badge, Card, Container, Input } from '../../../components/ui'
 import { useAuth } from '../../../contexts/AuthContext'
+import { getClassStudentCount } from '../../../api/grades'
 import useGradesStore from '../../../store/gradesStore'
 
-// Define interface for the teacher's classes
+// Define interface for the teacher's classes with actual student count
 interface TeacherClassInfo {
 	classId: string
 	classname: string
@@ -16,6 +17,7 @@ interface TeacherClassInfo {
 	levelName: string
 	studentCount: number
 	subjectCount: number
+	actualStudentCount?: number // This will hold the actual count from classstudents table
 }
 
 const ClassesList: React.FC = () => {
@@ -25,6 +27,7 @@ const ClassesList: React.FC = () => {
 	const { user } = useAuth()
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
+	const [classesWithCounts, setClassesWithCounts] = useState<TeacherClassInfo[]>([])
 
 	// Use the gradesStore instead of direct service calls
 	const classes = useGradesStore(state => state.classes) as TeacherClassInfo[]
@@ -34,7 +37,7 @@ const ClassesList: React.FC = () => {
 	const levels = useGradesStore(state => state.levels)
 
 	useEffect(() => {
-		const initializeData = async () => {
+		const fetchDataAndCounts = async () => {
 			try {
 				setLoading(true)
 
@@ -51,6 +54,24 @@ const ClassesList: React.FC = () => {
 
 				// Wait for all data to load
 				await Promise.all(fetchPromises)
+
+				// Get actual student counts for each class
+				const updatedClasses = await Promise.all(
+					classes.map(async classItem => {
+						try {
+							const actualCount = await getClassStudentCount(classItem.classId)
+							return {
+								...classItem,
+								actualStudentCount: actualCount,
+							}
+						} catch (countError) {
+							console.error(`Error fetching student count for class ${classItem.classId}:`, countError)
+							return classItem
+						}
+					})
+				)
+
+				setClassesWithCounts(updatedClasses)
 			} catch (err) {
 				console.error('Error fetching classes:', err)
 				setError('Failed to load classes. Please try again later.')
@@ -59,11 +80,11 @@ const ClassesList: React.FC = () => {
 			}
 		}
 
-		initializeData()
-	}, [fetchTeacherLevels, levels.length])
+		fetchDataAndCounts()
+	}, [fetchTeacherLevels, fetchTeacherClasses, levels.length, classes])
 
 	// Filter classes based on search term
-	const filteredClasses = classes.filter(
+	const filteredClasses = classesWithCounts.filter(
 		classItem =>
 			classItem.classname.toLowerCase().includes(searchTerm.toLowerCase()) ||
 			classItem.levelName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -107,7 +128,7 @@ const ClassesList: React.FC = () => {
 	}
 
 	// Group classes by grade level for better organization
-	const classGroups = classes.reduce((groups, classItem) => {
+	const classGroups = classesWithCounts.reduce((groups, classItem) => {
 		const level = classItem.levelName
 		if (!groups[level]) {
 			groups[level] = []
@@ -167,7 +188,7 @@ const ClassesList: React.FC = () => {
 													<FiUsers />
 												</MetricIcon>
 												<MetricContent>
-													<MetricValue>{classItem.studentCount}</MetricValue>
+													<MetricValue>{classItem.actualStudentCount !== undefined ? classItem.actualStudentCount : classItem.studentCount}</MetricValue>
 													<MetricLabel>Students</MetricLabel>
 												</MetricContent>
 											</Metric>
@@ -232,7 +253,7 @@ const ClassesList: React.FC = () => {
 															<FiUsers />
 														</MetricIcon>
 														<MetricContent>
-															<MetricValue>{classItem.studentCount}</MetricValue>
+															<MetricValue>{classItem.actualStudentCount !== undefined ? classItem.actualStudentCount : classItem.studentCount}</MetricValue>
 															<MetricLabel>Students</MetricLabel>
 														</MetricContent>
 													</Metric>
@@ -259,9 +280,9 @@ const ClassesList: React.FC = () => {
 					)
 				) : (
 					<NoResults>
-						{searchTerm
-							? `No classes found matching "${searchTerm}"`
-							: "You don't have any classes assigned yet."}
+						{classesWithCounts.length === 0
+							? 'No classes assigned to you yet.'
+							: `No classes found matching "${searchTerm}"`}
 					</NoResults>
 				)}
 			</ContentContainer>

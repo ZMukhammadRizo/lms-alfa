@@ -307,7 +307,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 		{ path: '/admin/classes', icon: <FiLayers />, label: 'Classes' },
 		{ path: '/admin/assignments', icon: <FiFileText />, label: 'Assignments' },
 		{ path: '/admin/grades', icon: <FiClipboard />, label: 'Grades' },
-		{ path: '/admin/attendance', icon: <FiCalendar />, label: 'Attendance' },
 		{ path: '/admin/timetables', icon: <FiCalendar />, label: 'Timetables' },
 	]
 

@@ -13,7 +13,6 @@ import AnnouncementCreate from './pages/admin/AnnouncementCreate'
 import AdminAnnouncements from './pages/admin/Announcements'
 import AssignmentFiles from './pages/admin/AssignmentFiles'
 import AdminAssignments from './pages/admin/Assignments'
-import AdminAttendance from './pages/admin/Attendance'
 import Classes from './pages/admin/Classes'
 import Dashboard from './pages/admin/Dashboard'
 import AdminGradesModule from './pages/admin/GradesModule'
@@ -57,6 +56,8 @@ import TeacherSchedule from './pages/teacher/TeacherSchedule'
 import TeacherStudents from './pages/teacher/TeacherStudents'
 import GlobalStyle from './styles/globalStyles'
 import { createTheme } from './styles/theme'
+import StudentGradesPage from './pages/student/Grades'
+import GradeDetails from './pages/student/GradeDetails'
 
 // Create a context for theme settings
 export interface ThemeContextType {
@@ -132,7 +133,6 @@ function AppContent() {
 						<Route path='assignments' element={<AdminAssignments />} />
 						<Route path='assignments/files/:id' element={<AssignmentFiles />} />
 						<Route path='grades/*' element={<AdminGradesModule />} />
-						<Route path='attendance' element={<AdminAttendance />} />
 						<Route path='timetables' element={<Timetables />} />
 						<Route path='settings' element={<Settings />} />
 						<Route path='profile' element={<ProfilePage />} />
@@ -173,6 +173,9 @@ function AppContent() {
 						<Route path='lesson/:lessonId' element={<LessonDetail />} />
 						<Route path='assignments' element={<Assignments />} />
 						<Route path='schedule' element={<StudentSchedule />} />
+						<Route path='grades' element={<StudentGradesPage />} />
+						{/* Route for viewing grades for a specific subject */}
+						<Route path='grades/:subjectId' element={<GradeDetails />} />
 						<Route path='messages' element={<h1>Coming Soon...</h1>} />
 						<Route path='tests' element={<h1>Coming Soon...</h1>} />
 						<Route path='flashcards' element={<h1>Coming Soon...</h1>} />

@@ -237,6 +237,7 @@ const Grades: React.FC = () => {
                 
                 <ViewMoreButton onClick={(e) => {
                   e.stopPropagation();
+                  console.log(`Navigating to subject grades for ID: ${subject.id}`);
                   navigate(`/student/grades/${subject.id}`);
                 }}>
                   <span>View Full Details</span>
@@ -649,4 +650,4 @@ const ViewMoreButton = styled.button`
   }
 `;
 
-export default Grades; 
+export default Grades;

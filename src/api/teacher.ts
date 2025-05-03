@@ -4,11 +4,25 @@ import supabase from '../config/supabaseClient'
 export const getTeacherClasses = async (teacherId: string) => {
 	const { data, error } = await supabase
 		.from('classes')
-		.select('*')
+		.select(`
+			*,
+			classstudents ( count )
+		`)
 		.eq('teacherid', teacherId)
 
-	if (error) throw error
-	return data as Class[]
+	if (error) {
+		console.error("Error fetching teacher classes with student count:", error);
+		throw error
+	}
+
+	// Map data to include studentCount
+	const classesWithCount = data.map(cls => ({
+		...cls,
+		// @ts-ignore Supabase typings might not recognize the count directly
+		studentCount: cls.classstudents[0]?.count || 0
+	}));
+	
+	return classesWithCount as Class[]; // Ensure the return type matches the updated Class type
 }
 
 export const getClassById = async (classId: string) => {
