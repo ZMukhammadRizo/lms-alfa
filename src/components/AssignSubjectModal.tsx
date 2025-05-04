@@ -168,7 +168,7 @@ const Select = styled.select`
   font-size: 0.9rem;
   background-color: white;
   cursor: pointer;
-
+  
   &:focus {
     outline: none;
     border-color: #6366f1;
@@ -238,7 +238,7 @@ const CancelButton = styled(Button)`
   background-color: white;
   border: 1px solid #d1d5db;
   color: #374151;
-
+  
   &:hover {
     background-color: #f9fafb;
   }
@@ -248,7 +248,7 @@ const AssignButton = styled(Button)`
   background-color: #4f46e5;
   border: none;
   color: white;
-
+  
   &:hover:not(:disabled) {
     background-color: #4338ca;
   }
@@ -301,11 +301,11 @@ const AssignSubjectModal: React.FC<AssignSubjectModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [availableGrades, setAvailableGrades] = useState<string[]>([]);
   const [filteredSubjects, setFilteredSubjects] = useState<SubjectType[]>([]);
-
+  
   // Fetch subjects and available grades on mount
   useEffect(() => {
     if (!isOpen) return; // Only fetch when modal opens
-
+      
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
@@ -322,7 +322,7 @@ const AssignSubjectModal: React.FC<AssignSubjectModalProps> = ({
         const { data: classesData, error: classesError } = await supabase
           .from('classes')
           .select('classname');
-
+        
         if (classesError) throw classesError;
 
         // Extract unique grade levels from class names
@@ -370,7 +370,7 @@ const AssignSubjectModal: React.FC<AssignSubjectModalProps> = ({
       setSelectedSubjects([]);
     }
   }, [selectedGrade, allSubjects]);
-
+  
   const handleSubjectToggle = (subjectId: string) => {
     setSelectedSubjects(prev =>
       prev.includes(subjectId)
@@ -389,7 +389,7 @@ const AssignSubjectModal: React.FC<AssignSubjectModalProps> = ({
     const success = await onAssign(selectedGrade, selectedSubjects);
     setIsLoading(false);
     
-    if (success) {
+      if (success) {
         setSelectedGrade('');
         setSelectedSubjects([]);
         onClose(); // Close modal on success
@@ -397,27 +397,27 @@ const AssignSubjectModal: React.FC<AssignSubjectModalProps> = ({
   };
 
   if (!isOpen) return null;
-
+  
   return (
     <ModalOverlay>
       <ModalContent>
-        <ModalHeader>
-          <ModalTitle>Assign Subject to Grade</ModalTitle>
+      <ModalHeader>
+        <ModalTitle>Assign Subject to Grade</ModalTitle>
           <CloseButton onClick={onClose}><FiX /></CloseButton>
-        </ModalHeader>
-
+      </ModalHeader>
+      
         <InfoPanel>
             <InfoIcon><FiInfo /></InfoIcon>
             <InfoTextContainer>
-              <InfoTitle>What does this do?</InfoTitle>
-              <InfoDescription>
+            <InfoTitle>What does this do?</InfoTitle>
+            <InfoDescription>
                 This feature automatically assigns selected subjects to all sections of the chosen grade (e.g., selecting Grade 10 assigns subjects to 10A, 10B, etc.).
-              </InfoDescription>
+            </InfoDescription>
             </InfoTextContainer>
         </InfoPanel>
 
         {error && <div style={{ color: 'red', marginBottom: '1rem' }}>Error: {error}</div>}
-
+        
         <FormGroup>
           <Label htmlFor="grade">Grade <span style={{ color: 'red' }}>*</span></Label>
           <Select
@@ -439,7 +439,7 @@ const AssignSubjectModal: React.FC<AssignSubjectModalProps> = ({
             )}
           </Select>
         </FormGroup>
-
+        
         <FormGroup>
           <Label>Subjects {selectedGrade ? `for Grade ${selectedGrade}` : ''} <span style={{ color: 'red' }}>*</span></Label>
           {isLoading && !allSubjects.length ? (
@@ -451,33 +451,33 @@ const AssignSubjectModal: React.FC<AssignSubjectModalProps> = ({
                 {filteredSubjects.map(subject => (
                   <SubjectItem key={subject.id}>
                     <Checkbox
-                      type="checkbox"
-                      id={`subject-${subject.id}`}
+                            type="checkbox" 
+                            id={`subject-${subject.id}`}
                       checked={selectedSubjects.includes(subject.id)}
                       onChange={() => handleSubjectToggle(subject.id)}
                       disabled={isLoading}
-                    />
+                          />
                     <label htmlFor={`subject-${subject.id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                       <SubjectLabel>{subject.name}</SubjectLabel>
-                      <SubjectCode>{subject.code}</SubjectCode>
+                          <SubjectCode>{subject.code}</SubjectCode>
                     </label>
-                  </SubjectItem>
-                ))}
+                      </SubjectItem>
+                    ))}
               </SubjectList>
-            ) : (
+              ) : (
               <div style={{ color: '#6b7280', marginTop: '0.5rem' }}>No subjects found for Grade {selectedGrade}.</div>
           )}
         </FormGroup>
-
-        <ModalFooter>
+      
+      <ModalFooter>
           <CancelButton onClick={onClose} disabled={isLoading}>Cancel</CancelButton>
           <AssignButton 
             onClick={handleAssignClick} 
             disabled={isLoading || !selectedGrade || selectedSubjects.length === 0}
-          >
+        >
             Assign {selectedSubjects.length} Subject(s)
           </AssignButton>
-        </ModalFooter>
+      </ModalFooter>
       </ModalContent>
     </ModalOverlay>
   );

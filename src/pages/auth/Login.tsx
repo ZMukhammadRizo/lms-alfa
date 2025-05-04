@@ -3,149 +3,7 @@ import { useNavigate, Link, Navigate } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import { useAuth } from '../../contexts/AuthContext'
 import { showSuccess, showError } from '../../utils/toast'
-
-const Login: React.FC = () => {
-	const navigate = useNavigate()
-	const { login, loading: authLoading, isAuthenticated, user } = useAuth()
-	const [username, setUsername] = useState('')
-	const [password, setPassword] = useState('')
-	const [rememberMe, setRememberMe] = useState(false)
-	const [error, setError] = useState('')
-	const [pageLoading, setPageLoading] = useState(true)
-	const [isLoggingIn, setIsLoggingIn] = useState(false)
-
-	// Handle initial page loading animation
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setPageLoading(false)
-		}, 1500) // Show loading animation for 1.5 seconds
-
-		return () => clearTimeout(timer)
-	}, [])
-
-	if (authLoading || pageLoading) {
-		return (
-			<LoadingContainer>
-				<LoadingContent>
-					<LogoIcon>LMS</LogoIcon>
-					<SpinnerContainer>
-						<Spinner />
-					</SpinnerContainer>
-					<LoadingText>Loading</LoadingText>
-				</LoadingContent>
-			</LoadingContainer>
-		)
-	}
-
-	if (isAuthenticated) {
-		// If already authenticated, redirect to the dashboard
-		const userRole = user?.role || 'student'
-		return <Navigate to={`/${userRole}/dashboard`} replace />
-	}
-
-	// Handle login form submission
-	const handleLogin = async (e: React.FormEvent) => {
-		e.preventDefault()
-		setIsLoggingIn(true)
-		setError('')
-
-		try {
-			// Use the AuthContext login function
-			const loginResult = await login(username, password)
-
-			if (loginResult.ok) {
-				// Show success notification
-				showSuccess(`Welcome back! You have successfully logged in.`)
-				// Navigate to the appropriate dashboard
-				navigate(`/${loginResult.role}/dashboard`)
-			} else {
-				// Show error notification
-				showError(loginResult.msg)
-				setError(loginResult.msg)
-			}
-		} catch (err) {
-			console.error('Login error:', err)
-			setError('An unexpected error occurred. Please try again.')
-		} finally {
-			setIsLoggingIn(false)
-		}
-	}
-
-	return (
-		<LoginContainer>
-			<FormSection>
-				<LogoSection>
-					<h1>Learning Management System</h1>
-					<p>Sign in to your account</p>
-				</LogoSection>
-
-				<LoginForm onSubmit={handleLogin}>
-					{error && <ErrorMessage>{error}</ErrorMessage>}
-
-					<FormGroup>
-						<Label htmlFor='username'>Email</Label>
-						<InputWrapper>
-							<Input
-								id='username'
-								type='email'
-								placeholder='Enter your email'
-								value={username}
-								onChange={e => setUsername(e.target.value)}
-								required
-							/>
-						</InputWrapper>
-					</FormGroup>
-
-					<FormGroup>
-						<Label htmlFor='password'>Password</Label>
-						<InputWrapper>
-							<Input
-								id='password'
-								type='password'
-								placeholder='Enter your password'
-								value={password}
-								onChange={e => setPassword(e.target.value)}
-								required
-							/>
-						</InputWrapper>
-					</FormGroup>
-
-					<FormOptions>
-						<RememberMeOption>
-							<Checkbox
-								type='checkbox'
-								id='rememberMe'
-								checked={rememberMe}
-								onChange={() => setRememberMe(!rememberMe)}
-							/>
-							<label htmlFor='rememberMe'>Remember me</label>
-						</RememberMeOption>
-						<ForgotPassword to='/forgot-password'>Forgot password?</ForgotPassword>
-					</FormOptions>
-
-					<LoginButton 
-						type='submit' 
-						disabled={isLoggingIn} 
-						$isLoading={isLoggingIn}
-					>
-						{isLoggingIn ? (
-							<>
-								<ButtonSpinner />
-								Signing in...
-							</>
-						) : (
-							'Sign in'
-						)}
-					</LoginButton>
-					
-					<RegisterPrompt>
-						Don't have an account? <RegisterLink to="/register">Sign up</RegisterLink>
-					</RegisterPrompt>
-				</LoginForm>
-			</FormSection>
-		</LoginContainer>
-	)
-}
+import { FiEye, FiEyeOff } from 'react-icons/fi'
 
 // Loading animations
 const spin = keyframes`
@@ -302,22 +160,31 @@ const Label = styled.label`
 
 const InputWrapper = styled.div`
 	position: relative;
-`
-
-const Input = styled.input`
-	width: 100%;
-	padding: ${props => props.theme.spacing[3]};
+	display: flex;
+	align-items: center;
 	border: 1px solid ${props => props.theme.colors.border.light};
 	border-radius: ${props => props.theme.borderRadius.md};
 	background-color: ${props => props.theme.colors.background.secondary};
-	color: ${props => props.theme.colors.text.primary};
-	font-size: 1rem;
 	transition: border-color ${props => props.theme.transition.fast};
 
-	&:focus {
+	&:focus-within {
 		border-color: ${props => props.theme.colors.primary[400]};
-		outline: none;
 		box-shadow: 0 0 0 2px ${props => props.theme.colors.primary[100]};
+	}
+`
+
+const Input = styled.input`
+	flex: 1;
+	width: 100%;
+	padding: ${props => props.theme.spacing[3]};
+	padding-right: ${props => props.theme.spacing[9]};
+	border: none;
+	background-color: transparent;
+	color: ${props => props.theme.colors.text.primary};
+	font-size: 1rem;
+
+	&:focus {
+		outline: none;
 	}
 
 	&::placeholder {
@@ -325,34 +192,33 @@ const Input = styled.input`
 	}
 `
 
-const FormOptions = styled.div`
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-`
-
-const RememberMeOption = styled.div`
+const PasswordToggleButton = styled.button`
+	position: absolute;
+	right: ${props => props.theme.spacing[1]};
+	top: 50%;
+	transform: translateY(-50%);
 	display: flex;
 	align-items: center;
-	gap: ${props => props.theme.spacing[2]};
-	font-size: 0.875rem;
-	color: ${props => props.theme.colors.text.secondary};
-`
-
-const Checkbox = styled.input`
-	accent-color: ${props => props.theme.colors.primary[500]};
+	background: none;
+	border: none;
 	cursor: pointer;
-`
+	padding: ${props => props.theme.spacing[2]};
+	color: ${props => props.theme.colors.text.tertiary};
+	border-radius: ${props => props.theme.borderRadius.sm};
 
-const ForgotPassword = styled(Link)`
-	font-size: 0.875rem;
-	color: ${props => props.theme.colors.primary[600]};
-	text-decoration: none;
-	transition: color ${props => props.theme.transition.fast};
+	svg {
+		width: 1.2rem;
+		height: 1.2rem;
+	}
 
 	&:hover {
-		color: ${props => props.theme.colors.primary[700]};
-		text-decoration: underline;
+		color: ${props => props.theme.colors.text.secondary};
+		background-color: ${props => props.theme.colors.background.hover};
+	}
+
+	&:focus {
+		outline: none;
+		box-shadow: 0 0 0 2px ${props => props.theme.colors.primary[100]};
 	}
 `
 
@@ -429,5 +295,138 @@ const RegisterLink = styled(Link)`
 		text-decoration: underline;
 	}
 `;
+
+const Login: React.FC = () => {
+	const navigate = useNavigate()
+	const { login, loading: authLoading, isAuthenticated, user } = useAuth()
+	const [username, setUsername] = useState('')
+	const [password, setPassword] = useState('')
+	const [showPassword, setShowPassword] = useState(false)
+	const [rememberMe, setRememberMe] = useState(false)
+	const [error, setError] = useState('')
+	const [pageLoading, setPageLoading] = useState(true)
+	const [isLoggingIn, setIsLoggingIn] = useState(false)
+
+	// Handle initial page loading animation
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setPageLoading(false)
+		}, 1500) // Show loading animation for 1.5 seconds
+
+		return () => clearTimeout(timer)
+	}, [])
+
+	if (authLoading || pageLoading) {
+		return (
+			<LoadingContainer>
+				<LoadingContent>
+					<LogoIcon>LMS</LogoIcon>
+					<SpinnerContainer>
+						<Spinner />
+					</SpinnerContainer>
+					<LoadingText>Loading</LoadingText>
+				</LoadingContent>
+			</LoadingContainer>
+		)
+	}
+
+	if (isAuthenticated) {
+		// If already authenticated, redirect to the dashboard
+		const userRole = user?.role || 'student'
+		return <Navigate to={`/${userRole}/dashboard`} replace />
+	}
+
+	// Handle login form submission
+	const handleLogin = async (e: React.FormEvent) => {
+		e.preventDefault()
+		setIsLoggingIn(true)
+		setError('')
+
+		try {
+			// Use the AuthContext login function
+			const loginResult = await login(username, password)
+
+			if (loginResult.ok) {
+				// Show success notification
+				showSuccess(`Welcome back! You have successfully logged in.`)
+				// Navigate to the appropriate dashboard
+				navigate(`/${loginResult.role}/dashboard`)
+			} else {
+				// Show error notification
+				showError(loginResult.msg)
+				setError(loginResult.msg)
+			}
+		} catch (err) {
+			console.error('Login error:', err)
+			setError('An unexpected error occurred. Please try again.')
+		} finally {
+			setIsLoggingIn(false)
+		}
+	}
+
+	return (
+		<LoginContainer>
+			<FormSection>
+				<LogoSection>
+					<h1>Learning Management System</h1>
+					<p>Sign in to your account</p>
+				</LogoSection>
+
+				<LoginForm onSubmit={handleLogin}>
+					{error && <ErrorMessage>{error}</ErrorMessage>}
+
+					<FormGroup>
+						<Label htmlFor='username'>Email</Label>
+						<InputWrapper>
+							<Input
+								id='username'
+								type='email'
+								placeholder='Enter your email'
+								value={username}
+								onChange={e => setUsername(e.target.value)}
+								required
+							/>
+						</InputWrapper>
+					</FormGroup>
+
+					<FormGroup>
+						<Label htmlFor='password'>Password</Label>
+						<InputWrapper>
+							<Input
+								id='password'
+								type={showPassword ? 'text' : 'password'}
+								placeholder='Enter your password'
+								value={password}
+								onChange={e => setPassword(e.target.value)}
+								required
+							/>
+							<PasswordToggleButton 
+								type="button"
+								onClick={() => setShowPassword(!showPassword)}
+								aria-label={showPassword ? "Hide password" : "Show password"}
+							>
+								{showPassword ? <FiEyeOff /> : <FiEye />}
+							</PasswordToggleButton>
+						</InputWrapper>
+					</FormGroup>
+					<LoginButton 
+						type='submit' 
+						disabled={isLoggingIn} 
+						$isLoading={isLoggingIn}
+					>
+						{isLoggingIn ? (
+							<>
+								<ButtonSpinner />
+								Signing in...
+							</>
+						) : (
+							'Sign in'
+						)}
+					</LoginButton>
+				</LoginForm>
+			</FormSection>
+		</LoginContainer>
+	)
+}
 
 export default Login

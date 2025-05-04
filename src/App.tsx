@@ -28,7 +28,6 @@ import Timetables from './pages/admin/Timetables'
 import Users from './pages/admin/Users'
 import Debug from './pages/auth/Debug'
 import Login from './pages/auth/Login'
-import Register from './pages/auth/Register'
 import AnnouncementsPage from './pages/parent/AnnouncementsPage'
 import AssignmentsPage from './pages/parent/AssignmentsPage'
 import AttendancePage from './pages/parent/AttendancePage'
@@ -121,7 +120,6 @@ function AppContent() {
 
 					{/* Auth routes */}
 					<Route path='/login' element={<Login />} />
-					<Route path='/register' element={<Register />} />
 					<Route path='/debug' element={<Debug />} />
 
 					{/* Admin routes */}

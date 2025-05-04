@@ -1871,14 +1871,14 @@ const Subjects: React.FC = () => {
                         {subject.status === 'active' ? 'Active' : 'Inactive'}
                       </SubjectStatus>
                       <SubjectActions>
-                        <EditButton 
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent triggering the card click
-                            handleEditSubject(subject);
-                          }}
-                        >
-                          <FiEdit2 />
-                        </EditButton>
+                      <EditButton 
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent triggering the card click
+                          handleEditSubject(subject);
+                        }}
+                      >
+                        <FiEdit2 />
+                      </EditButton>
                         <DeleteButton
                           onClick={(e) => {
                             e.stopPropagation(); // Prevent triggering the card click
