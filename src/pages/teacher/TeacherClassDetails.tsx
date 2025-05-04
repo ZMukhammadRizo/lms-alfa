@@ -236,7 +236,7 @@ const TeacherClassDetails: React.FC = () => {
 		}
 		
 		console.log(`[Debug] getEmbedUrl processing URL: ${url}`);
-
+		
 		if (isYouTubeUrl(url)) {
 			// Convert YouTube URL to embed format
 			const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/

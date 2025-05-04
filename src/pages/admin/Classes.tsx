@@ -1,10 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useEffect, useState, useRef } from 'react';
 import { 
-  FiArrowLeft, FiBook, FiChevronDown, 
-  FiChevronRight, FiDownload, FiEdit, 
-  FiFilter, FiGrid, FiList, FiMapPin, 
-  FiMoreHorizontal, FiPlus, FiSearch, FiTrash, FiTrash2, FiUserCheck, FiUsers, FiUserPlus, FiLayers 
+  FiArrowLeft, FiBook, FiChevronDown, FiChevronRight, FiDownload, FiEdit, 
+  FiFilter, FiGrid, FiList, FiMapPin, FiMoreHorizontal, FiPlus, FiSearch, 
+  FiTrash, FiTrash2, FiUserCheck, FiUsers, FiUserPlus, FiLayers 
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import styled from 'styled-components';
@@ -22,7 +21,6 @@ interface Student {
   phone: string;
   grade: string;
   section: string;
-  attendance: number;
   performance: number;
   subjects: string[];
   status: string;
@@ -875,13 +873,6 @@ const SectionsComponent: React.FC<SectionsProps> = ({
                 <SectionValue>{section.teacher}</SectionValue>
               </SectionRow>
 
-              <SectionPerformance>
-                <SectionPerformanceLabel>Section Performance</SectionPerformanceLabel>
-                <SectionPerformanceValue>{section.performance}%</SectionPerformanceValue>
-                <SectionPerformanceBar>
-                  <SectionPerformanceFill $percentage={section.performance} $color={getPerformanceColor(section.performance)} />
-                </SectionPerformanceBar>
-              </SectionPerformance>
 
               <button
                 style={{
@@ -1081,40 +1072,6 @@ const SectionIcon = styled.div`
     width: 16px;
     height: 16px;
   }
-`;
-
-const SectionPerformance = styled.div`
-  padding: 16px;
-  border-bottom: 1px solid #f3f4f6;
-`;
-
-const SectionPerformanceLabel = styled.div`
-  font-size: 14px;
-  color: #6b7280;
-  margin-bottom: 8px;
-`;
-
-const SectionPerformanceValue = styled.div`
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 8px;
-`;
-
-// Add after SectionPerformanceValue
-const SectionPerformanceBar = styled.div`
-  width: 100%;
-  height: 8px;
-  background-color: #f3f4f6;
-  border-radius: 4px;
-  overflow: hidden;
-`;
-
-const SectionPerformanceFill = styled.div<SectionPerformanceBarProps>`
-  width: ${props => `${props.$percentage}%`};
-  height: 100%;
-  background-color: ${props => props.$color};
-  border-radius: 4px;
 `;
 
 // Empty state for no data
@@ -2297,7 +2254,7 @@ const Classes: React.FC = () => {
           
           // Try to get actual performance and attendance data if available
           let performance = 0;
-          let attendance = 0;
+          let attendance = 0; // Default to 0
           
           try {
             // Check if there's performance data
@@ -2310,9 +2267,6 @@ const Classes: React.FC = () => {
             
             if (!perfError && performanceData) {
               performance = performanceData.performance;
-            } else {
-              // Generate random performance as fallback
-              performance = Math.floor(Math.random() * 30) + 70;
             }
             
             // Check if there's attendance data
@@ -2325,15 +2279,11 @@ const Classes: React.FC = () => {
             
             if (!attError && attendanceData) {
               attendance = attendanceData.percentage;
-            } else {
-              // Generate random attendance as fallback
-              attendance = Math.floor(Math.random() * 30) + 70;
+            } else if (attError && attError.code !== 'PGRST116') { // PGRST116 means no rows found, which is not an error here
+              console.error(`Error fetching attendance for student ${enrollment.studentid} in class ${enrollment.classid}:`, attError);
             }
           } catch (dataError) {
             console.error('Error fetching performance/attendance data:', dataError);
-            // Fallback to random values
-            performance = Math.floor(Math.random() * 30) + 70;
-            attendance = Math.floor(Math.random() * 30) + 70;
           }
           
           return {
@@ -2344,10 +2294,9 @@ const Classes: React.FC = () => {
             guardian: '',  // Guardian not available in current structure
             status: userData.status || 'active',
             course: '',  // Course not available in current structure
-            performance,  // Now using real data when available
             grade,
             section,
-            attendance,  // Now using real data when available
+            performance,  // Now using real data when available
             subjects: subjectList  // Real subjects from database
           } as Student;
         })
@@ -3312,20 +3261,19 @@ const Classes: React.FC = () => {
                   <span>Student</span>
                   <FiChevronDown />
                 </StudentsTableHeaderCell>
-                <StudentsTableHeaderCell style={{ width: '10%' }}>Grade</StudentsTableHeaderCell>
-                <StudentsTableHeaderCell style={{ width: '11%' }}>Attendance</StudentsTableHeaderCell>
-                <StudentsTableHeaderCell style={{ width: '15%' }}>Performance</StudentsTableHeaderCell>
-                <StudentsTableHeaderCell style={{ width: '10%' }}>Status</StudentsTableHeaderCell>
-                <StudentsTableHeaderCell style={{ width: '12%' }}>Actions</StudentsTableHeaderCell>
+                <StudentsTableHeaderCell style={{ width: '20%' }}>Grade</StudentsTableHeaderCell>
+                <StudentsTableHeaderCell style={{ width: '20%' }}>Attendance</StudentsTableHeaderCell>
+                <StudentsTableHeaderCell style={{ width: '20%' }}>Status</StudentsTableHeaderCell>
+                <StudentsTableHeaderCell style={{ width: '20%' }}>Actions</StudentsTableHeaderCell>
               </StudentsTableHeader>
 
               <StudentsTableBody>
                 {filteredStudents.map(student => (
                   <StudentsTableRow key={student.id}>
-                    <StudentsTableCell style={{ width: '28%' }}>
+                    <StudentsTableCell style={{ width: '26%' }}>
                       <StudentProfile>
                         <StudentAvatar>
-                          {student.name.substr(0, 2)}
+                          {student.name.slice(0, 2)}
                         </StudentAvatar>
                         <StudentDetails>
                           <StudentName>{student.name}</StudentName>
@@ -3334,28 +3282,18 @@ const Classes: React.FC = () => {
                       </StudentProfile>
                     </StudentsTableCell>
 
-                      <StudentsTableCell style={{ width: '10%' }}>
+                      <StudentsTableCell style={{ width: '20%' }}>
                         {selectedSection}
                       </StudentsTableCell>
 
 
-                    <StudentsTableCell style={{ width: '11%', color: '#f59e0b', fontWeight: 'bold' }}>
+                    <StudentsTableCell style={{ width: '17%', color: '#f59e0b', fontWeight: 'bold' }}>
                       {student.attendance}%
                     </StudentsTableCell>
 
-                    <StudentsTableCell style={{ width: '15%' }}>
-                      <PerformanceWrapper>
-                        <PercentageValue>{student.performance}%</PercentageValue>
-                        <PerformanceBar>
-                          <PerformanceFill
-                            $percentage={student.performance}
-                            $color={getPerformanceColor(student.performance)}
-                          />
-                        </PerformanceBar>
-                      </PerformanceWrapper>
-                    </StudentsTableCell>
+                   
 
-                    <StudentsTableCell style={{ width: '10%' }}>
+                    <StudentsTableCell style={{ width: '15%' }}>
                       <StatusIndicator>
                           <StatusDot $active={student.status === 'active'} />
                           <span>{student.status === 'active' ? 'Active' : 'Inactive'}</span>
@@ -4899,16 +4837,16 @@ const FormGroup = styled.div`
   margin-bottom: 16px;
   
   label {
-    font-size: 14px;
-    font-weight: 500;
+    fontSize: 14px;
+    fontWeight: 500;
     color: #334155;
   }
   
   input {
     padding: 10px 12px;
-    border-radius: 6px;
+    borderRadius: 6px;
     border: 1px solid #cbd5e1;
-    font-size: 14px;
+    fontSize: 14px;
     color: #1e293b;
   }
 `;
@@ -4922,10 +4860,10 @@ const ButtonGroup = styled.div`
 
 const Button = styled.button`
   padding: 10px 16px;
-  border-radius: 6px;
+  borderRadius: 6px;
   border: none;
-  font-size: 14px;
-  font-weight: 500;
+  fontSize: 14px;
+  fontWeight: 500;
   cursor: pointer;
 `;
 
