@@ -395,6 +395,8 @@ const SubjectFooter = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
 `;
 
 const SubjectStatus = styled.span<{ $active?: boolean }>`
@@ -404,6 +406,11 @@ const SubjectStatus = styled.span<{ $active?: boolean }>`
   font-weight: 500;
   background-color: ${props => props.$active ? '#e6f7ed' : '#f9e9e9'};
   color: ${props => props.$active ? '#0c6b39' : '#b91c1c'};
+`;
+
+const SubjectActions = styled.div`
+  display: flex;
+  gap: 0.5rem;
 `;
 
 const EditButton = styled.button`
@@ -428,6 +435,17 @@ const EditButton = styled.button`
   
   &:active {
     transform: translateY(0);
+  }
+`;
+
+const DeleteButton = styled(EditButton)`
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  
+  &:hover {
+    background-color: #fecaca;
+    transform: translateY(-1px);
   }
 `;
 
@@ -745,31 +763,6 @@ const LessonActionsContainer = styled.div`
   margin-top: 1rem;
 `;
 
-const DeleteButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  background-color: #fee2e2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
-  border-radius: 0.5rem;
-  padding: 0.625rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background-color: #fecaca;
-    transform: translateY(-1px);
-  }
-  
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
 // Add a styled button for adding lessons
 const AddLessonButton = styled.button`
   display: flex;
@@ -790,6 +783,64 @@ const AddLessonButton = styled.button`
     background-color: ${props => props.theme.colors.primary[700]};
   }
 `;
+
+// Define loadLessons function outside useEffect for reusability
+const loadLessons = async (
+  setLessons: React.Dispatch<React.SetStateAction<Lesson[]>>,
+  setFilteredLessons: React.Dispatch<React.SetStateAction<Lesson[]>>,
+  setError: React.Dispatch<React.SetStateAction<string | null>>,
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>,
+  selectedSubject: Subject | null // Pass selectedSubject to filter correctly
+) => {
+  try {
+    setLoading(true);
+    console.log("Loading lessons...");
+    
+    const { data, error } = await fetchLessons();
+    
+    if (error) {
+      console.error("Error in loadLessons:", error);
+      throw error;
+    }
+    
+    // Log the raw data
+    console.log("Raw lessons data:", data);
+    
+    if (data && data.length > 0) {
+      console.log(`Successfully loaded ${data.length} lessons`);
+      setLessons(data);
+      
+      // Filtering if a subject is selected
+      if (selectedSubject) {
+        console.log("Filtering lessons for selected subject:", selectedSubject.id);
+        
+        const filtered = data.filter(lesson => {
+          console.log("Lesson:", lesson.id, "subjectid:", lesson.subjectid);
+          return lesson.subjectid && lesson.subjectid.id === selectedSubject.id;
+        });
+        
+        console.log(`Found ${filtered.length} lessons for subject ${selectedSubject.id}`);
+        setFilteredLessons(filtered);
+      } else {
+        console.log("No subject selected, not filtering lessons");
+        setFilteredLessons([]); // Clear filtered if no subject selected
+      }
+    } else {
+      console.log("No lessons data returned or empty array");
+      setLessons([]);
+      setFilteredLessons([]);
+    }
+    
+    setError(null);
+  } catch (err: any) {
+    console.error("Error loading lessons:", err);
+    setError(err.message || "Failed to load lessons");
+    setLessons([]);
+    setFilteredLessons([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
 const Subjects: React.FC = () => {
   const [levels, setLevels] = useState<Level[]>([]);
@@ -830,6 +881,10 @@ const Subjects: React.FC = () => {
   const [isLessonEditModalOpen, setIsLessonEditModalOpen] = useState<boolean>(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<boolean>(false);
   const [lessonToDelete, setLessonToDelete] = useState<string | null>(null);
+
+  // State for delete subject confirmation modal
+  const [showDeleteSubjectModal, setShowDeleteSubjectModal] = useState<boolean>(false);
+  const [subjectToDelete, setSubjectToDelete] = useState<string | null>(null);
 
   // Fetch levels from Supabase
   useEffect(() => {
@@ -911,120 +966,9 @@ const Subjects: React.FC = () => {
 
   // Fetch lessons from Supabase
   useEffect(() => {
-    const loadLessons = async () => {
-      try {
-        setLoading(true);
-        console.log("Loading lessons...");
-        
-        const { data, error } = await fetchLessons();
-        
-        if (error) {
-          console.error("Error in loadLessons:", error);
-          throw error;
-        }
-        
-        // Log the raw data
-        console.log("Raw lessons data:", data);
-        
-        if (data && data.length > 0) {
-          console.log(`Successfully loaded ${data.length} lessons`);
-          setLessons(data);
-          
-          // Initial filtering if a subject is already selected
-          if (selectedSubject) {
-            console.log("Filtering lessons for selected subject:", selectedSubject.id);
-            
-            const filtered = data.filter(lesson => {
-              // Log each lesson's subjectid for debugging
-              console.log("Lesson:", lesson.id, "subjectid:", lesson.subjectid);
-              
-              return lesson.subjectid && lesson.subjectid.id === selectedSubject.id;
-            });
-            
-            console.log(`Found ${filtered.length} lessons for subject ${selectedSubject.id}`);
-            setFilteredLessons(filtered);
-          } else {
-            console.log("No subject selected, not filtering lessons");
-          }
-        } else {
-          console.log("No lessons data returned or empty array");
-          setLessons([]);
-          setFilteredLessons([]);
-        }
-        
-        setError(null);
-      } catch (err: any) {
-        console.error("Error in loadLessons:", err);
-        setError(err.message || "Failed to load lessons");
-        setLessons([]);
-        setFilteredLessons([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadLessons();
-  }, []); // Empty dependency array ensures this only runs once on mount
-
-  // After the existing useEffects, add a new one for selected subject
-  useEffect(() => {
-    // Skip if no subject is selected
-    if (!selectedSubject) return;
-    
-    const loadSubjectLessons = async () => {
-      try {
-        setLoading(true);
-        console.log("Fetching lessons for selected subject:", selectedSubject.id);
-        
-        // Try direct query first
-        const { data, error } = await supabase
-          .from('lessons')
-          .select('*')
-          .eq('subjectid', selectedSubject.id);
-        
-        console.log("Direct subject query result:", { data, error });
-        
-        if (!error && data && data.length > 0) {
-          console.log(`Found ${data.length} lessons with direct query`);
-          setFilteredLessons(data);
-          return;
-        }
-        
-        // If direct query didn't work, try filtering the existing lessons
-        console.log("Direct query returned no results, trying manual filtering");
-        const filtered = lessons.filter(lesson => {
-          try {
-            // Check different subjectid formats
-            if (typeof lesson.subjectid === 'string') {
-              return lesson.subjectid === selectedSubject.id;
-            } 
-            
-            if (typeof lesson.subjectid === 'object' && lesson.subjectid !== null) {
-              if (lesson.subjectid.id) {
-                return lesson.subjectid.id === selectedSubject.id;
-              }
-            }
-            
-            return false;
-          } catch (err) {
-            console.error("Error filtering lesson:", err);
-            return false;
-          }
-        });
-        
-        console.log(`Found ${filtered.length} lessons with manual filtering`);
-        setFilteredLessons(filtered);
-        
-      } catch (err: any) {
-        console.error("Error in loadSubjectLessons:", err);
-        setError(err.message || "Failed to load lessons for this subject");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadSubjectLessons();
-  }, [selectedSubject, lessons]); // Run when selected subject or lessons array changes
+    // Call the standalone loadLessons function, passing the required state and setters
+    loadLessons(setLessons, setFilteredLessons, setError, setLoading, selectedSubject);
+  }, [selectedSubject]); // Re-run when selectedSubject changes
 
   // Handle level selection and filter subjects
   const handleLevelSelect = (level: string) => {
@@ -1120,6 +1064,113 @@ const Subjects: React.FC = () => {
       status: subject.status
     });
     setIsModalOpen(true);
+  };
+
+  // Placeholder for delete subject functionality
+  const handleDeleteSubject = async (subjectId: string) => {
+    setSubjectToDelete(subjectId);
+    setShowDeleteSubjectModal(true);
+  };
+  
+  // Function to handle the actual deletion after confirmation
+  const confirmDeleteSubject = async () => {
+    if (!subjectToDelete) return;
+
+    try {
+      setLoading(true);
+
+      // 1. Check if the subject is referenced in the timetable
+      console.log(`Checking direct subject timetable references for subject: ${subjectToDelete}`);
+      const { data: timetableReferences, error: checkError } = await supabase
+        .from('timetable')
+        .select('id') // Select any column just to see if a row exists
+        .limit(1)     // Only need to know if at least one exists
+        .eq('subjectId', subjectToDelete);
+
+      if (checkError) {
+        console.error('Error checking direct subject timetable references:', checkError);
+        throw new Error('Could not verify subject usage. Please try again.');
+      }
+
+      console.log(`Timetable reference check returned: ${timetableReferences ? timetableReferences.length : 0} results.`);
+
+      if (timetableReferences && timetableReferences.length > 0) {
+        // Subject is referenced, prevent deletion
+        toast.error('Cannot delete subject: It is currently used in the timetable. Please remove it from the schedule first.');
+        // Close the modal without deleting
+        setShowDeleteSubjectModal(false);
+        setSubjectToDelete(null);
+        setLoading(false);
+        return;
+      }
+
+      // Check 2: Check if associated classes are in the timetable
+      console.log(`Checking associated classes for subject: ${subjectToDelete}`);
+      const { data: associatedLinks, error: linkError } = await supabase
+        .from('classsubjects')
+        .select('classid')
+        .eq('subjectid', subjectToDelete); // subjectid is likely correct here based on schema
+
+      if (linkError) {
+        console.error('Error fetching class-subject links:', linkError);
+        throw new Error('Could not check class associations.');
+      }
+
+      if (associatedLinks && associatedLinks.length > 0) {
+        const associatedClassIds = associatedLinks.map(link => link.classid).filter(id => id != null); // Get non-null class IDs
+        console.log('Associated Class IDs:', associatedClassIds);
+
+        if (associatedClassIds.length > 0) {
+          const { data: classTimetableRefs, error: classCheckError } = await supabase
+            .from('timetable')
+            .select('id') // Check for any entry
+            .in('classId', associatedClassIds) // Use classId (camelCase) as likely in timetable
+            .limit(1); // We only need to know if at least one exists
+
+          if (classCheckError) {
+            console.error('Error checking class timetable references:', classCheckError);
+            throw new Error('Could not check class timetable references.');
+          }
+
+          console.log(`Class timetable reference check returned: ${classTimetableRefs ? classTimetableRefs.length : 0} results.`);
+
+          if (classTimetableRefs && classTimetableRefs.length > 0) {
+            // An associated class is in the timetable, block subject deletion
+            toast.error('Cannot delete subject: A class associated with this subject is still scheduled. Please remove related timetable entries first.');
+            setShowDeleteSubjectModal(false);
+            setSubjectToDelete(null);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      // 2. Proceed with deletion if no references found
+      console.log("No timetable references found. Proceeding with deletion...");
+      const { error: deleteError } = await supabase.from('subjects').delete().eq('id', subjectToDelete);
+
+      if (deleteError) {
+        // Handle potential errors during the actual delete (other than FK violation)
+        throw deleteError;
+      }
+
+      // 3. Update state and notify user on successful deletion
+      setSubjects(prev => prev.filter(s => s.id !== subjectToDelete));
+      setFilteredSubjects(prev => prev.filter(s => s.id !== subjectToDelete));
+      toast.success('Subject deleted successfully');
+
+    } catch (err: any) {
+      console.error('Error deleting subject:', err);
+      toast.error(err.message || 'Failed to delete subject');
+      setError(err.message || 'Failed to delete subject'); // Optionally set error state
+    } finally {
+      setLoading(false);
+      // Close the modal and reset state (only if deletion wasn't stopped early)
+      if (showDeleteSubjectModal) { // Check if modal is still technically open
+        setShowDeleteSubjectModal(false);
+        setSubjectToDelete(null);
+      }
+    }
   };
   
   // Handle form input changes
@@ -1549,8 +1600,8 @@ const Subjects: React.FC = () => {
       
       toast.success('Lesson deleted successfully');
       
-      // Reload lessons
-      await loadLessons();
+      // Reload lessons by calling the standalone function
+      await loadLessons(setLessons, setFilteredLessons, setError, setLoading, selectedSubject);
       
       // Close the modal
       setShowDeleteConfirmation(false);
@@ -1732,19 +1783,6 @@ const Subjects: React.FC = () => {
           <LessonsHeader>
             <LessonsTitle>Lessons for {selectedSubject.subjectname}</LessonsTitle>
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-              <button
-                onClick={debugLessonsData}
-                style={{
-                  padding: '0.375rem 0.75rem',
-                  fontSize: '0.8rem',
-                  backgroundColor: '#f0f0f0',
-                  border: '1px solid #ddd',
-                  borderRadius: '0.375rem',
-                  cursor: 'pointer'
-                }}
-              >
-                Debug
-              </button>
               <BackButton onClick={handleBackToSubjects}>
                 <FiChevronLeft />
                 Back to Subjects
@@ -1832,14 +1870,24 @@ const Subjects: React.FC = () => {
                       <SubjectStatus $active={subject.status === 'active'}>
                         {subject.status === 'active' ? 'Active' : 'Inactive'}
                       </SubjectStatus>
-                      <EditButton 
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent triggering the card click
-                          handleEditSubject(subject);
-                        }}
-                      >
-                        <FiEdit2 />
-                      </EditButton>
+                      <SubjectActions>
+                        <EditButton 
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent triggering the card click
+                            handleEditSubject(subject);
+                          }}
+                        >
+                          <FiEdit2 />
+                        </EditButton>
+                        <DeleteButton
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent triggering the card click
+                            handleDeleteSubject(subject.id);
+                          }}
+                        >
+                          <FiTrash2 />
+                        </DeleteButton>
+                      </SubjectActions>
                     </SubjectFooter>
                   </SubjectCard>
                 ))}
@@ -2176,6 +2224,50 @@ const Subjects: React.FC = () => {
         onClose={() => setShowAssignModal(false)}
         onAssign={handleAssignSubjectToGrade}
       />
+
+      {/* Delete Subject Confirmation Modal */}
+      {showDeleteSubjectModal && (
+        <ModalOverlay initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <ModalContent
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{ maxWidth: '450px' }}
+          >
+            <ModalHeader>
+              <ModalTitle>Confirm Subject Deletion</ModalTitle>
+              <CloseButton onClick={() => setShowDeleteSubjectModal(false)}>
+                <FiX size={20} />
+              </CloseButton>
+            </ModalHeader>
+            <div style={{ padding: '1rem 0.5rem' }}>
+              <p style={{ marginBottom: '1.5rem', lineHeight: '1.6' }}>
+                Are you sure you want to delete this subject?
+                <br />
+                <strong>This action cannot be undone.</strong> It may also affect related lessons and class assignments.
+              </p>
+              <FormButtonContainer>
+                <CancelButton
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteSubjectModal(false);
+                    setSubjectToDelete(null);
+                  }}
+                >
+                  Cancel
+                </CancelButton>
+                <DeleteButton
+                  onClick={confirmDeleteSubject}
+                  style={{ width: 'auto' }} // Adjust width if needed
+                  disabled={loading} // Disable if loading state is active
+                >
+                  <FiTrash2 />
+                  Yes, Delete Subject
+                </DeleteButton>
+              </FormButtonContainer>
+            </div>
+          </ModalContent>
+        </ModalOverlay>
+      )}
 
     </SubjectsContainer>
   );

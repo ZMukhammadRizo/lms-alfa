@@ -1098,7 +1098,7 @@ const Timetables: React.FC = () => {
       
       const { data: timetableData, error: timetableError } = await supabase
         .from('timetable')
-        .select('*, subjects(id, subjectname), classes(id, classname), users(firstName, lastName)');
+        .select('*, subjects:subjects!timetable_subjectId_fkey(id, subjectname), classes(id, classname), users(firstName, lastName)'); // Specify relationship
       
       if (timetableError) {
         console.error('Error fetching timetable:', timetableError);
