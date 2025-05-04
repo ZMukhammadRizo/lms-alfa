@@ -263,26 +263,7 @@ const ParentDashboard: React.FC = () => {
 						))}
 					</StudentButtonsContainer>
 
-					<RefreshButton onClick={handleRefresh} disabled={isRefreshing || loading}>
-						<AnimatePresence mode='wait'>
-							{isRefreshing ? (
-								<motion.div
-									key='refreshing'
-									initial={{ rotate: 0 }}
-									animate={{ rotate: 360 }}
-									exit={{ rotate: 0 }}
-									transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-								>
-									<FiRefreshCw />
-								</motion.div>
-							) : (
-								<motion.div key='refresh'>
-									<FiRefreshCw />
-								</motion.div>
-							)}
-						</AnimatePresence>
-						<span>Refresh</span>
-					</RefreshButton>
+					
 				</HeaderControls>
 			</DashboardHeader>
 
@@ -475,38 +456,6 @@ const ParentDashboard: React.FC = () => {
 											{overallStats.attendanceValue}%
 										</ProgressValue>
 									</ProgressItem>
-									<ProgressItem>
-										<ProgressLabel>Assignment Completion</ProgressLabel>
-										<ProgressBar>
-											<ProgressFill
-												$percentage={
-													overallStats.pendingAssignments > 0
-														? 100 - overallStats.pendingAssignments * 20
-														: 100
-												}
-												$color={
-													overallStats.pendingAssignments === 0
-														? '#22c55e'
-														: overallStats.pendingAssignments <= 2
-														? '#f59e0b'
-														: '#ef4444'
-												}
-											/>
-										</ProgressBar>
-										<ProgressValue
-											$value={
-												overallStats.pendingAssignments > 0
-													? 100 - overallStats.pendingAssignments * 20
-													: 100
-											}
-											$type='assignments'
-										>
-											{overallStats.pendingAssignments > 0
-												? 100 - overallStats.pendingAssignments * 20
-												: 100}
-											%
-										</ProgressValue>
-									</ProgressItem>
 								</ProgressSection>
 							</OverviewCard>
 						</GridItem>
@@ -580,40 +529,6 @@ const ParentDashboard: React.FC = () => {
 							</GradesCard>
 						</GridItem>
 
-						{/* Upcoming Events */}
-						<GridItem
-							as={motion.div}
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.3, delay: 0.6 }}
-						>
-							<SectionHeader>
-								<SectionTitle>Upcoming Events</SectionTitle>
-								<ViewAllButton as={Link} to='/parent/calendar'>
-									Calendar <FiCalendar />
-								</ViewAllButton>
-							</SectionHeader>
-							<EventsCard>
-								{upcomingEvents.length === 0 ? (
-									<EmptyState>No upcoming events</EmptyState>
-								) : (
-									upcomingEvents.map(event => (
-										<EventItem key={event.id}>
-											<EventDate>
-												<EventIcon>
-													<FiCalendar />
-												</EventIcon>
-												<EventDateTime>
-													<div>{event.date}</div>
-													<EventTime>{event.time}</EventTime>
-												</EventDateTime>
-											</EventDate>
-											<EventTitle>{event.title}</EventTitle>
-										</EventItem>
-									))
-								)}
-							</EventsCard>
-						</GridItem>
 					</DashboardGrid>
 				</>
 			)}

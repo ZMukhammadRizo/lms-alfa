@@ -213,7 +213,6 @@ const GradesPage: React.FC = () => {
 														<SubjectName>{subject.subjectName}</SubjectName>
 														<SubjectGrade $score={averageScore}>
 															{renderGradeLetter(averageScore)}
-															<SubjectScore>({averageScore.toFixed(1)}%)</SubjectScore>
 														</SubjectGrade>
 													</SubjectCard>
 												)
@@ -242,8 +241,7 @@ const GradesPage: React.FC = () => {
 															{subject.subjectName}
 														</SubjectHeaderName>
 														<SubjectHeaderGrade $score={averageScore}>
-															Average: {renderGradeLetter(averageScore)} ({averageScore.toFixed(1)}
-															%)
+															Average: {renderGradeLetter(averageScore)}
 														</SubjectHeaderGrade>
 													</SubjectHeader>
 
@@ -260,7 +258,7 @@ const GradesPage: React.FC = () => {
 																	<LessonCell width='50%'>{lesson.lessons.lessonname}</LessonCell>
 																	<LessonCell width='25%'>{lesson.quarters.name}</LessonCell>
 																	<LessonGradeCell width='25%' $score={lesson.score}>
-																		{renderGradeLetter(lesson.score)} ({lesson.score}%)
+																		{renderGradeLetter(lesson.score)}
 																	</LessonGradeCell>
 																</LessonsTableRow>
 															))}
