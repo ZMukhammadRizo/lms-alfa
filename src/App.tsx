@@ -40,7 +40,10 @@ import { StudentsPage } from './pages/parent/StudentsPage'
 import Announcements from './pages/student/Announcements'
 import Assignments from './pages/student/Assignments'
 import CourseDetail from './pages/student/CourseDetail'
+import GradeDetails from './pages/student/GradeDetails'
+import StudentGradesPage from './pages/student/Grades'
 import MyCourses from './pages/student/MyCourses'
+import SingleAssignment from './pages/student/SingleAssignment'
 import StudentDashboard from './pages/student/StudentDashboard'
 import StudentSchedule from './pages/student/StudentSchedule'
 import TeacherAnnouncements from './pages/teacher/Announcements'
@@ -56,8 +59,7 @@ import TeacherSchedule from './pages/teacher/TeacherSchedule'
 import TeacherStudents from './pages/teacher/TeacherStudents'
 import GlobalStyle from './styles/globalStyles'
 import { createTheme } from './styles/theme'
-import StudentGradesPage from './pages/student/Grades'
-import GradeDetails from './pages/student/GradeDetails'
+import TeacherSubmissions from './pages/teacher/TeacherSubmissions'
 
 // Create a context for theme settings
 export interface ThemeContextType {
@@ -161,6 +163,7 @@ function AppContent() {
 						<Route path='announcements' element={<TeacherAnnouncements />} />
 						<Route path='journal/:classId' element={<TeacherJournalPage />} />
 						<Route path='journal' element={<TeacherJournalPage />} />
+						<Route path='submissions' element={<TeacherSubmissions />} />
 					</Route>
 
 					{/* Student routes */}
@@ -172,6 +175,7 @@ function AppContent() {
 						<Route path='course/:courseId' element={<CourseDetail />} />
 						<Route path='lesson/:lessonId' element={<LessonDetail />} />
 						<Route path='assignments' element={<Assignments />} />
+						<Route path='assignments/:assignmentId' element={<SingleAssignment />} />
 						<Route path='schedule' element={<StudentSchedule />} />
 						<Route path='grades' element={<StudentGradesPage />} />
 						{/* Route for viewing grades for a specific subject */}
