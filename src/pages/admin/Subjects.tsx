@@ -815,8 +815,12 @@ const loadLessons = async (
         console.log("Filtering lessons for selected subject:", selectedSubject.id);
         
         const filtered = data.filter(lesson => {
-          console.log("Lesson:", lesson.id, "subjectid:", lesson.subjectid);
-          return lesson.subjectid && lesson.subjectid.id === selectedSubject.id;
+          // Handle both string and object cases for subjectid
+          const subjectId = typeof lesson.subjectid === 'object' 
+                            ? lesson.subjectid?.id 
+                            : lesson.subjectid;
+          // console.log("Lesson:", lesson.id, "subjectid raw:", lesson.subjectid, "extracted ID:", subjectId); // More detailed log if needed
+          return subjectId === selectedSubject.id;
         });
         
         console.log(`Found ${filtered.length} lessons for subject ${selectedSubject.id}`);
