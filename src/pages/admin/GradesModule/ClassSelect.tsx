@@ -79,7 +79,7 @@ const ClassSelect: React.FC = () => {
 
 	// Handle card click - navigate to subject selection
 	const handleClassClick = (classId: string) => {
-		navigate(`/admin/grades/levels/${gradeLevel}/classes/${classId}/subjects`)
+		navigate(`/admin/grades/levels/${levelName}/classes/${classId}/subjects`)
 	}
 
 	// Animation variants
@@ -119,7 +119,7 @@ const ClassSelect: React.FC = () => {
 			<PageHeaderWrapper>
 				<PageHeader>
 					<HeaderContent>
-						<PageTitle>Grade {levelName || gradeLevel} Classes</PageTitle>
+						<PageTitle>Grade {levelName} Classes</PageTitle>
 						<SubTitle>Select a class to view and manage subjects and grades</SubTitle>
 					</HeaderContent>
 					<HeaderRight>

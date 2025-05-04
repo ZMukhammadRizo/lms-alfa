@@ -1,26 +1,27 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import styled, { css } from 'styled-components';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
+import styled from 'styled-components';
 import { 
-  FiCalendar, FiClock, FiChevronDown, 
-  FiChevronLeft, FiChevronRight, FiInfo, FiBook,
-  FiUsers, FiMapPin, FiTarget, FiX, FiUser
+  FiClock, FiFilter, FiChevronDown, 
+  FiChevronLeft, FiChevronRight, FiArrowUp, FiUser,
+  FiMapPin, FiUsers
 } from 'react-icons/fi';
-import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
-import { fetchAllTimetableEvents } from '../../services/teacherService'; // Import the new service
-import { RingLoader } from 'react-spinners';
+import supabase from '../../config/supabaseClient';
+import { useAuth } from '../../contexts/AuthContext';
 
-// --- Reusing Helper functions from ParentCalendar --- 
+// Helper functions
 const getWeekDays = (date: Date): Date[] => {
   const day = date.getDay();
   const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+  
   const monday = new Date(date.setDate(diff));
   const days = [new Date(monday)];
-  for (let i = 1; i < 7; i++) {
+  
+  for (let i = 1; i < 7; i++) {  // Changed to 7 days (Mon-Sun) for full week
     const next = new Date(monday);
     next.setDate(monday.getDate() + i);
     days.push(next);
   }
+  
   return days;
 };
 
@@ -32,932 +33,506 @@ const formatDay = (date: Date): string => {
   return date.toLocaleDateString('en-US', { weekday: 'short' });
 };
 
-const formatTime = (decimalHour: number): string => {
-    const hour = Math.floor(decimalHour);
-    const minutes = Math.round((decimalHour - hour) * 60);
+const formatTime = (hour: number, minute: number = 0): string => {
   const ampm = hour >= 12 ? 'PM' : 'AM';
   const formattedHour = hour % 12 || 12;
-    const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes;
-    // Only show minutes if they are not 00
-    return `${formattedHour}${minutes > 0 ? `:${formattedMinutes}` : ''} ${ampm}`;
+  return `${formattedHour}:${minute === 0 ? '00' : minute} ${ampm}`;
 };
 
-const isToday = (date: Date) => {
-  const today = new Date();
-  return (
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear()
-  );
-};
-
-// --- New Color Generation Helpers ---
-
-// Predefined color palette (adjust as needed)
-const colorPalette = [
-  '#4F46E5', // Indigo
-  '#0D9488', // Teal
-  '#DB2777', // Pink
-  '#D97706', // Amber
-  '#6D28D9', // Violet
-  '#16A34A', // Green
-  '#DC2626', // Red
-  '#0EA5E9', // Sky Blue
-  '#EA580C', // Orange
-  '#65A30D', // Lime
-];
-
-// Simple hash function for strings
-const hashCode = (str: string): number => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0; // Convert to 32bit integer
-  }
-  return Math.abs(hash);
-};
-
-// Function to get a color from the palette based on a string
-const getColorFromPalette = (str: string, palette: string[]): string => {
-  if (!str || palette.length === 0) {
-    return palette[0] || '#4F46E5'; // Default or fallback
-  }
-  const hash = hashCode(str);
-  const index = hash % palette.length;
-  return palette[index];
-};
-
-// Helper function to determine if a hex color is light or dark
-const isLightColor = (hexColor: string): boolean => {
-  if (!hexColor || !hexColor.startsWith('#')) return false; // Default to dark text if invalid
-  const hex = hexColor.replace('#', '');
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  // Formula for perceived brightness
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness > 150; // Threshold for considering color light (adjust as needed)
-};
-
-// Type definitions (Updated)
+// Type definitions
 interface ClassEvent {
-  id: number | string;
-  title: string; // Subject Name
-  course: string; // Subject Name (Same as title)
-  startTime: number; // Decimal hour format
-  endTime: number; // Decimal hour format
+  id: number;
+  title: string;
+  subjectid: string;
+  startTime: number; // 24-hour format (e.g., 9 for 9:00 AM)
+  startMinute?: number; // Optional minute (e.g., 30 for 9:30)
+  endTime: number; // 24-hour format (e.g., 10 for 10:00 AM)
+  endMinute?: number; // Optional minute (e.g., 30 for 10:30)
   day: number; // 0-6 for Monday-Sunday
-  teacher: string; 
-  location: string;
-  color: string; // Original color from DB (might be unused now but keep for data structure)
-  classId?: string;
-  className?: string; // Added from service
-  generatedColor?: string; // Color generated from palette
+  teacherid?: string;
+  students?: number;
+  location?: string;
+  color: string;
+  // Add these for backward compatibility with existing code
+  course?: string; // For display purposes
+  teacher?: string; // For display purposes
+  classId?: string; // Store the class ID from the database
+  className?: string; // Store the class name for display
 }
 
-// Interface for filter dropdown options
+// Define global variable types
+declare global {
+  interface Window {
+    actualIdFieldName?: string;
+    lastEditedEvent?: ClassEvent;
+    lastDeletedEventId?: number;
+  }
+}
+
 interface FilterOptionProps {
   $isActive: boolean;
 }
 
-// --- Reusing Animation Variants from ParentCalendar --- 
-const calendarVariants = {
-  hidden: (direction: number) => ({ 
-    opacity: 0, 
-    x: direction > 0 ? 50 : -50 
-  }),
-  visible: { 
-    opacity: 1, 
-    x: 0, 
-    transition: { type: 'tween', duration: 0.3, ease: 'easeInOut' } 
-  },
-  exit: (direction: number) => ({ 
-    opacity: 0, 
-    x: direction < 0 ? 50 : -50, 
-    transition: { type: 'tween', duration: 0.3, ease: 'easeInOut' } 
-  }),
-};
+// Adding interfaces for form data
+interface ScheduleFormData {
+  title: string;
+  course: string;
+  startTime: string;
+  endTime: string;
+  day: number;
+  location: string;
+  assignedClass: string;
+}
 
-const eventVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: (i: number) => ({ 
-    opacity: 1, 
-    y: 0, 
-    transition: { delay: i * 0.03, duration: 0.2 } 
-  }),
-};
+// Update interfaces to match the relationship between classes and subjects
+interface ClassSubject {
+  classid: boolean;
+  subjectId: string | undefined;
+  id: string;
+  classId?: string;
+  subjectid?: string; // Some DBs may use subjectid instead of subject_id
+  subject_name?: string;
+  subjectname?: string; // Add this for consistency
+  className?: string;  // Add this property
+  classname?: string;   // Add this property
+}
 
-const modalOverlayVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.2 } },
-  exit: { opacity: 0, transition: { duration: 0.2 } },
-};
+// Adding interfaces for the Supabase data
+interface CourseData {
+  id: string;
+  name: string;
+  color: string;
+}
 
-const modalContentVariants = {
-  hidden: { opacity: 0, scale: 0.9 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.2, ease: 'easeOut' } },
-  exit: { opacity: 0, scale: 0.9, transition: { duration: 0.15, ease: 'easeIn' } },
-};
+interface ClassData {
+  id: string;
+  name: string;
+  teacherid?: string;
+}
 
-// --- TeacherSchedule Component --- 
-const TeacherSchedule: React.FC = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedEvent, setSelectedEvent] = useState<ClassEvent | null>(null);
-  const [direction, setDirection] = useState(0); // Use number for animation direction
-  const [classEvents, setClassEvents] = useState<ClassEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Filter States
-  const [filterSubject, setFilterSubject] = useState<string | null>(null);
-  const [filterClass, setFilterClass] = useState<string | null>(null);
-  const [showSubjectFilter, setShowSubjectFilter] = useState(false);
-  const [showClassFilter, setShowClassFilter] = useState(false);
-  
-  const { user } = useAuth(); // Get user from context
-  const teacherId = user?.id;
-  
-  const weekScheduleRef = useRef<HTMLDivElement>(null); // For potential scrolling
-  
-  const weekDays = getWeekDays(new Date(currentDate));
-  const hours = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
-  
-  // Fetch data when teacherId changes
-  useEffect(() => {
-    const loadData = async () => {
-      if (!teacherId) {
-        setError("User not logged in.");
-        setIsLoading(false);
-        setClassEvents([]);
-      return;
-    }
-    
-    setIsLoading(true);
-    setError(null);
-      try {
-        const fetchedEvents = await fetchAllTimetableEvents();
-        setClassEvents(fetchedEvents || []);
-    } catch (err) {
-        console.error("Failed to load master schedule data:", err);
-        setError("Could not load schedule data. Please try again later.");
-        setClassEvents([]);
-    } finally {
-      setIsLoading(false);
-    }
-    };
-    
-    loadData();
-  }, [teacherId]);
-
-  // Get unique subjects and classes for filters
-  const uniqueSubjects = useMemo(() => 
-    [...new Set(classEvents.map(event => event.course))].sort()
-  , [classEvents]);
-
-  const uniqueClasses = useMemo(() => 
-    [...new Set(classEvents.map(event => event.className).filter(Boolean) as string[])].sort()
-  , [classEvents]);
-
-  // Apply filters - Return empty if no class is selected
-  const filteredEvents = useMemo(() => {
-    // If "All Classes" (or initial state) is selected, show nothing yet.
-    if (!filterClass) {
-      return [];
-    }
-    // Otherwise, filter by selected class and subject
-    return classEvents.filter(event => {
-      const subjectMatch = !filterSubject || event.course === filterSubject;
-      const classMatch = event.className === filterClass; // filterClass is guaranteed non-null here
-      return subjectMatch && classMatch;
-    });
-  }, [classEvents, filterSubject, filterClass]); 
-  
-  const handlePrevious = () => {
-    setDirection(-1); 
-    const newDate = new Date(currentDate);
-      newDate.setDate(newDate.getDate() - 7);
-    setCurrentDate(newDate);
-  };
-  
-  const handleNext = () => {
-    setDirection(1); 
-    const newDate = new Date(currentDate);
-      newDate.setDate(newDate.getDate() + 7);
-    setCurrentDate(newDate);
-  };
-  
-  const handleEventClick = (event: ClassEvent) => {
-    // Calculate the generated color for this specific event
-    const generatedColor = getColorFromPalette(event.course, colorPalette);
-    // Set the state with the original event data PLUS the generated color
-    setSelectedEvent({ ...event, generatedColor });
-  };
-  
-  // Filter handlers
-  const handleSubjectFilterChange = (subject: string | null) => {
-    setFilterSubject(subject);
-    setShowSubjectFilter(false);
-  };
-
-  const handleClassFilterChange = (className: string | null) => {
-    setFilterClass(className);
-    setShowClassFilter(false);
-  };
-
-  const handleToday = () => {
-    setDirection(currentDate > new Date() ? -1 : 1); // Set direction based on current vs today
-    setCurrentDate(new Date());
-  };
-  
-  return (
-    <CalendarContainer
-      as={motion.div}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
-      <ControlBar>
-        <CalendarTitle>My Schedule</CalendarTitle>
-
-        <DateNavigator>
-          <NavButton onClick={handlePrevious}>
-            <FiChevronLeft />
-          </NavButton>
-          <CurrentPeriod>
-            <span>{formatDate(weekDays[0])} - {formatDate(weekDays[6])}</span>
-          </CurrentPeriod>
-          <NavButton onClick={handleNext}>
-            <FiChevronRight />
-          </NavButton>
-        </DateNavigator>
-        
-        <Spacer />
-
-        <ActionControls>
-           {/* Subject Filter */}
-           <FilterContainer>
-             <FilterButton onClick={() => setShowSubjectFilter(!showSubjectFilter)}>
-               <FiBook size={16} /> 
-               <span>{filterSubject || 'All Subjects'}</span>
-               <AnimatedChevron $isOpen={showSubjectFilter} />
-             </FilterButton>
-             <AnimatePresence>
-               {showSubjectFilter && (
-                 <FilterDropdown 
-                   variants={dropdownVariants}
-                   initial="hidden" 
-                   animate="visible" 
-                   exit="exit"
-                   onClick={() => setShowSubjectFilter(false)} // Close on option click
-                 >
-          <FilterOption 
-                     onClick={() => handleSubjectFilterChange(null)}
-                     $isActive={filterSubject === null}
-          >
-                     All Subjects
-          </FilterOption>
-                   {uniqueSubjects.map((subject) => (
-            <FilterOption 
-                       key={subject}
-                       onClick={() => handleSubjectFilterChange(subject)}
-                       $isActive={filterSubject === subject}
-                     >
-                       {subject}
-            </FilterOption>
-          ))}
-        </FilterDropdown>
-      )}
-             </AnimatePresence>
-           </FilterContainer>
-
-           {/* Class/Section Filter */}
-           <FilterContainer>
-             <FilterButton onClick={() => setShowClassFilter(!showClassFilter)}>
-               <FiUsers size={16} /> 
-               <span>{filterClass || 'All Classes'}</span>
-               <AnimatedChevron $isOpen={showClassFilter} />
-             </FilterButton>
-             <AnimatePresence>
-               {showClassFilter && (
-                 <FilterDropdown 
-                   variants={dropdownVariants}
-                   initial="hidden" 
-                   animate="visible" 
-                   exit="exit"
-                   onClick={() => setShowClassFilter(false)} // Close on option click
-                 >
-          <FilterOption 
-                     onClick={() => handleClassFilterChange(null)}
-                     $isActive={filterClass === null}
-          >
-            All Classes
-          </FilterOption>
-                   {uniqueClasses.map((className) => (
-            <FilterOption 
-                       key={className}
-                       onClick={() => handleClassFilterChange(className)}
-                       $isActive={filterClass === className}
-                     >
-                       {className}
-            </FilterOption>
-          ))}
-        </FilterDropdown>
-      )}
-             </AnimatePresence>
-           </FilterContainer>
-
-          <TodayButton onClick={handleToday}>
-            <FiTarget size={16} />
-            <span>Today</span>
-          </TodayButton>
-        </ActionControls>
-      </ControlBar>
-      
-      {isLoading && (
-        <LoadingOverlay>
-          <RingLoader color="#4F46E5" size={60} />
-        </LoadingOverlay>
-      )}
-
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-
-      {!isLoading && !error && (
-        // Conditionally render placeholder or schedule
-        !filterClass ? (
-          <SelectClassMessage>
-            <FiInfo size={24} />
-            Please select a class to see the schedule.
-          </SelectClassMessage>
-        ) : (
-          <>
-            <AnimatePresence initial={false} custom={direction} mode="wait">
-              <motion.div
-                key={currentDate.toISOString() + filterClass} // Add filterClass to key for re-animation on filter change
-                variants={calendarVariants}
-                custom={direction} 
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                style={{ height: 'calc(100% - 5rem)', width: '100%' }} // Adjust height accounting for control bar
-              >
-          <WeekScheduleContainer>
-                <TimeAxis>
-                  {hours.map((hour) => (
-                    <TimeSlot key={hour}>
-                        {formatTime(hour)}
-                    </TimeSlot>
-                  ))}
-                </TimeAxis>
-                
-                  <WeekSchedule ref={weekScheduleRef}>
-                  <DaysContainer>
-                      {weekDays.map((day, dayIndex) => (
-                        <DayColumn key={dayIndex} $isToday={isToday(day)}>
-                          <DayHeader $isToday={isToday(day)}>
-                            <DayName>{formatDay(day)}</DayName>
-                            <DayDate>{formatDate(day)}</DayDate>
-                          </DayHeader>
-                          
-                          <DaySchedule>
-                            <AnimatePresence>
-                              {filteredEvents
-                                .filter(event => event.day === dayIndex) // Filter events for the current day column
-                                .map((event, index) => (
-                                  <ClassEventComponent 
-                                      key={`event-${event.id}`}
-                                    $eventColor={event.generatedColor || event.color}
-                                      style={{
-                                      top: `${(event.startTime - hours[0]) * 60}px`, 
-                                      height: `${(event.endTime - event.startTime) * 60}px`, 
-                                      minHeight: '40px'
-                                    }}
-                                        onClick={() => handleEventClick(event)}
-                                    variants={eventVariants} 
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="hidden" 
-                                    custom={index}
-                                    layout
-                                  >
-                                    <ClassEventContent>
-                                      <ClassEventTitle>{event.title}</ClassEventTitle>
-                                      <ClassEventDetail><FiClock size={12} /><span>{formatTime(event.startTime)} - {formatTime(event.endTime)}</span></ClassEventDetail>
-                                      <ClassEventDetail><FiMapPin size={12} /><span>{event.location}</span></ClassEventDetail>
-                                      <ClassEventDetail><FiUser size={12} /><span>{event.teacher}</span></ClassEventDetail>
-                                    </ClassEventContent>
-                                  </ClassEventComponent>
-                                ))}
-                            </AnimatePresence>
-                          </DaySchedule>
-                        </DayColumn>
-                      ))}
-                  </DaysContainer>
-                </WeekSchedule>
-          </WeekScheduleContainer>
-              </motion.div>
-            </AnimatePresence>
-          </>
-        )
-      )}
-      
-      {/* --- Reusing Modal from ParentCalendar --- */}
-      <AnimatePresence>
-        {selectedEvent && (
-          <ModalBackdrop 
-             key="backdrop" 
-             variants={modalOverlayVariants} 
-             initial="hidden" 
-             animate="visible" 
-             exit="exit" 
-             onClick={() => setSelectedEvent(null)} 
-          />
-        )}
-      {selectedEvent && (
-          <ModalWrapper key="modal"> 
-            <ModalContentComponent
-               variants={modalContentVariants} 
-               initial="hidden" 
-               animate="visible" 
-               exit="exit" 
-               onClick={(e) => e.stopPropagation()} 
-            >
-              <ModalHeaderComponent $color={selectedEvent.generatedColor || selectedEvent.color}><h3>{selectedEvent.title}</h3><ModalCloseButton onClick={() => setSelectedEvent(null)}><FiX size={20}/></ModalCloseButton></ModalHeaderComponent>
-              <ModalBodyComponent>
-                <EventDetailGrid>
-                  <EventDetail>
-                    <EventDetailIcon $color={selectedEvent.generatedColor || selectedEvent.color}>
-                      <FiBook size={16} />
-                    </EventDetailIcon>
-                    <EventDetailContent>
-                      <EventDetailLabel>Course</EventDetailLabel>
-                      <EventDetailValue>{selectedEvent.course}</EventDetailValue>
-                    </EventDetailContent>
-                  </EventDetail>
-                  
-                  <EventDetail>
-                    <EventDetailIcon $color={selectedEvent.generatedColor || selectedEvent.color}>
-                      <FiClock size={16} />
-                    </EventDetailIcon>
-                    <EventDetailContent>
-                      <EventDetailLabel>Time</EventDetailLabel>
-                      <EventDetailValue>{formatTime(selectedEvent.startTime)} - {formatTime(selectedEvent.endTime)}</EventDetailValue>
-                    </EventDetailContent>
-                  </EventDetail>
-                  
-                  <EventDetail>
-                    <EventDetailIcon $color={selectedEvent.generatedColor || selectedEvent.color}>
-                <FiCalendar size={16} />
-                    </EventDetailIcon>
-                    <EventDetailContent>
-                      <EventDetailLabel>Day</EventDetailLabel>
-                      <EventDetailValue>{formatDay(weekDays[selectedEvent.day])}</EventDetailValue>
-                    </EventDetailContent>
-                  </EventDetail>
-                                    
-                  <EventDetail>
-                    <EventDetailIcon $color={selectedEvent.generatedColor || selectedEvent.color}>
-                      <FiUser size={16} />
-                    </EventDetailIcon>
-                    <EventDetailContent>
-                      <EventDetailLabel>Teacher</EventDetailLabel>
-                      <EventDetailValue>{selectedEvent.teacher}</EventDetailValue>
-                    </EventDetailContent>
-                  </EventDetail>
-                  
-                  <EventDetail>
-                    <EventDetailIcon $color={selectedEvent.generatedColor || selectedEvent.color}>
-                  <FiMapPin size={16} />
-                    </EventDetailIcon>
-                    <EventDetailContent>
-                      <EventDetailLabel>Location</EventDetailLabel>
-                      <EventDetailValue>{selectedEvent.location}</EventDetailValue>
-                    </EventDetailContent>
-                  </EventDetail>
-                  
-                  {selectedEvent.className && (
-                     <EventDetail>
-                       <EventDetailIcon $color={selectedEvent.generatedColor || selectedEvent.color}>
-                  <FiUsers size={16} />
-                       </EventDetailIcon>
-                       <EventDetailContent>
-                         <EventDetailLabel>Class</EventDetailLabel>
-                         <EventDetailValue>{selectedEvent.className}</EventDetailValue>
-                       </EventDetailContent>
-                     </EventDetail>
-                  )}
-                </EventDetailGrid>
-              </ModalBodyComponent>
-              <ModalFooterComponent><ActionButton variant="outline" onClick={() => setSelectedEvent(null)}>Close</ActionButton></ModalFooterComponent>
-            </ModalContentComponent>
-           </ModalWrapper>
-        )}
-      </AnimatePresence>
-    </CalendarContainer>
-  );
-};
-
-// --- Reusing Styled Components from ParentCalendar (adaptations might be needed) ---
-const CalendarContainer = styled.div`
+// Styled components
+const Container = styled.div`
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 60px); // Adjust based on header height
-  background-color: ${({ theme }) => theme.colors.background.primary};
-  color: ${({ theme }) => theme.colors.text.primary};
-  padding: 1rem;
+  width: 100%;
+  padding: 20px;
+  font-family: 'Inter', sans-serif;
+  background-color: #f8fafc;
+  min-height: calc(100vh - 60px);
 `;
 
-const ControlBar = styled.div`
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+`;
+  
+const Title = styled.h2`
+    font-size: 24px;
+    font-weight: 600;
+  color: #1e293b;
+    margin: 0;
+`;
+
+const HeaderControls = styled.div`
+  display: flex;
+  gap: 10px;
+`;
+
+const Button = styled.button`
   display: flex;
   align-items: center;
-  padding: 0.5rem 0;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: #f8fafc;
+  }
+  
+  svg {
+    color: #6b7280;
+  }
 `;
 
-const CalendarTitle = styled.h1`
-  font-size: 1.6rem;
-  font-weight: 600;
-  margin: 0;
-  color: ${props => props.theme.colors.text.primary};
-  margin-right: 2rem;
+const PrimaryButton = styled(Button)`
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  
+  &:hover {
+    background-color: #2563eb;
+  }
+  
+  svg {
+    color: white;
+  }
 `;
 
-const DateNavigator = styled.div`
+const FilterContainer = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+`;
+
+const DateNavigation = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
 `;
 
 const NavButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  background-color: ${({ theme }) => theme.colors.background.secondary};
-  color: ${props => props.theme.colors.text.secondary};
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background: white;
+  border: 1px solid #e2e8f0;
   cursor: pointer;
   transition: all 0.2s ease;
   
   &:hover {
-    background-color: ${props => props.theme.colors.background.hover};
-    color: ${props => props.theme.colors.text.primary};
-    border-color: ${({ theme }) => theme.colors.border.light};
+    background: #f7fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    cursor: default;
+    opacity: 0.5;
+    transform: none;
+    box-shadow: none;
   }
 `;
 
-const CurrentPeriod = styled.div`
-  font-weight: 500;
-  color: ${props => props.theme.colors.text.primary};
-  padding: 0 0.75rem;
-  font-size: 1rem;
-`;
-  
-const Spacer = styled.div`
-  flex-grow: 1;
-`;
-
-const ActionControls = styled.div`
+const FilterGroup = styled.div`
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  gap: 10px;
 `;
 
-// Base Button style for filters/today
-const BaseButton = styled.button` 
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 0.9rem;
-  background-color: ${({ theme }) => theme.colors.background.secondary};
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-  border-radius: 8px;
-  color: ${props => props.theme.colors.text.secondary};
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.border.light};
-    background-color: ${({ theme }) => theme.colors.background.hover};
-  }
-`;
-
-const TodayButton = styled(BaseButton)`
-  // Inherits styles, can add specifics if needed
-`;
-
-const WeekScheduleContainer = styled.div`
-  display: flex;
-  height: 100%;
-  overflow: hidden;
-  background-color: ${({ theme }) => theme.colors.background.primary};
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-  border-radius: 8px;
-`;
-
-const TimeAxis = styled.div`
-  display: flex;
-  flex-direction: column;
-  width: 60px;
-  min-width: 60px;
-  padding-top: 45px; // Match DayHeader height
-  border-right: 1px solid ${props => props.theme.colors.border.light};
-  align-self: stretch;
-`;
-
-const TimeSlot = styled.div`
-  height: 60px; // Represents 1 hour
-  padding-right: 8px;
-  font-size: 12px;
-  color: ${props => props.theme.colors.text.secondary};
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
+const FilterDropdown = styled.div`
   position: relative;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
+  min-width: 120px;
 `;
 
-const WeekSchedule = styled.div`
-  flex: 1;
-  overflow: auto;
-  position: relative;
-`;
-
-const DaysContainer = styled.div`
-  display: flex;
-  min-width: min-content;
-`;
-
-const DayColumn = styled.div<{ $isToday: boolean }>`
-  flex: 1;
-  min-width: 140px; // Ensure minimum width for readability
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid ${props => props.theme.colors.border.light};
-  &:last-child { border-right: none; }
-`;
-
-const DayHeader = styled.div<{ $isToday: boolean }>`
-  height: 45px;
-  padding: 0 10px;
-  text-align: center;
-  border-bottom: 1px solid ${props => props.theme.colors.border.light};
-  background-color: ${({ theme }) => theme.colors.background.secondary}; // Slight background
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-
-  ${({ $isToday, theme }) => $isToday && css`
-    background-color: ${theme.colors.primary[50]};
-    ${DayName}, ${DayDate} {
-      color: ${theme.colors.primary[600]};
-      font-weight: 600;
-    }
-    border-bottom-color: ${theme.colors.primary[300]};
-  `}
-`;
-
-const DayName = styled.div`
-  font-weight: 500;
-  font-size: 0.75rem;
-  color: ${props => props.theme.colors.text.primary};
-  text-transform: uppercase;
-  line-height: 1.2;
-`;
-
-const DayDate = styled.div`
-  font-size: 0.7rem;
-  color: ${props => props.theme.colors.text.secondary};
-  line-height: 1.2;
-`;
-
-const DaySchedule = styled.div`
-  position: relative;
-  flex-grow: 1; 
-  background-image: linear-gradient(to bottom, ${({ theme }) => theme.colors.border.light ?? '#d1d5db'} 1px, transparent 1px);
-  background-size: 100% 60px; // Lines repeat every hour (60px)
-`;
-
-// Renamed to avoid conflict
-const ClassEventComponent = styled(motion.div)<{ $eventColor: string }>`
-  position: absolute; 
-  left: 5px;
-  right: 5px;
-  background-color: ${({ $eventColor }) => $eventColor};
-  border-radius: 6px;
-  padding: 6px 9px;
-  overflow: hidden;
-  cursor: pointer;
-  border: none;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  color: ${({ $eventColor }) => isLightColor($eventColor) ? '#1f2937' : 'white'};
-  z-index: 10;
-  transition: filter 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-  display: flex;
-  flex-direction: column;
-  
-  &:hover {
-    filter: brightness(1.05);
-    transform: translateY(-2px) scale(1.01);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  }
-`;
-
-const ClassEventContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-`;
-
-const ClassEventTitle = styled.div`
-  font-size: 0.8rem; 
-  font-weight: 600;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: inherit;
-  min-height: 1.2em;
-`;
-
-const ClassEventDetail = styled.div`
+const FilterButton = styled.button`
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.75rem;
-  margin-bottom: 3px;
-  opacity: 0.9;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: inherit;
-  flex-shrink: 0;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: white;
+  font-size: 14px;
+  cursor: pointer;
+  
+  &:hover {
+    background: #f7fafc;
+  }
   
   svg {
-    width: 12px;
-    height: 12px;
-    opacity: 0.8;
-    flex-shrink: 0;
-    transition: opacity 0.2s;
-  }
-
-  &:hover {
-    opacity: 1;
+    color: #718096;
   }
 `;
 
-// --- Reusing Modal Styled Components from ParentCalendar --- 
-const ModalWrapper = styled(motion.div)`
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1001;
-  pointer-events: none;
+const DropdownContent = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 10;
 `;
 
-const ModalBackdrop = styled(motion.div)`
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5); 
-  z-index: 1000;
-`;
-
-// Renamed to avoid conflict
-const ModalContentComponent = styled(motion.div)` 
-  background-color: ${props => props.theme.colors.background.primary};
-  border-radius: 12px;
-  width: 90%;
-  max-width: 480px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-  pointer-events: auto;
-`;
-
-interface ModalHeaderProps {
-  $color: string;
-}
-
-// Renamed to avoid conflict
-const ModalHeaderComponent = styled.div<ModalHeaderProps>` 
-  background: ${({ $color }) => $color || '#4F46E5'}; // Use solid color, remove gradient
-  color: ${({ $color }) => isLightColor($color) ? '#1f2937' : 'white'};
-  padding: 1rem 1.5rem; 
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  
-  h3 { margin: 0; font-size: 1.1rem; font-weight: 600; }
-`;
-
-// Renamed from ParentCalendar's CloseButton
-const ModalCloseButton = styled.button`
-  background: none;
-  border: none;
-  color: white;
-  opacity: 0.8;
-  font-size: 1.6rem;
-  width: 2.25rem; height: 2.25rem;
-  border-radius: 50%;
+const DropdownItem = styled.div<FilterOptionProps>`
+  padding: 8px 12px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.2s;
+  background: ${props => props.$isActive ? '#edf2f7' : 'transparent'};
   
   &:hover {
-    opacity: 1;
+    background: #f7fafc;
   }
 `;
 
-// Renamed to avoid conflict
-const ModalBodyComponent = styled.div` 
-  padding: 1.5rem;
-  max-height: 60vh;
-  overflow-y: auto;
-`;
-
-const EventDetailGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr; 
-  gap: 1rem;
-`;
-
-const EventDetail = styled.div`
+const TimetableContainer = styled.div`
   display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  position: relative; /* Ensure position relative here */
 `;
 
-const EventDetailIcon = styled.div<{ $color: string }>`
-  width: 36px;
-  height: 36px;
+const TimetableHeader = styled.div`
+  display: grid;
+  grid-template-columns: 70px repeat(7, 1fr); // 7 days + time column
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+`;
+
+const HeaderCell = styled.div`
+  padding: 14px 8px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+  border-right: 1px solid #e2e8f0;
+  margin: 0 4px;
+  
+  &:last-child {
+    border-right: none;
+  }
+`;
+
+const DayHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+`;
+
+const DayName = styled.div`
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 15px;
+`;
+
+const DayDate = styled.div`
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  font-weight: normal;
+`;
+
+const TimetableBody = styled.div`
+  display: grid;
+  grid-template-columns: 70px repeat(7, 1fr); // 7 days + time column
+  overflow-y: auto;
+  max-height: calc(100vh - 250px);
+`;
+
+const TimeColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+  min-width: 70px;
+`;
+
+const TimeSlot = styled.div`
+  height: 80px; // Increased height for better spacing
   display: flex;
   align-items: center;
-    justify-content: center;
-  border-radius: 8px;
-  background: ${props => `${props.$color}15`};
-  color: ${props => props.$color};
+  justify-content: center;
+  font-size: 12px;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: center;
+  
+  &:last-child {
+    border-bottom: none;
+  }
 `;
 
-const EventDetailContent = styled.div`
+const DayColumn = styled.div<{ $isToday: boolean }>`
+  position: relative;
+  border-right: 1px solid #e2e8f0;
+  background: ${props => props.$isToday ? '#f0f9ff' : 'white'};
+  margin: 0 4px;
+  
+  &:last-child {
+    border-right: none;
+  }
+`;
+
+const HourRow = styled.div`
+  height: 80px; // Increased height to match TimeSlot
+  border-bottom: 1px solid #e2e8f0;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const ClassCard = styled.div<{ $top: number, $height: number, $color: string }>`
+  position: absolute;
+  top: ${props => props.$top}px;
+  left: 5px;
+  right: 5px;
+  height: ${props => props.$height}px;
+  background-color: ${props => {
+    // Convert the hex color to RGB and create a lighter fully opaque pastel version
+    const hex = props.$color.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    // Mix with white to create pastel
+    const pastelR = Math.floor(r + (255 - r) * 0.8);
+    const pastelG = Math.floor(g + (255 - g) * 0.8);
+    const pastelB = Math.floor(b + (255 - b) * 0.8);
+    return `rgb(${pastelR}, ${pastelG}, ${pastelB})`;
+  }};
+  border-left: 4px solid ${props => props.$color};
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  cursor: pointer;
+  z-index: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Show action buttons only on hover */
+  .action-buttons {
+    display: none;
+  }
+  
+  &:hover .action-buttons {
     display: flex;
+  }
+`;
+
+const ClassTitle = styled.div`
+  font-weight: 600;
+  font-size: 14px;
+  color: #1e293b;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+`;
+
+const ClassDetails = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+  padding: 2px 0;
+`;
+
+const ClassIcon = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  width: 16px;
+  min-width: 16px;
+`;
+
+const CurrentTimeIndicator = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ef4444;
+  z-index: 3;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    left: 68px;
+    top: -4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef4444;
+  }
+`;
+
+const ColorLegend = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 15px;
+  padding: 15px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+`;
+
+const LegendTitle = styled.div`
+  font-weight: 600;
+  font-size: 14px;
+  color: #1e293b;
+`;
+
+const LegendItems = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+`;
+
+const LegendItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const ColorCircle = styled.div<{ $color: string }>`
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: ${props => props.$color};
+`;
+
+const LegendText = styled.div`
+  font-size: 12px;
+  color: #64748b;
+`;
+
+const TimeLabel = styled.div`
+  display: flex;
   flex-direction: column;
 `;
 
-const EventDetailLabel = styled.div`
-  font-size: 0.75rem;
-  color: ${props => props.theme.colors.text.secondary};
+const TimePart = styled.span`
+  line-height: 1.2;
 `;
 
-const EventDetailValue = styled.div`
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: ${props => props.theme.colors.text.primary};
-`;
-
-// Renamed to avoid conflict
-const ModalFooterComponent = styled.div` 
-  padding: 1rem 1.5rem;
-  background-color: ${props => props.theme.colors.background.secondary};
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  border-top: 1px solid ${({ theme }) => theme.colors.border.light};
-`;
-
-const ActionButton = styled.button<{ variant?: 'primary' | 'outline' }>`
-  background-color: ${props => props.variant === 'outline' 
-    ? 'transparent' 
-    : props.theme.colors.primary[500]};
-  color: ${props => props.variant === 'outline' 
-    ? props.theme.colors.primary[500] 
-    : 'white'};
-  border: ${props => props.variant === 'outline' 
-    ? `1px solid ${props.theme.colors.primary[500]}` 
-    : 'none'};
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+const LoadingSpinner = styled.div`
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(59, 130, 246, 0.2);
+  border-radius: 50%;
+  border-top-color: #3b82f6;
+  animation: spin 1s ease-in-out infinite;
+  margin: 0 auto;
   
-  &:hover {
-    background: ${props => props.variant === 'outline' 
-      ? props.theme.colors.primary?.[50]
-      : props.theme.colors.primary[600]};
-    // Remove hover transform/shadow for simplicity for now
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 `;
 
@@ -967,118 +542,1156 @@ const LoadingOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.7);
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   z-index: 100;
 `;
 
-const ErrorMessage = styled.div`
-  color: ${({ theme }) => theme.colors.danger?.[600] || '#dc2626'};
-  background-color: ${({ theme }) => theme.colors.danger?.[100] || '#fee2e2'};
-    padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.colors.danger?.[200] || '#fecaca'};
+const SuccessMessage = styled.div`
+  color: #10b981;
+  margin-bottom: 15px;
   text-align: center;
-  margin: 1rem;
+  padding: 12px;
+  background: #ecfdf5;
+  border-radius: 4px;
+  border: 1px solid #a7f3d0;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 `;
 
-// Helper for modal header gradient
-const lighten = (amount: number, color: string): string => {
-  try {
-    if (!color || !color.startsWith('#')) return color; // Basic check
-    let [r, g, b] = color.match(/\w\w/g)?.map((hex) => parseInt(hex, 16)) || [79, 70, 229]; // Default to primary color
-    r = Math.min(255, Math.round(r * (1 + amount)));
-    g = Math.min(255, Math.round(g * (1 + amount)));
-    b = Math.min(255, Math.round(b * (1 + amount)));
-    return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
-  } catch (e) {
-    console.error("Color lighten error:", e);
-    return color; // Return original color on error
-  }
-};
-
-// Filter specific styles (reusing some from ParentCalendar)
-const FilterContainer = styled.div`
+const AnimatedContainer = styled.div<{ $isAnimating: boolean, $direction: 'left' | 'right' | null }>`
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: ${props => props.$isAnimating 
+    ? `translateX(${props.$direction === 'left' ? '-3%' : '3%'}) scale(0.98)` 
+    : 'translateX(0) scale(1)'};
+  opacity: ${props => props.$isAnimating ? 0.7 : 1};
+  will-change: transform, opacity;
   position: relative;
+  min-height: 300px; /* Ensure min-height to prevent layout shifts */
 `;
 
-const FilterButton = styled(BaseButton)` // Extend BaseButton
-  min-width: 150px; // Give filters some minimum width
-  justify-content: space-between; // Space out text and chevron
-  
-  span {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-      flex-grow: 1;
-      text-align: left;
-      margin: 0 0.5rem; 
-  }
-`;
-
-const AnimatedChevron = styled(FiChevronDown)<{ $isOpen: boolean }>`
-  transition: transform 0.2s ease-in-out;
-  transform: ${({ $isOpen }) => $isOpen ? 'rotate(180deg)' : 'rotate(0deg)'};
-  flex-shrink: 0;
-`;
-
-const FilterDropdown = styled(motion.div)`
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  background-color: ${props => props.theme.colors.background.primary};
-  border-radius: 6px;
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  z-index: 50;
-  min-width: 100%; // Match button width
-  max-height: 300px;
-  overflow-y: auto;
-`;
-
-const FilterOption = styled.div<FilterOptionProps>`
-  padding: 0.6rem 1rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: background-color 0.2s ease;
-  background-color: ${props => props.$isActive ? props.theme.colors.background.hover : 'transparent'};
-  color: ${props => props.$isActive ? props.theme.colors.primary[500] : props.theme.colors.text.primary};
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  
-  &:hover {
-    background-color: ${props => props.theme.colors.background.hover};
-  }
-`;
-
-const dropdownVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-  exit: { opacity: 0 },
-};
-
-// Placeholder message style
-const SelectClassMessage = styled.div`
-    display: flex;
-    flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: calc(100% - 5rem); // Fill available space below control bar
-  font-size: 1.1rem;
-  color: ${({ theme }) => theme.colors.text.secondary};
+const AnimatedDateRange = styled.div<{ $isAnimating: boolean, $direction: 'left' | 'right' | null }>`
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: ${props => props.$isAnimating 
+    ? `translateX(${props.$direction === 'left' ? '-8px' : '8px'})`
+    : 'translateX(0)'};
+  opacity: ${props => props.$isAnimating ? 0.5 : 1};
+  font-weight: 500;
+  position: relative;
+  min-width: 120px;
   text-align: center;
-  padding: 2rem;
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-  border-radius: 8px;
-  background-color: ${({ theme }) => theme.colors.background.secondary};
-  gap: 1rem;
+  display: inline-block;
+`;
 
-  svg {
-      color: ${({ theme }) => theme.colors.primary[400]};
+const FadeIn = styled.div`
+  animation: fadeIn 0.6s ease-out;
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 `;
+
+const PlaceholderMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px; // Adjust height as needed
+  font-size: 16px;
+  color: #64748b;
+  text-align: center;
+  background-color: white;
+  border-top: 1px solid #e2e8f0; // Add border to match grid structure
+`;
+
+const TeacherSchedule: React.FC = () => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [filterCourse, setFilterCourse] = useState<string | null>(null);
+  const [filterClass, setFilterClass] = useState<string | null>(null);
+  const [showCourseFilter, setShowCourseFilter] = useState(false);
+  const [showClassFilter, setShowClassFilter] = useState(false);
+  const [currentTimePos, setCurrentTimePos] = useState<number>(0);
+  const [classEvents, setClassEvents] = useState<ClassEvent[]>([]);
+  
+  // Add state for animation
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  
+  // Success message state
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // Supabase data states
+  const [allCourses, setAllCourses] = useState<CourseData[]>([]); // All courses/subjects
+  const [classSubjects, setClassSubjects] = useState<ClassSubject[]>([]); // Relationships between classes and subjects
+  const [availableCourses, setAvailableCourses] = useState<CourseData[]>([]); // Courses available for selected class
+  const [classes, setClasses] = useState<ClassData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth(); // Get user context
+  
+  const [formData, setFormData] = useState<ScheduleFormData>({
+    title: '',
+    course: '',
+    startTime: '09:00',
+    endTime: '10:00',
+    day: 0,
+    location: '',
+    assignedClass: ''
+  });
+  
+  const timetableRef = useRef<HTMLDivElement>(null);
+  
+  // Generate week days based on current date
+  const weekDays = getWeekDays(currentDate);
+  
+  // Hours range (8 AM to 5 PM)
+  const hours = Array.from({ length: 10 }, (_, i) => i + 8);
+  
+  // Function to generate a random color based on string
+  const getRandomColor = (str: string) => {
+    // Simple hash function to generate a color based on a string
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Convert to hexadecimal and ensure it's a valid color
+    const color = '#' + ((hash & 0x00FFFFFF).toString(16).padStart(6, '0'));
+    return color;
+  };
+  
+  // Create course colors object
+  const courseColors = allCourses.reduce((acc: Record<string, string>, course: CourseData) => ({
+    ...acc,
+    [course.name]: course.color
+  }), {
+    // Fallback colors in case data isn't loaded yet
+    "Algebra": "#4F46E5",
+    "Physics": "#0EA5E9",
+    "Chemistry": "#10B981",
+    "Biology": "#F59E0B",
+    "Geometry": "#8B5CF6"
+  });
+
+  // Fetch all subjects from Supabase
+  useEffect(() => {
+    const fetchSubjectsAndRelationships = async () => {
+      try {
+        setIsLoading(true);
+        
+        // First get the classsubjects data to find the relationships
+        const { data: relationshipsData, error: relationshipsError } = await supabase
+          .from('classsubjects')
+          .select('*');
+        
+        if (relationshipsError) {
+          throw relationshipsError;
+        }
+        
+        if (relationshipsData) {
+          console.log('Raw classsubjects data:', relationshipsData);
+          
+          // Store relationships for later filtering
+          setClassSubjects(relationshipsData);
+          
+          // Next, get the subjects data to find details about each subject
+          const { data: subjectsData, error: subjectsError } = await supabase
+            .from('subjects')
+            .select('*');
+          
+          if (subjectsError) {
+            console.warn('Error fetching subjects, will try to extract from relationships:', subjectsError);
+            
+            // If we can't get subjects directly, extract from relationships
+            const extractedSubjects = new Map();
+            
+            relationshipsData.forEach(item => {
+              const subjectId = item.subjectId || item.subjectid;
+              
+              if (subjectId) {
+                // Use either provided name or generate a placeholder
+                const subjectName = item.subject_name || item.subjectname || `Subject ${subjectId}`;
+                
+                if (!extractedSubjects.has(subjectId)) {
+                  extractedSubjects.set(subjectId, {
+                    id: subjectId,
+                    name: subjectName, // Use the extracted name
+                    color: getRandomColor(subjectName)
+                  });
+                }
+              }
+            });
+            
+            const formattedSubjects = Array.from(extractedSubjects.values());
+            console.log('Extracted subjects from relationships:', formattedSubjects);
+            setAllCourses(formattedSubjects);
+            
+          } else if (subjectsData && subjectsData.length > 0) {
+            // We successfully got subjects data
+            console.log('Subjects data:', subjectsData);
+            
+            const formattedSubjects = subjectsData.map(subject => {
+              // Extract name from various possible fields
+              const subjectName = subject.name || subject.subjectname || subject.subject_name || `Subject ${subject.id}`;
+              
+              return {
+                id: subject.id,
+                name: subjectName, // Use the standardized name
+                color: subject.color || getRandomColor(subjectName)
+              };
+            });
+            
+            console.log('Formatted subjects:', formattedSubjects);
+            setAllCourses(formattedSubjects);
+            
+          } else {
+            // No subjects found, use default
+            console.warn('No subjects found in database');
+            setAllCourses([]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setError('Failed to load subjects. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchSubjectsAndRelationships();
+  }, []);
+  
+  // Fetch classes from Supabase
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        setIsLoading(true);
+        setError(null); // Clear previous errors
+        
+        // Simplify query to just get basic class data first
+        const { data: classesData, error: classesError } = await supabase
+          .from('classes')
+          .select('id, classname, teacherid');
+        
+        if (classesError) {
+          console.error('Error fetching classes:', classesError);
+          setError('Failed to load classes. Please try again later.');
+          setIsLoading(false);
+          return;
+        }
+        
+        if (classesData && classesData.length > 0) {
+          console.log('Successfully retrieved classes data:', classesData);
+          
+          // Ensure we're mapping the data correctly based on actual column names
+          const formattedData = classesData.map(item => {
+            return {
+              id: item.id,
+              name: item.classname,
+              teacherid: item.teacherid
+            };
+          });
+          
+          console.log('Formatted classes data:', formattedData);
+          setClasses(formattedData);
+        } else {
+          console.log('No classes data returned');
+          setClasses([]);
+        }
+      } catch (error) {
+        console.error('Error in fetchClasses function:', error);
+        setError('Failed to load classes. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchClasses();
+  }, []);
+
+  // Fetch classes assigned to the current teacher
+  useEffect(() => {
+    const fetchTeacherClasses = async () => {
+      if (!user?.id) {
+        setError('Teacher ID not found. Please log in again.');
+        setClasses([]);
+        console.error("[Debug] User ID not available for fetching teacher classes.");
+        return;
+      }
+      
+      console.log(`[Debug] Fetching classes for teacher ID: ${user.id}`);
+
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const { data: classesData, error: classesError } = await supabase
+          .from('classes')
+          .select('id, classname, teacherid') // Select necessary fields
+          .eq('teacherid', user.id); // Filter by logged-in teacher's ID
+        
+        if (classesError) {
+          console.error("[Debug] Supabase error fetching teacher classes:", classesError);
+          throw classesError;
+        }
+        
+        if (classesData) {
+          const formattedData = classesData.map(item => ({
+            id: item.id,
+            name: item.classname,
+            teacherid: item.teacherid
+          }));
+          console.log('[Debug] Formatted data from fetchTeacherClasses:', formattedData);
+          setClasses(formattedData);
+        } else {
+          console.log('[Debug] No classes data returned from fetchTeacherClasses.');
+          setClasses([]);
+        }
+      } catch (error: any) {
+        console.error('[Debug] Error in fetchTeacherClasses catch block:', error);
+        setError('Failed to load assigned classes: ' + error.message);
+        setClasses([]); // Clear classes on error
+      } finally {
+        // Keep isLoading true until timetable data is also loaded if needed
+        // setIsLoading(false); 
+      }
+    };
+    
+    fetchTeacherClasses();
+  }, [user?.id]);
+
+  // Update available courses when a class is selected
+  useEffect(() => {
+    if (formData.assignedClass && classSubjects.length > 0) {
+      console.log('Current form data:', formData);
+      console.log('All class subjects data:', classSubjects);
+      console.log('All courses:', allCourses);
+      console.log('All classes:', classes);
+      
+      // Find the class ID for the selected class name
+      const selectedClass = classes.find(c => c.name === formData.assignedClass);
+      
+      if (selectedClass) {
+        console.log('Selected class:', selectedClass);
+        
+        // Get all possible ways the class ID might be stored
+        const classId = selectedClass.id;
+        const className = selectedClass.name;
+        
+        console.log(`Looking for class with ID ${classId} or name ${className}`);
+        
+        // Find all relationships for this class
+        const subjectsForClass = classSubjects.filter(cs => {
+          // Check every possible way the class could be referenced
+          const classIdMatch = 
+            (cs.classId && String(cs.classId) === String(classId)) || 
+            (cs.classid && String(cs.classid) === String(classId));
+          
+          // Also check for class name matches
+          const classNameMatch = 
+            (cs.className === className) || 
+            (cs.classname === className);
+          
+          const isMatch = classIdMatch || classNameMatch;
+          
+          if (isMatch) {
+            console.log(`Found matching class relationship:`, cs);
+          }
+          
+          return isMatch;
+        });
+        
+        if (subjectsForClass.length === 0) {
+          console.warn(`No subjects found for class ${className}`);
+          setAvailableCourses([]);
+        } else {
+          console.log('Subjects for this class:', subjectsForClass);
+          
+          // Get all subject IDs for this class
+          const subjectIds = subjectsForClass.map(cs => cs.subjectId || cs.subjectid).filter(Boolean);
+          console.log('Subject IDs for this class:', subjectIds);
+          
+          // Find matching courses
+          const filteredCourses = allCourses.filter(course => 
+            subjectIds.includes(course.id)
+          );
+          
+          console.log('Filtered courses for this class:', filteredCourses);
+          
+          // If no matching courses but we have subject IDs, create placeholder courses
+          if (filteredCourses.length === 0 && subjectIds.length > 0) {
+            console.log('Creating placeholder courses from subject IDs');
+            
+            const placeholderCourses = subjectIds
+              .filter(id => id !== undefined) // Filter out undefined IDs
+              .map(id => {
+                // Try to find subject name in the relationship data
+                const relationship = subjectsForClass.find(
+                  cs => (cs.subjectId === id || cs.subjectid === id)
+                );
+                
+                const name = relationship?.subject_name || 
+                           relationship?.subjectname || 
+                           `Subject ${id}`;
+                
+                return {
+                  id: id!, // Non-null assertion since we filtered out undefined values
+                  name,
+                  color: getRandomColor(name)
+                };
+              });
+            
+            console.log('Created placeholder courses:', placeholderCourses);
+            setAvailableCourses(placeholderCourses as CourseData[]);
+          } else {
+            setAvailableCourses(filteredCourses);
+          }
+        }
+        
+        // Reset course selection
+        setFormData(prev => ({
+          ...prev,
+          course: ''
+        }));
+      }
+    }
+  }, [formData.assignedClass, classSubjects, allCourses, classes]);
+
+  // Fetch timetable data from Supabase
+  const fetchTimetableData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null); // Clear previous errors
+      
+      const { data: timetableData, error: timetableError } = await supabase
+        .from('timetable')
+        .select('*, subjects(id, subjectname), classes(id, classname), users(firstName, lastName)');
+      
+      if (timetableError) {
+        console.error('Error fetching timetable:', timetableError);
+        setError('Failed to load schedule. Please try again later.');
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!timetableData || timetableData.length === 0) {
+        console.log('No timetable data found, using empty schedule');
+        setClassEvents([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log('Raw timetable data:', timetableData);
+      
+      // Inspect the first record to see the actual database column names
+      if (timetableData.length > 0) {
+        console.log('Database schema column names:');
+        const firstRecord = timetableData[0];
+        Object.keys(firstRecord).forEach(key => {
+          console.log(`- ${key}: ${typeof firstRecord[key]} = ${JSON.stringify(firstRecord[key])}`);
+        });
+      }
+      
+      // Convert timetable data to ClassEvent format, ensuring all IDs are valid numbers
+      const formattedEvents: ClassEvent[] = timetableData.map((item: any, index) => {
+        // Extract or default the values we need
+        // Always use the index+1 as a fallback ID to ensure we have a valid number
+        let id = index + 1; // Default fallback ID 
+        
+        // Try to use the database ID if it's valid
+        if (item.id !== undefined && item.id !== null) {
+          const parsedId = parseInt(String(item.id));
+          if (!isNaN(parsedId)) {
+            id = parsedId;
+          }
+        }
+        
+        // Get title from direct field or use subject name as fallback
+        const title = item.title || 
+                     (item.subjects?.subjectname ? `${item.subjects.subjectname} Class` : 'Untitled Lesson');
+        
+        // Get course name from either related subject or find it from our allCourses list using subject ID
+        let courseName = 'Unknown Course';
+        
+        if (item.subjects?.subjectname) {
+          courseName = item.subjects.subjectname;
+        } else if (item.subjectId) {
+          // Try to find the subject name from our list of all courses
+          const subjectMatch = allCourses.find(c => c.id === item.subjectId);
+          if (subjectMatch) {
+            courseName = subjectMatch.name;
+          }
+        }
+        
+        // Parse time values from various possible field formats
+        let startTime = 9; // Default to 9 AM
+        
+        if (item.start_time !== undefined && item.start_time !== null) {
+          startTime = typeof item.start_time === 'string' ? parseInt(item.start_time) : item.start_time;
+        } else if (item.startTime !== undefined && item.startTime !== null) {
+          // Handle time object format (HH:MM:SS)
+          if (typeof item.startTime === 'string' && item.startTime.includes(':')) {
+            startTime = parseInt(item.startTime.split(':')[0]);
+          } else if (typeof item.startTime === 'object' && item.startTime.hours !== undefined) {
+            startTime = item.startTime.hours;
+          }
+        }
+        
+        let endTime = startTime + 1; // Default to 1 hour length
+        
+        if (item.end_time !== undefined && item.end_time !== null) {
+          endTime = typeof item.end_time === 'string' ? parseInt(item.end_time) : item.end_time;
+        } else if (item.endTime !== undefined && item.endTime !== null) {
+          // Handle time object format (HH:MM:SS)
+          if (typeof item.endTime === 'string' && item.endTime.includes(':')) {
+            endTime = parseInt(item.endTime.split(':')[0]);
+          } else if (typeof item.endTime === 'object' && item.endTime.hours !== undefined) {
+            endTime = item.endTime.hours;
+          }
+        }
+        
+        // Parse minutes if available
+        const startMinute = item.start_minute || item.startMinute || 0;
+        const endMinute = item.end_minute || item.endMinute || 0;
+        
+        // Parse day value (0-6 for Monday-Sunday)
+        let day = 0; // Default to Monday
+        if (item.day !== undefined && item.day !== null) {
+          if (typeof item.day === 'string') {
+            day = parseInt(item.day);
+          } else if (typeof item.day === 'object' && (item.day instanceof Date || 'getDate' in item.day)) {
+            // Get day of week from Date (0 = Sunday, 1 = Monday)
+            try {
+              const dateObj = item.day instanceof Date ? item.day : new Date(item.day);
+              day = dateObj.getDay();
+              if (day === 0) day = 6; // Convert Sunday from 0 to 6
+              else day -= 1; // Shift other days down by 1
+            } catch (e) {
+              console.error('Error parsing date object:', e);
+              day = 0; // Default to Monday on error
+            }
+          } else {
+            day = typeof item.day === 'number' ? item.day : 0;
+          }
+          
+          // Ensure day is between 0-6
+          day = day % 7;
+        }
+        
+        // Other fields
+        const location = item.location || item.room || '';
+        
+        // Get teacher info from either direct field or relationship
+        const teacher = item.teacher || 
+                       (item.users ? `${item.users.firstName} ${item.users.lastName}` : '') ||
+                       '';
+        
+        // Store class info separately - keep className for UI purposes
+        const classId = item.classId || item.class_id || '';
+        // Get className from the classes relation if available
+        const className = item.classes?.classname || '';
+        
+        const students = item.students || item.student_count || 0;
+        
+        // Find course color or generate one
+        const courseObj = allCourses.find(c => c.name === courseName);
+        const color = item.color || 
+                     courseObj?.color || 
+                     courseColors[courseName as keyof typeof courseColors] || 
+                     getRandomColor(courseName);
+        
+        return {
+          id,  // Use our validated ID
+          title,
+          subjectid: item.subjectId || '',
+          startTime,
+          startMinute,
+          endTime,
+          endMinute,
+          day,
+          location,
+          teacherid: item.teacherId || '',
+          students,
+          color,
+          // Add these for display purposes
+          course: courseName,
+          teacher,
+          classId,
+          className // Only for UI display
+        };
+      });
+      
+      console.log('Formatted timetable events:', formattedEvents);
+      setClassEvents(formattedEvents);
+      
+    } catch (error) {
+      console.error('Error processing timetable data:', error);
+      setError('Failed to process schedule data. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initialize with data from Supabase timetable
+  useEffect(() => {
+    // Only fetch timetable data if we have course data loaded
+    if (allCourses.length > 0) {
+      fetchTimetableData();
+    }
+  }, [allCourses]); // Depend on allCourses to ensure we have course data for colors
+  
+  // Ensure we include predefined classes if they're not already in the database
+  useEffect(() => {
+    // Add default grade-section classes if not already in the database
+    const defaultClasses = ['10A', '10B', '11A', '11B', '12A', '12B'];
+    const existingClassNames = classes.map(c => c.name);
+    
+    // Combine database classes with default classes for the filter
+    const missingClasses = defaultClasses.filter(c => !existingClassNames.includes(c));
+    
+    if (missingClasses.length > 0) {
+      console.log('Adding missing default classes to the filter options:', missingClasses);
+    }
+  }, [classes]);
+
+  // Get unique classes and sort them by grade then section
+  const getUniqueClasses = () => {
+    // Only use classes from the database
+    const classNames = classes.map(c => c.name).filter(Boolean);
+    console.log("[Debug] Classes state used for getUniqueClasses:", classes);
+    console.log("[Debug] Class names extracted for dropdown:", classNames);
+
+    // Sort by grade then section
+    return classNames.sort((a, b) => {
+      // Extract numeric part or default to 0
+      const gradeAMatch = a.match(/\d+/);
+      const gradeBMatch = b.match(/\d+/);
+      
+      const gradeA = gradeAMatch ? parseInt(gradeAMatch[0], 10) : 0;
+      const gradeB = gradeBMatch ? parseInt(gradeBMatch[0], 10) : 0;
+      
+      if (gradeA !== gradeB) return gradeA - gradeB;
+      return a.localeCompare(b);
+    });
+  };
+  
+  // Get unique courses and teachers
+  const uniqueCourses = [...new Set(classEvents.map((event: ClassEvent) => event.course || ''))];
+  const uniqueClasses = getUniqueClasses();
+  console.log("[Debug] Final uniqueClasses array for dropdown:", uniqueClasses);
+  
+  // Filter events - update to correctly check for matching classes
+  const filteredEvents = classEvents.filter(event => 
+    (filterCourse ? (event.course || '') === filterCourse : true) && 
+    (filterClass ? (
+      event.className === filterClass || 
+      classes.find(c => c.id === event.classId)?.name === filterClass
+    ) : true)
+  );
+  
+  // Handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+  
+  // Available classes for assignment 
+  const availableClasses = ['10A', '10B', '11A', '11B', '12A', '12B'];
+  
+  // Function to calculate date for a given day of week (0-6)
+  const calculateDateForDay = (dayOfWeek: number): string => {
+    const today = new Date();
+    const currentDayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ...
+    
+    // Convert to our format where 0 = Monday
+    const currentDayConverted = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
+    
+    // Calculate days to add
+    let daysToAdd = dayOfWeek - currentDayConverted;
+    
+    // If the day is earlier in the week, move to next week
+    if (daysToAdd < 0) {
+      daysToAdd += 7;
+    }
+    
+    // Create the date
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + daysToAdd);
+    
+    // Format as YYYY-MM-DD
+    return targetDate.toISOString().split('T')[0];
+  };
+  
+  // Close modal and reset form (Unused, related to modal)
+  /*
+  const resetForm = () => {
+    // setShowScheduleModal(false); // Usage removed
+    // setIsEditing(false); // Usage removed
+    // setCurrentEventId(null); // Usage removed
+    setFormData({
+      title: '',
+      course: '',
+      startTime: '09:00',
+      endTime: '10:00',
+      day: 0,
+      location: '',
+      assignedClass: ''
+    });
+    console.log('Form reset'); // Simplified log
+  };
+  */
+  
+  // Handle form submission (Unused)
+  /*
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      setSuccessMessage(null);
+      
+      // console.log('Form submission - isEditing:', isEditing); // Usage removed
+      // console.log('Form submission - currentEventId:', currentEventId); // Usage removed
+      
+      // ... (rest of handleSubmit logic, referencing removed state)
+      
+    } catch (error: any) {
+      console.error('Error in form submission:', error);
+      setError('An unexpected error occurred: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  */
+
+  // Handle edit lesson (Unused)
+  /*
+  const handleEditLesson = (event: ClassEvent) => {
+     // ... (logic referencing removed state)
+    
+    // Set editing state - store all necessary data for update (Usages removed)
+    // setIsEditing(true);
+    // setCurrentEventId(validEventId);
+    // setShowScheduleModal(true);
+  };
+  */
+  
+  // Handle previous week with improved animation
+  const handlePrevious = () => {
+    if (isAnimating) return;
+    
+    setIsAnimating(true);
+    setSlideDirection('right');
+    
+    // First phase - animate out
+    setTimeout(() => {
+      // Second phase - update data
+    const newDate = new Date(currentDate);
+      newDate.setDate(newDate.getDate() - 7);
+    setCurrentDate(newDate);
+      
+      // Third phase - animate in
+      setTimeout(() => {
+        setIsAnimating(false);
+      }, 300);
+    }, 250);
+  };
+  
+  // Handle next week with improved animation
+  const handleNext = () => {
+    if (isAnimating) return;
+    
+    setIsAnimating(true);
+    setSlideDirection('left');
+    
+    // First phase - animate out
+    setTimeout(() => {
+      // Second phase - update data
+    const newDate = new Date(currentDate);
+      newDate.setDate(newDate.getDate() + 7);
+    setCurrentDate(newDate);
+      
+      // Third phase - animate in  
+      setTimeout(() => {
+        setIsAnimating(false);
+      }, 300);
+    }, 250);
+  };
+  
+  // Check if a date is today
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.getDate() === today.getDate() && 
+           date.getMonth() === today.getMonth() && 
+           date.getFullYear() === today.getFullYear();
+  };
+  
+  // Update current time indicator
+    const updateCurrentTime = () => {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      
+    if (currentHour >= 8 && currentHour < 17) {
+      const hourOffset = currentHour - 8;
+      const minuteOffset = currentMinute / 60;
+      setCurrentTimePos((hourOffset + minuteOffset) * 80); // Multiplied by row height
+    }
+  };
+  
+  // Scroll to current time
+  const scrollToCurrentTime = () => {
+    if (timetableRef.current) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      
+      if (currentHour >= 8 && currentHour < 17) {
+        const hourOffset = currentHour - 8;
+        timetableRef.current.scrollTop = hourOffset * 80 - 120; // Center it in the view
+      }
+    }
+  };
+  
+  useEffect(() => {
+    updateCurrentTime();
+    const intervalId = setInterval(updateCurrentTime, 60000); // Update every minute
+    
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    scrollToCurrentTime();
+  }, []);
+  
+  // Format date range for header
+  const formatDateRange = () => {
+    const startDate = formatDate(weekDays[0]);
+    const endDate = formatDate(weekDays[6]);
+    return `${startDate} - ${endDate}`;
+  };
+
+  // Form component sections for the modal
+  
+  // Add a refreshClasses method for manual refreshing
+  const refreshClasses = async () => {
+    try {
+      setIsLoading(true);
+      setError(null); // Clear previous errors
+      
+      // Simple query to get class data
+      const { data: classesData, error: classesError } = await supabase
+        .from('classes')
+        .select('id, classname, teacherid');
+      
+      if (classesError) {
+        console.error('Error refreshing classes:', classesError);
+        setError('Failed to refresh classes. Please try again later.');
+        return;
+      }
+      
+      if (classesData && classesData.length > 0) {
+        console.log('Successfully refreshed classes data:', classesData);
+        
+        const formattedData = classesData.map(item => ({
+          id: item.id,
+          name: item.classname,
+          teacherid: item.teacherid
+        }));
+        
+        setClasses(formattedData);
+        setError(null); // Clear error on success
+      } else {
+        console.log('No classes found during refresh');
+        setClasses([]);
+      }
+    } catch (error) {
+      console.error('Error in refreshClasses function:', error);
+      setError('Failed to refresh classes. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Container>
+      <Header>
+        <Title>Weekly Schedule</Title>
+        <HeaderControls>
+          <Button onClick={scrollToCurrentTime}>
+            <FiArrowUp size={14} />
+            Current Time
+          </Button>
+        </HeaderControls>
+      </Header>
+      
+      <FilterContainer>
+        <DateNavigation>
+          <NavButton 
+            onClick={handlePrevious} 
+            disabled={isAnimating}
+          >
+            <FiChevronLeft />
+          </NavButton>
+          <AnimatedDateRange $isAnimating={isAnimating} $direction={slideDirection}>
+            {formatDateRange()}
+          </AnimatedDateRange>
+          <NavButton 
+            onClick={handleNext} 
+            disabled={isAnimating}
+          >
+            <FiChevronRight />
+          </NavButton>
+        </DateNavigation>
+        
+        <FilterGroup>
+              <FilterDropdown>
+            <FilterButton onClick={() => setShowCourseFilter(!showCourseFilter)}>
+              <FiFilter size={14} />
+              {filterCourse || "All Courses"}
+              <FiChevronDown size={14} />
+            </FilterButton>
+            {showCourseFilter && (
+              <DropdownContent>
+                <DropdownItem 
+                  $isActive={filterCourse === null}
+                  onClick={() => {
+                    setFilterCourse(null);
+                    setShowCourseFilter(false);
+                  }}
+                >
+                  All Courses
+                </DropdownItem>
+                {uniqueCourses.map((course, index) => (
+                  <DropdownItem 
+                    key={index}
+                    $isActive={filterCourse === course}
+                    onClick={() => {
+                      setFilterCourse(course);
+                      setShowCourseFilter(false);
+                    }}
+                  >
+                    {course}
+                  </DropdownItem>
+                ))}
+              </DropdownContent>
+            )}
+          </FilterDropdown>
+
+          <FilterDropdown>
+            <FilterButton onClick={() => setShowClassFilter(!showClassFilter)}>
+              <FiUsers size={14} />
+              {filterClass || "All Grade Sections"}
+              <FiChevronDown size={14} />
+            </FilterButton>
+            {showClassFilter && (
+              <DropdownContent>
+                <DropdownItem 
+                  $isActive={filterClass === null}
+                  onClick={() => {
+                    setFilterClass(null);
+                    setShowClassFilter(false);
+                  }}
+                >
+                  All Grade Sections
+                </DropdownItem>
+                {isLoading ? (
+                  <DropdownItem $isActive={false}>
+                    Loading classes...
+                  </DropdownItem>
+                ) : uniqueClasses.length > 0 ? (
+                  uniqueClasses.map((className, index) => (
+                    <DropdownItem 
+                      key={index}
+                      $isActive={filterClass === className}
+                      onClick={() => {
+                        setFilterClass(className);
+                        setShowClassFilter(false);
+                      }}
+                    >
+                      {className}
+                    </DropdownItem>
+                  ))
+                ) : (
+                  <DropdownItem $isActive={false}>
+                    No classes available
+                  </DropdownItem>
+                )}
+              </DropdownContent>
+            )}
+          </FilterDropdown>
+        </FilterGroup>
+          </FilterContainer>
+          
+      {/* Display success message if there's one */}
+      {successMessage && (
+        <SuccessMessage>
+          <div>✅ {successMessage}</div>
+        </SuccessMessage>
+      )}
+          
+      {/* Display error message if there's an error */}
+      {error && (
+        <div style={{ 
+          color: '#ef4444', 
+          marginBottom: '15px', 
+          textAlign: 'center', 
+          padding: '12px', 
+          background: '#fef2f2', 
+          borderRadius: '4px',
+          border: '1px solid #fee2e2',
+          fontWeight: '500',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+        }}>
+          <div style={{ marginBottom: '5px' }}>⚠️ {error}</div>
+          {error.includes('classes') && (
+            <button 
+              onClick={refreshClasses} 
+              style={{
+                padding: '6px 12px',
+                background: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                marginTop: '8px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Try Again
+            </button>
+          )}
+        </div>
+      )}
+      
+      <FadeIn>
+      <TimetableContainer>
+          {isLoading && (
+            <LoadingOverlay>
+              <LoadingSpinner />
+              <div style={{ marginTop: '10px', color: '#3b82f6', fontWeight: 500 }}>Loading schedule...</div>
+            </LoadingOverlay>
+          )}
+          
+          <AnimatedContainer $isAnimating={isAnimating} $direction={slideDirection}>
+            <TimetableHeader>
+              <HeaderCell></HeaderCell>
+              {weekDays.map((day, index) => {
+                const dayName = formatDay(day);
+                const monthName = day.toLocaleDateString('en-US', { month: 'short' });
+                const dayNum = day.getDate();
+                
+                return (
+                  <HeaderCell key={index}>
+                    <DayHeader>
+                      <DayName>{dayName}</DayName>
+                      <DayDate>
+                        {monthName} {dayNum}
+                      </DayDate>
+                    </DayHeader>
+                  </HeaderCell>
+                );
+              })}
+            </TimetableHeader>
+            
+            {/* Conditional Rendering: Show placeholder or timetable body */}
+            {!filterClass ? (
+              <PlaceholderMessage>
+                Please select a grade to see their schedule
+              </PlaceholderMessage>
+            ) : (
+              <TimetableBody ref={timetableRef}>
+                <TimeColumn>
+                  {hours.map(hour => (
+                      <TimeSlot key={hour}>
+                      <TimeLabel>
+                        <TimePart>{hour % 12 || 12}:00</TimePart>
+                        <TimePart>{hour >= 12 ? 'PM' : 'AM'}</TimePart>
+                      </TimeLabel>
+                      </TimeSlot>
+                    ))}
+                </TimeColumn>
+                
+                {weekDays.map((day, dayIndex) => (
+                  <DayColumn key={dayIndex} $isToday={isToday(day)}>
+                    {hours.map(hour => (
+                      <HourRow key={hour} />
+                    ))}
+                    
+                    {/* Current time indicator */}
+                    {isToday(day) && (
+                      <CurrentTimeIndicator style={{ top: `${currentTimePos}px` }} />
+                    )}
+                    
+                    {/* Class events */}
+                    {filteredEvents
+                      .filter(event => event.day === dayIndex)
+                      .map(event => {
+                        const startMinute = event.startMinute || 0;
+                        const endMinute = event.endMinute || 0;
+                        
+                        const top = ((event.startTime - 8) + (startMinute / 60)) * 80;
+                        const height = ((event.endTime - event.startTime) * 60 - startMinute + endMinute) / 60 * 80;
+                        
+                        const startTimeFormatted = formatTime(event.startTime, startMinute);
+                        const endTimeFormatted = formatTime(event.endTime, endMinute);
+                        
+                        return (
+                          <ClassCard 
+                            key={event.id}
+                            $top={top}
+                            $height={height}
+                            $color={event.color}
+                          >                    
+                            <ClassTitle>{event.title}</ClassTitle>
+                            <ClassDetails>
+                              <ClassIcon><FiClock size={12} /></ClassIcon>
+                              {startTimeFormatted} - {endTimeFormatted}
+                            </ClassDetails>
+                            {event.location && (
+                              <ClassDetails>
+                                <ClassIcon><FiMapPin size={12} /></ClassIcon>
+                                {event.location}
+                              </ClassDetails>
+                            )}
+                                {event.className && (
+                                  <ClassDetails>
+                                    <ClassIcon><FiUsers size={12} /></ClassIcon>
+                                    Class: {event.className}
+                              </ClassDetails>
+                            )}
+                            {event.teacher && (
+                              <ClassDetails>
+                                <ClassIcon><FiUser size={12} /></ClassIcon>
+                                    Teacher: {event.teacher}
+                              </ClassDetails>
+                            )}
+                          </ClassCard>
+                        );
+                      })
+                    }
+                  </DayColumn>
+                ))}
+              </TimetableBody>
+            )}
+            {/* End Conditional Rendering */}
+          </AnimatedContainer>
+      </TimetableContainer>
+      </FadeIn>
+    </Container>
+  );
+};
 
 export default TeacherSchedule; 

@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useRef, useState } from 'react'
-import { FiArrowLeft, FiBook, FiCheck, FiChevronRight, FiClock, FiPlay, FiPlayCircle } from 'react-icons/fi'
+import { FiArrowLeft, FiBook, FiCheck, FiChevronRight, FiClock, FiPlay, FiPlayCircle, FiFileText, FiDownload } from 'react-icons/fi'
 import { useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { NewClass } from '../../types/Class'
@@ -14,6 +14,15 @@ interface Lesson {
 	duration: string
 	videourl: string
 	description?: string
+}
+
+// Add interface for Lesson Files
+interface LessonFile {
+    id: string;
+    lesson_id: string;
+    file_name: string;
+    file_url: string;
+    // Add other relevant fields like file_type, size, uploaded_at if available
 }
 
 // Subject interface
@@ -72,6 +81,8 @@ const TeacherClassDetails: React.FC = () => {
 	const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null)
 	const [isLoadingSubjects, setIsLoadingSubjects] = useState<boolean>(false)
 	const [lessons, setLessons] = useState<Lesson[]>([])
+	const [lessonFiles, setLessonFiles] = useState<LessonFile[]>([]); // State for lesson files
+	const [isLoadingFiles, setIsLoadingFiles] = useState<boolean>(false); // Loading state for files
 
 	// Fetch class data
 	useEffect(() => {
@@ -155,11 +166,38 @@ const TeacherClassDetails: React.FC = () => {
 	}
 
 	// Function to handle selecting a lesson
-	const handleSelectLesson = (lesson: Lesson) => {
+	const handleSelectLesson = async (lesson: Lesson) => {
 		setSelectedLesson(lesson)
 		setVideoLoaded(false)
+		setLessonFiles([]); // Clear previous files
+		setIsLoadingFiles(true); // Set loading true for files
 		
-		console.log('Selected lesson video URL:', lesson.videourl)
+		console.log('[Debug] Selected lesson object:', lesson);
+		console.log('[Debug] Selected lesson video URL:', lesson.videourl);
+
+		// --- Fetch associated files --- 
+		try {
+			console.log(`[Debug] Fetching files for lesson ID: ${lesson.id}`);
+			const { data: filesData, error: filesError } = await supabase
+				.from('lesson_files') // Assuming table name is 'lesson_files'
+				.select('id, lesson_id, file_name, file_url') // Select necessary columns
+				.eq('lesson_id', lesson.id);
+
+			if (filesError) {
+				console.error('[Debug] Error fetching lesson files:', filesError);
+				throw filesError;
+			}
+
+			console.log('[Debug] Fetched files data:', filesData);
+			setLessonFiles(filesData || []);
+
+		} catch (error) {
+			console.error('Error fetching lesson files in handleSelectLesson:', error);
+			setLessonFiles([]); // Ensure files are empty on error
+		} finally {
+			setIsLoadingFiles(false);
+		}
+		// --- End Fetch Files --- 
 
 		// Show success toast
 		setShowSuccessToast(true)
@@ -192,29 +230,41 @@ const TeacherClassDetails: React.FC = () => {
 
 	// Function to get proper embed URL
 	const getEmbedUrl = (url: string): string => {
-		if (!url) return ''
+		if (!url) {
+			console.log('[Debug] getEmbedUrl received empty URL');
+			return ''
+		}
 		
+		console.log(`[Debug] getEmbedUrl processing URL: ${url}`);
+
 		if (isYouTubeUrl(url)) {
 			// Convert YouTube URL to embed format
 			const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
 			const match = url.match(youtubeRegex)
 			const videoId = match ? match[1] : null
+			console.log(`[Debug] YouTube regex match: ${match}, Video ID: ${videoId}`);
 			
 			if (videoId) {
-				return `https://www.youtube.com/embed/${videoId}`
+				const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+				console.log(`[Debug] Generated YouTube embed URL: ${embedUrl}`);
+				return embedUrl;
 			}
 		} else if (isVimeoUrl(url)) {
 			// Convert Vimeo URL to embed format
 			const vimeoRegex = /vimeo\.com\/(?:.*#|.*\/videos\/)?([0-9]+)/
 			const match = url.match(vimeoRegex)
 			const videoId = match ? match[1] : null
+			console.log(`[Debug] Vimeo regex match: ${match}, Video ID: ${videoId}`);
 			
 			if (videoId) {
-				return `https://player.vimeo.com/video/${videoId}`
+				const embedUrl = `https://player.vimeo.com/video/${videoId}`;
+				console.log(`[Debug] Generated Vimeo embed URL: ${embedUrl}`);
+				return embedUrl;
 			}
 		}
 		
 		// Return original URL if not YouTube or Vimeo
+		console.log('[Debug] URL not recognized as YouTube/Vimeo, returning original');
 		return url
 	}
 
@@ -453,6 +503,37 @@ const TeacherClassDetails: React.FC = () => {
 										<p>{selectedLesson.description}</p>
 										</LessonDescription>
 								)}
+
+                                {/* --- Files Section --- */}
+                                {isLoadingFiles ? (
+                                    <LoadingIndicator>Loading files...</LoadingIndicator>
+                                ) : lessonFiles.length > 0 && (
+                                    <FilesSection>
+                                        <SectionHeader style={{ marginBottom: '1rem' }}>
+                                            <SectionTitle>Lesson Materials</SectionTitle>
+                                        </SectionHeader>
+                                        <FileList>
+                                            {lessonFiles.map(file => (
+                                                <FileItem key={file.id}>
+                                                    <FileInfo>
+                                                        <FileIcon><FiFileText /></FileIcon> 
+                                                        <FileName>{file.file_name || 'Untitled File'}</FileName>
+                                                    </FileInfo>
+                                                    <DownloadButton 
+                                                        href={file.file_url} 
+                                                        target="_blank" // Open in new tab
+                                                        rel="noopener noreferrer" // Security measure
+                                                        download // Suggest downloading
+                                                    >
+                                                        <FiDownload size={14}/> Download
+                                                    </DownloadButton>
+                                                </FileItem>
+                                            ))}
+                                        </FileList>
+                                    </FilesSection>
+                                )}
+                                {/* --- End Files Section --- */}
+
 							</motion.div>
 					</VideoSection>
 						)}
@@ -715,10 +796,12 @@ const CourseContent = styled.div`
 
 	@media (max-width: 1024px) {
 		grid-template-columns: 300px 1fr;
+		gap: 1.5rem;
 	}
 
 	@media (max-width: 768px) {
 		grid-template-columns: 1fr;
+		gap: 2rem;
 	}
 `
 
@@ -742,9 +825,11 @@ const LessonsSection = styled.div`
 	padding: 1.5rem;
 	height: fit-content;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	margin-right: 1.5rem;
 
 	@media (max-width: 768px) {
 		margin-bottom: 2rem;
+		margin-right: 0;
 	}
 `
 
@@ -1084,5 +1169,74 @@ const NoVideoMessage = styled.div`
 		opacity: 0.7;
 	}
 `
+
+// Styled components for Files Section
+const FilesSection = styled.div`
+    margin-top: 2rem; // Space above the files section
+    padding: 1.5rem;
+    border-top: 1px solid ${props => props.theme.colors.border.light};
+`;
+
+const FileList = styled.ul`
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem; // Space between files
+`;
+
+const FileItem = styled.li`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background-color: ${props => props.theme.colors.background.tertiary};
+    border-radius: ${props => props.theme.borderRadius.md};
+    border: 1px solid ${props => props.theme.colors.border.light};
+`;
+
+const FileInfo = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+`;
+
+const FileIcon = styled.div`
+    font-size: 1.25rem;
+    color: ${props => props.theme.colors.primary[500]};
+    display: flex;
+    align-items: center;
+`;
+
+const FileName = styled.span`
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: ${props => props.theme.colors.text.primary};
+`;
+
+const DownloadButton = styled.a`
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    background-color: ${props => props.theme.colors.primary[500]};
+    color: white;
+    border: none;
+    border-radius: ${props => props.theme.borderRadius.sm};
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+        background-color: ${props => props.theme.colors.primary[600]};
+    }
+
+    svg {
+        font-size: 0.9rem;
+    }
+`;
 
 export default TeacherClassDetails

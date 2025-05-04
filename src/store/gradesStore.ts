@@ -1,12 +1,11 @@
 import { create } from 'zustand'
-import { supabase } from '../services/supabaseClient'
+import supabase from '../config/supabaseClient'
 import {
 	ClassSubjectOverview,
 	GradeLevelOverview,
 	JournalTable,
 	LevelCategoryOverview,
 } from '../types/grades'
-import { useAuth } from '../contexts/AuthContext'
 
 interface GradesState {
 	// Data states
@@ -53,16 +52,6 @@ interface GradesState {
 	setSelectedClass: (classId: string | null) => void
 	setSelectedSubject: (subjectId: string | null) => void
 	setSelectedQuarter: (quarterId: string | null) => void
-}
-
-// Define interface for student data from API
-interface StudentResponse {
-	studentid: string
-	users: {
-		id: string
-		firstName: string
-		lastName: string
-	} | null
 }
 
 const useGradesStore = create<GradesState>((set, get) => ({

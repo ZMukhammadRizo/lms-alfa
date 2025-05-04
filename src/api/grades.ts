@@ -178,47 +178,39 @@ const getOrdinalSuffix = (n: number): string => {
 // Fetches summary data for each grade level
 export const getGradeLevelSummaries = async (): Promise<GradeLevelSummary[]> => {
 	try {
-		// Option 1: Use an RPC function (if you create one in Supabase)
-		// const { data, error } = await supabase.rpc('get_grade_level_summaries');
-		// if (error) throw error;
-		// return data;
+		// Fetch distinct grade levels along with their names from the 'levels' table
+		// Assumes 'levels' table has 'id' (UUID) and 'name' (string)
+		// Assumes 'classes' table has 'level_id' referencing 'levels.id'
+		const { data: levelsData, error: levelsError } = await supabase
+			.from('levels')
+			.select('id, name');
 
-		// Option 2: Query and aggregate in the frontend (less efficient for large data)
-		// This is a simplified example and might need adjustments based on your schema
-
-		// 1. Get all distinct grade levels from classes
-		const { data: gradesData, error: gradesError } = await supabase
-			.from('classes')
-			.select('level_id')
-
-		if (gradesError) throw gradesError
-		const distinctGradeLevels = [...new Set(gradesData.map(g => g.level_id))].filter(g => g != null) as number[];
+		if (levelsError) throw levelsError;
 
 		// 2. Fetch counts for each grade level
 		const summaries: GradeLevelSummary[] = [];
-		for (const level of distinctGradeLevels) {
-			// Count classes for this level
+		for (const level of levelsData) {
+			// Count classes for this level using the level ID (UUID)
 			const { count: classCount, error: classError } = await supabase
 				.from('classes')
 				.select('*' , { count: 'exact', head: true })
-				.eq('level_id', level);
-			if (classError) console.warn(`Error counting classes for grade ${level}:`, classError);
+				.eq('level_id', level.id);
+			if (classError) console.warn(`Error counting classes for level ${level.name} (ID: ${level.id}):`, classError);
 
 			// Get class IDs for this level to count students and subjects
 			const { data: classIdsData, error: classIdsError } = await supabase
 				.from('classes')
 				.select('id')
-				.eq('level_id', level);
+				.eq('level_id', level.id);
 			if (classIdsError) {
-				console.warn(`Error getting class IDs for grade ${level}:`, classIdsError);
-				continue; // Skip this grade if we can't get class IDs
+				console.warn(`Error getting class IDs for level ${level.name} (ID: ${level.id}):`, classIdsError);
+				continue; // Skip this level if we can't get class IDs
 			}
 			const classIds = classIdsData.map(c => c.id);
 
 			let studentCount = 0;
 			if (classIds.length > 0) {
 				try {
-					// Count unique students across all classes in this grade level
 					const { data: studentData, error: studentError } = await supabase
 						.from('classstudents')
 						.select('studentid')
@@ -226,16 +218,13 @@ export const getGradeLevelSummaries = async (): Promise<GradeLevelSummary[]> => 
 					if (studentError) throw studentError;
 					studentCount = new Set(studentData?.map(s => s.studentid) || []).size;
 				} catch (studentError) {
-					console.error(`Error counting students for grade ${level} with class IDs [${classIds.join(', ')}]:`, studentError);
-					// Optionally set count to 0 or a specific error indicator
+					console.error(`Error counting students for level ${level.name} (ID: ${level.id}):`, studentError);
 				}
 			}
 
 			let subjectCount = 0;
 			if (classIds.length > 0) {
 				try {
-					// Count unique subjects across all classes in this grade level
-					// This assumes a 'classsubjects' table exists linking classid and subjectid
 					const { data: subjectData, error: subjectError } = await supabase
 						.from('classsubjects') 
 						.select('subjectid')
@@ -243,22 +232,32 @@ export const getGradeLevelSummaries = async (): Promise<GradeLevelSummary[]> => 
 					if (subjectError) throw subjectError;
 					subjectCount = new Set(subjectData?.map(s => s.subjectid) || []).size;
 				} catch (subjectError) {
-					console.error(`Error counting subjects for grade ${level} with class IDs [${classIds.join(', ')}]:`, subjectError);
-					// Optionally set count to 0 or a specific error indicator
+					console.error(`Error counting subjects for level ${level.name} (ID: ${level.id}):`, subjectError);
 				}
 			}
 
+			// Use the fetched level name directly
+			// Also, use level.id (which is likely a UUID string) for the id field in the summary, 
+			// but the GradeLevelSummary interface expects a number. We might need to adjust the interface or how the ID is used later.
+			// For now, let's cast it to any to satisfy the current structure, but this should be revisited.
 			summaries.push({
-				id: level,
-				name: `${level}${getOrdinalSuffix(level)} Grade`,
+				id: level.id as any, // Cast to any - REVISIT THIS LATER
+				name: level.name || `Level ${level.id}`, // Use fetched name, fallback to ID
 				studentCount: studentCount || 0,
 				classCount: classCount || 0,
 				subjectCount: subjectCount || 0,
 			});
 		}
 		
-		// Sort summaries by grade level
-		summaries.sort((a, b) => a.id - b.id);
+		// Sort summaries by name (assuming name is like "10th Grade", "11th Grade")
+		summaries.sort((a, b) => {
+			const numA = parseInt(a.name);
+			const numB = parseInt(b.name);
+			if (!isNaN(numA) && !isNaN(numB)) {
+				return numA - numB;
+			}
+			return a.name.localeCompare(b.name); // Fallback to string compare
+		});
 
 		return summaries;
 		

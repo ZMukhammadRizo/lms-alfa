@@ -171,14 +171,11 @@ export const fetchDashboardStats = async (teacherId: string): Promise<TeacherDas
  * Fetch today's schedule for teacher
  */
 export const fetchTodaySchedule = async (teacherId: string): Promise<UpcomingClass[]> => {
-  console.log(`Fetching schedule for teacher: ${teacherId}`);
+  console.log(`[Service Debug] Fetching schedule for teacher: ${teacherId}`);
   try {
-    // Get current date in YYYY-MM-DD format
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    const requestedDay = today.getDay(); // Default to today's day of week
-    
-    // Get classes taught by this teacher
+    const requestedDay = today.getDay();
+
     const { data: teacherClasses, error: classesError } = await supabase
       .from('classes')
       .select('id')
@@ -187,15 +184,16 @@ export const fetchTodaySchedule = async (teacherId: string): Promise<UpcomingCla
     if (classesError) throw classesError;
     
     if (!teacherClasses || teacherClasses.length === 0) {
+      console.log('[Service Debug] Teacher has no assigned classes.');
       return [];
     }
     
     const classIds = teacherClasses.map(c => c.id);
-    
-    // Try to find schedule entries for today
-    // Based on database structure, either check a dedicated schedule table
+    console.log(`[Service Debug] Fetching timetable for class IDs: ${classIds.join(', ')}`);
+
+    // Modified query to fetch related names more directly
     const { data: schedule, error: scheduleError } = await supabase
-      .from('timetable') // Or 'lessons' based on your DB structure
+      .from('timetable')
       .select(`
         id,
         classId,
@@ -204,99 +202,115 @@ export const fetchTodaySchedule = async (teacherId: string): Promise<UpcomingCla
         day,
         location,
         subjectId,
-        classes:classId (
-          id, 
-          classname
-        ),
-        subjects:subjectId (
-          id,
-          subjectname
-        )
+        subject_name:subjects ( subjectname ), 
+        class_name:classes ( classname )
       `)
-      .in('classId', classIds)
-      // Get all schedule entries for this teacher's classes and filter by day in the client
-      // This is more reliable than trying to guess the exact day format
-      ;
+      .in('classId', classIds);
     
     if (scheduleError) {
-      console.error('Schedule fetch error:', scheduleError);
+      console.error('[Service Debug] Schedule fetch error:', scheduleError);
       throw scheduleError;
     }
     
     if (!schedule || schedule.length === 0) {
-      console.log('No schedule found for today');
+      console.log('[Service Debug] No schedule found in DB for this teacher classes');
       return [];
     }
     
-    console.log('Raw schedule data:', schedule);
-    
-    // Define expected shape of schedule data
+    console.log('[Service Debug] Raw schedule data from DB:', schedule);
+
+    // --- Deduplication Step --- 
+    const uniqueScheduleMap = new Map<string, any>();
+    schedule.forEach(item => {
+      if (!uniqueScheduleMap.has(item.id)) { // Use timetable entry ID for uniqueness
+        uniqueScheduleMap.set(item.id, item);
+      }
+    });
+    const uniqueSchedule = Array.from(uniqueScheduleMap.values());
+    console.log(`[Service Debug] Schedule data after deduplication (removed ${schedule.length - uniqueSchedule.length} duplicates):`, uniqueSchedule);
+    // --- End Deduplication --- 
+
+    // Define expected shape (adjust based on new query structure)
     type ScheduleQueryResult = {
         id: string;
         classId: string;
-        start_time: string | null;
-        end_time: string | null;
+        start_time: string | number | null;
+        end_time: string | number | null;
         location: string | null;
         subjectId: string;
         day: string | number | null;
-        // These are arrays in the Supabase response due to the join
-        classes: { id: string; classname: string | null }[];
-        subjects: { id: string; subjectname: string | null }[];
+        // These might now be objects, not arrays, if the relationship is one-to-one
+        subject_name: { subjectname: string | null } | null; 
+        class_name: { classname: string | null } | null;
     };
 
-    const typedScheduleData: ScheduleQueryResult[] = schedule || [];
+    const typedScheduleData: ScheduleQueryResult[] = uniqueSchedule; // Use unique data
     
-    // Get today's day name and potential day formats
+    let todayNumberAdjusted = requestedDay - 1;
+    if (todayNumberAdjusted === -1) {
+      todayNumberAdjusted = 6;
+    }
+
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const dayShort = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-    const todayNumber = requestedDay; // 0-6
-    const todayName = dayNames[todayNumber];
-    const todayShortName = dayShort[todayNumber];
     
-    console.log(`Filtering for day: ${todayNumber}, ${todayName}, ${todayShortName}`);
+    console.log(`[Service Debug] Filtering for adjusted day number: ${todayNumberAdjusted} (Original JS day: ${requestedDay})`); 
     
-    // Filter entries for today using various possible day formats
+    // Filter entries for today using the adjusted day number primarily
+    // Reverted filter logic to original state without internal logs
     const todayEntries = typedScheduleData.filter(entry => {
       const entryDay = entry.day;
-      if (entryDay === null) return false;
+      if (entryDay === null || entryDay === undefined) return false;
       
-      // Convert to string to handle all formats
-      const dayStr = String(entryDay).toLowerCase();
-      
-      return (
-        dayStr === String(todayNumber) ||
-        dayStr === todayName ||
-        dayStr === todayShortName ||
-        dayStr.includes(todayShortName) || // Handle cases like "mon-1" or "mon_1"
-        dayStr.includes(todayName) || // Handle longer formats
-        (todayNumber === 0 && dayStr === '7') // Some systems use 1-7 with Sunday as 7
-      );
+      const entryDayStr = String(entryDay).toLowerCase();
+      let entryDayNum = parseInt(entryDayStr);
+
+      if (isNaN(entryDayNum)) {
+          const nameIndex = dayNames.indexOf(entryDayStr);
+          if (nameIndex !== -1) {
+              entryDayNum = nameIndex - 1;
+              if (entryDayNum === -1) entryDayNum = 6;
+          } else {
+              return false; 
+          }
+      } else {
+          entryDayNum = entryDayNum % 7; 
+      }
+      const match = entryDayNum === todayNumberAdjusted;
+      return match;
     });
     
-    console.log(`Found ${todayEntries.length} entries for today:`, todayEntries);
+    console.log(`[Service Debug] Found ${todayEntries.length} entries after filtering for today:`, todayEntries);
 
-    // Sort client-side with explicit types
     todayEntries.sort((a: ScheduleQueryResult, b: ScheduleQueryResult) => {
-        const timeA = a.start_time || '99:99';
-        const timeB = b.start_time || '99:99';
-        return timeA.localeCompare(timeB);
+        const timeA = String(a.start_time || '99:99'); 
+        const timeB = String(b.start_time || '99:99'); 
+        return timeA.localeCompare(timeB);      
     });
 
-    // Format data with explicit types
-    const formattedSchedule = todayEntries.map((item: ScheduleQueryResult): UpcomingClass => ({
-      id: item.id,
-      subject: item.subjects[0]?.subjectname || 'No Subject',
-      className: item.classes[0]?.classname || 'No Class',
-      time: formatTime(item.start_time),
-      duration: calculateDuration(item.start_time, item.end_time),
-      room: item.location || 'N/A'
-    }));
+    // Updated mapping logic to use new query structure
+    const formattedSchedule = todayEntries.map((item: ScheduleQueryResult): UpcomingClass => {
+      const formattedStartTime = formatTime(item.start_time);
+      const formattedEndTime = formatTime(item.end_time);
+      const timeString = `${formattedStartTime} - ${formattedEndTime}`;
 
-    // Log the final formatted schedule
-    console.log('Formatted schedule:', formattedSchedule);
+      // Extract names using the new structure, check for nulls
+      const subjectName = item.subject_name?.subjectname || 'No Subject';
+      const className = item.class_name?.classname || 'No Class';
+
+      return {
+        id: item.id,
+        subject: subjectName,
+        className: className,
+        time: timeString, 
+        duration: '', 
+        room: item.location || 'N/A'
+      };
+    });
+
+    console.log('[Service Debug] Final formatted schedule returned:', formattedSchedule); 
     return formattedSchedule;
   } catch (error) {
-    console.error('Error fetching today schedule:', error);
+    console.error('[Service Debug] Error in fetchTodaySchedule catch block:', error); 
     return [];
   }
 };
@@ -320,21 +334,6 @@ export const fetchPendingAssignments = async (teacherId: string): Promise<Pendin
     }
     
     const classIds = teacherClasses.map(c => c.id);
-    
-    let subjectIds: string[] = [];
-    // Get subjects for these classes
-    if (classIds.length > 0) {
-      const { data: classSubjects, error: subjectsError } = await supabase
-        .from('classsubjects')
-        .select('subjectid')
-        .in('classid', classIds);
-      
-      if (subjectsError) throw subjectsError;
-      
-      if (classSubjects && classSubjects.length > 0) {
-        subjectIds = classSubjects.map(cs => cs.subjectid);
-      }
-    }
     
     // Get pending assignments for these classes or subjects
     // Try both approaches to accommodate different DB structures
@@ -432,51 +431,47 @@ export const fetchPendingAssignments = async (teacherId: string): Promise<Pendin
 };
 
 // Helper Functions
-const formatTime = (timeStr: string | null): string => {
-  if (!timeStr) return 'N/A';
-  try {
-    // Best guess: timeStr is 'HH:MM:SS' or 'HH:MM'
-    const parts = timeStr.split(':');
-    if (parts.length < 2) throw new Error("Invalid time format");
-    const hours = parseInt(parts[0], 10);
-    const minutes = parseInt(parts[1], 10);
-    if (isNaN(hours) || isNaN(minutes)) throw new Error("Invalid time format");
+const formatTime = (timeInput: string | number | null): string => {
+  if (timeInput === null || timeInput === undefined) return 'N/A';
 
+  try {
+    let hours: number;
+    let minutes: number = 0; // Default minutes to 0
+
+    if (typeof timeInput === 'number') {
+      // If input is a number, assume it's the hour
+      hours = timeInput;
+    } else if (typeof timeInput === 'string') {
+      // If input is a string, try to parse it
+      const parts = timeInput.split(':');
+      if (parts.length >= 2) {
+        hours = parseInt(parts[0], 10);
+        minutes = parseInt(parts[1], 10);
+      } else {
+        // Try parsing as just an hour number if split fails
+        hours = parseInt(timeInput, 10);
+      }
+      // If parsing results in NaN, throw error
+      if (isNaN(hours) || isNaN(minutes)) {
+         throw new Error("Invalid time string format");
+      }
+    } else {
+       throw new Error("Unsupported time input type");
+    }
+    
+    // Ensure hours and minutes are valid numbers after parsing
+    if (isNaN(hours) || isNaN(minutes)) {
+         throw new Error("Parsed time values are not valid numbers");
+    }
+
+    // Format the time using Date object
     const date = new Date();
     date.setHours(hours, minutes, 0);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); // Using numeric hour for cleaner output e.g., 9:00 AM
+
   } catch (e) {
-    console.error("Error formatting time:", timeStr, e);
-    return timeStr; // Return original string on error
-  }
-};
-
-const calculateDuration = (startTime: string | null, endTime: string | null): string => {
-  if (!startTime || !endTime) return '-';
-  try {
-    // Use today's date just to parse the time part
-    const start = new Date(`1970-01-01T${startTime}`);
-    const end = new Date(`1970-01-01T${endTime}`);
-    const diff = end.getTime() - start.getTime();
-
-    // Check for invalid dates or negative duration
-    if (isNaN(diff) || diff < 0) {
-        console.warn("Invalid start/end time for duration calc:", startTime, endTime);
-        return '-';
-    }
-    const minutes = Math.floor(diff / 60000);
-
-    if (minutes === 0) return '-'; // Show dash for zero duration
-    if (minutes < 60) {
-      return `${minutes} mins`;
-    } else {
-      const hours = Math.floor(minutes / 60);
-      const remainingMinutes = minutes % 60;
-      return remainingMinutes > 0 ? `${hours} hr ${remainingMinutes} mins` : `${hours} hr`;
-    }
-  } catch (e) {
-     console.error("Error calculating duration:", startTime, endTime, e);
-    return '-'; // Return dash on error
+    console.error("Error formatting time:", timeInput, e);
+    return String(timeInput); // Return original value stringified on error
   }
 };
 

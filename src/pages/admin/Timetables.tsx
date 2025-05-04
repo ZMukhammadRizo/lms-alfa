@@ -766,6 +766,19 @@ const FadeIn = styled.div`
   }
 `;
 
+// Placeholder message component
+const PlaceholderMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px; // Adjust height as needed
+  font-size: 16px;
+  color: #64748b;
+  text-align: center;
+  background-color: white;
+  border-top: 1px solid #e2e8f0;
+`;
+
 const Timetables: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filterCourse, setFilterCourse] = useState<string | null>(null);
@@ -2420,152 +2433,162 @@ const Timetables: React.FC = () => {
           })}
         </TimetableHeader>
         
-        <TimetableBody ref={timetableRef}>
-          <TimeColumn>
-            {hours.map(hour => (
-                <TimeSlot key={hour}>
-                <TimeLabel>
-                  <TimePart>{hour % 12 || 12}:00</TimePart>
-                  <TimePart>{hour >= 12 ? 'PM' : 'AM'}</TimePart>
-                </TimeLabel>
-                </TimeSlot>
-              ))}
-          </TimeColumn>
-          
-          {weekDays.map((day, dayIndex) => (
-            <DayColumn key={dayIndex} $isToday={isToday(day)}>
+        {/* Conditional Rendering: Show placeholder or timetable body */}
+        {!filterClass && (
+          <PlaceholderMessage>
+            Select a Grade Section to view their schedule
+          </PlaceholderMessage>
+        )}
+        
+        {filterClass && (
+          <TimetableBody ref={timetableRef}>
+            <TimeColumn>
               {hours.map(hour => (
-                <HourRow key={hour} />
-              ))}
-              
-              {/* Current time indicator */}
-              {isToday(day) && (
-                <CurrentTimeIndicator style={{ top: `${currentTimePos}px` }} />
-              )}
-              
-              {/* Class events */}
-              {filteredEvents
-                .filter(event => event.day === dayIndex)
-                .map(event => {
-                  const startMinute = event.startMinute || 0;
-                  const endMinute = event.endMinute || 0;
-                  
-                  const top = ((event.startTime - 8) + (startMinute / 60)) * 80;
-                  const height = ((event.endTime - event.startTime) * 60 - startMinute + endMinute) / 60 * 80;
-                  
-                  const startTimeFormatted = formatTime(event.startTime, startMinute);
-                  const endTimeFormatted = formatTime(event.endTime, endMinute);
-                  
-                  return (
-                    <ClassCard 
-                      key={event.id}
-                      $top={top}
-                      $height={height}
-                      $color={event.color}
-                    >
-                          <ActionButtons className="action-buttons">
-                            <ActionButton 
-                              title="Edit lesson"
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent card click event
-                                handleEditLesson(event);
-                              }}
-                            >
-                              <FiEdit size={14} />
-                            </ActionButton>
-                            <ActionButton 
-                              className="delete-btn"
-                              title="Delete lesson"
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent card click event
-                                console.log('Delete button clicked for event:', event);
-                                console.log('Event ID to delete:', event.id, 'Type:', typeof event.id);
-                                
-                                // Get alternative identifiers in case ID is NaN
-                                const title = event.title || '';
-                                const startTime = event.startTime || 0;
-                                const day = event.day;
-                                
-                                // First check if we have a proper ID
-                                if (typeof event.id === 'number' && !isNaN(event.id)) {
-                                  console.log('Using numeric ID for deletion:', event.id);
-                                  openDeleteConfirmation(event.id);
-                                  return;
-                                }
-                                
-                                console.log('Event ID is invalid, searching for matching event in state...');
-                                
-                                // Try to find a matching event in our classEvents array by properties
-                                const matchingEvents = classEvents.filter(e => 
-                                  e.title === title && 
-                                  e.startTime === startTime && 
-                                  e.day === day
-                                );
-                                
-                                console.log('Found matching events:', matchingEvents);
-                                
-                                if (matchingEvents.length === 1) {
-                                  // We found exactly one match, use its ID
-                                  const matchId = matchingEvents[0].id;
-                                  console.log('Found exactly one matching event, using ID:', matchId);
+                  <TimeSlot key={hour}>
+                  <TimeLabel>
+                    <TimePart>{hour % 12 || 12}:00</TimePart>
+                    <TimePart>{hour >= 12 ? 'PM' : 'AM'}</TimePart>
+                  </TimeLabel>
+                  </TimeSlot>
+                ))}
+            </TimeColumn>
+            
+            {weekDays.map((day, dayIndex) => (
+              <DayColumn key={dayIndex} $isToday={isToday(day)}>
+                {hours.map(hour => (
+                  <HourRow key={hour} />
+                ))}
+                
+                {/* Current time indicator */}
+                {isToday(day) && (
+                  <CurrentTimeIndicator style={{ top: `${currentTimePos}px` }} />
+                )}
+                
+                {/* Class events */}
+                {filteredEvents
+                  .filter(event => event.day === dayIndex)
+                  .map(event => {
+                    const startMinute = event.startMinute || 0;
+                    const endMinute = event.endMinute || 0;
+                    
+                    const top = ((event.startTime - 8) + (startMinute / 60)) * 80;
+                    const height = ((event.endTime - event.startTime) * 60 - startMinute + endMinute) / 60 * 80;
+                    
+                    const startTimeFormatted = formatTime(event.startTime, startMinute);
+                    const endTimeFormatted = formatTime(event.endTime, endMinute);
+                    
+                    return (
+                      <ClassCard 
+                        key={event.id}
+                        $top={top}
+                        $height={height}
+                        $color={event.color}
+                      >
+                            <ActionButtons className="action-buttons">
+                              <ActionButton 
+                                title="Edit lesson"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent card click event
+                                  handleEditLesson(event);
+                                }}
+                              >
+                                <FiEdit size={14} />
+                              </ActionButton>
+                              <ActionButton 
+                                className="delete-btn"
+                                title="Delete lesson"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent card click event
+                                  console.log('Delete button clicked for event:', event);
+                                  console.log('Event ID to delete:', event.id, 'Type:', typeof event.id);
                                   
-                                  if (typeof matchId === 'number' && !isNaN(matchId)) {
-                                    openDeleteConfirmation(matchId);
-                                  } else {
-                                    setError('Cannot delete: Found event has invalid ID');
+                                  // Get alternative identifiers in case ID is NaN
+                                  const title = event.title || '';
+                                  const startTime = event.startTime || 0;
+                                  const day = event.day;
+                                  
+                                  // First check if we have a proper ID
+                                  if (typeof event.id === 'number' && !isNaN(event.id)) {
+                                    console.log('Using numeric ID for deletion:', event.id);
+                                    openDeleteConfirmation(event.id);
+                                    return;
                                   }
-                                } else if (matchingEvents.length > 1) {
-                                  // Multiple matches found, this is unusual but we'll use the first valid ID
-                                  console.log('Found multiple matching events, using first valid ID');
                                   
-                                  const validEvent = matchingEvents.find(e => typeof e.id === 'number' && !isNaN(e.id));
+                                  console.log('Event ID is invalid, searching for matching event in state...');
                                   
-                                  if (validEvent) {
-                                    openDeleteConfirmation(validEvent.id);
+                                  // Try to find a matching event in our classEvents array by properties
+                                  const matchingEvents = classEvents.filter(e => 
+                                    e.title === title && 
+                                    e.startTime === startTime && 
+                                    e.day === day
+                                  );
+                                  
+                                  console.log('Found matching events:', matchingEvents);
+                                  
+                                  if (matchingEvents.length === 1) {
+                                    // We found exactly one match, use its ID
+                                    const matchId = matchingEvents[0].id;
+                                    console.log('Found exactly one matching event, using ID:', matchId);
+                                    
+                                    if (typeof matchId === 'number' && !isNaN(matchId)) {
+                                      openDeleteConfirmation(matchId);
+                                    } else {
+                                      setError('Cannot delete: Found event has invalid ID');
+                                    }
+                                  } else if (matchingEvents.length > 1) {
+                                    // Multiple matches found, this is unusual but we'll use the first valid ID
+                                    console.log('Found multiple matching events, using first valid ID');
+                                    
+                                    const validEvent = matchingEvents.find(e => typeof e.id === 'number' && !isNaN(e.id));
+                                    
+                                    if (validEvent) {
+                                      openDeleteConfirmation(validEvent.id);
+                                    } else {
+                                      setError('Cannot delete: All matching events have invalid IDs');
+                                    }
                                   } else {
-                                    setError('Cannot delete: All matching events have invalid IDs');
+                                    // No matches found, show an error
+                                    console.error('No matching events found for deletion');
+                                    setError('Cannot delete: No matching lesson found');
                                   }
-                                } else {
-                                  // No matches found, show an error
-                                  console.error('No matching events found for deletion');
-                                  setError('Cannot delete: No matching lesson found');
-                                }
-                              }}
-                            >
-                              <FiX size={14} />
-                            </ActionButton>
-                          </ActionButtons>
-                          
-                      <ClassTitle>{event.title}</ClassTitle>
-                      <ClassDetails>
-                        <ClassIcon><FiClock size={12} /></ClassIcon>
-                        {startTimeFormatted} - {endTimeFormatted}
-                      </ClassDetails>
-                      {event.location && (
+                                }}
+                              >
+                                <FiX size={14} />
+                              </ActionButton>
+                            </ActionButtons>
+                            
+                        <ClassTitle>{event.title}</ClassTitle>
                         <ClassDetails>
-                          <ClassIcon><FiMapPin size={12} /></ClassIcon>
-                          {event.location}
+                          <ClassIcon><FiClock size={12} /></ClassIcon>
+                          {startTimeFormatted} - {endTimeFormatted}
                         </ClassDetails>
-                      )}
-                          {event.className && (
-                            <ClassDetails>
-                              <ClassIcon><FiUsers size={12} /></ClassIcon>
-                              Class: {event.className}
-                        </ClassDetails>
-                      )}
-                      {event.teacher && (
-                        <ClassDetails>
-                          <ClassIcon><FiUser size={12} /></ClassIcon>
-                              Teacher: {event.teacher}
-                        </ClassDetails>
-                      )}
-                    </ClassCard>
-                  );
-                })
-              }
-            </DayColumn>
-          ))}
-        </TimetableBody>
+                        {event.location && (
+                          <ClassDetails>
+                            <ClassIcon><FiMapPin size={12} /></ClassIcon>
+                            {event.location}
+                          </ClassDetails>
+                        )}
+                            {event.className && (
+                              <ClassDetails>
+                                <ClassIcon><FiUsers size={12} /></ClassIcon>
+                                Class: {event.className}
+                          </ClassDetails>
+                        )}
+                        {event.teacher && (
+                          <ClassDetails>
+                            <ClassIcon><FiUser size={12} /></ClassIcon>
+                                Teacher: {event.teacher}
+                          </ClassDetails>
+                        )}
+                      </ClassCard>
+                    );
+                  })
+                }
+              </DayColumn>
+            ))}
+          </TimetableBody>
+        )}
+        {/* End Conditional Rendering */}
           </AnimatedContainer>
       </TimetableContainer>
       </FadeIn>

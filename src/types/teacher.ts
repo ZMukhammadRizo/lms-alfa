@@ -9,6 +9,7 @@ export interface Class {
 	students?: User[]
 	subjects?: Subject
 	studentCount?: number
+	subjectCount?: number
   [key: string]: any
 }
 

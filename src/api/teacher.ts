@@ -6,23 +6,26 @@ export const getTeacherClasses = async (teacherId: string) => {
 		.from('classes')
 		.select(`
 			*,
-			classstudents ( count )
+			classstudents ( count ),
+            classsubjects ( count )
 		`)
 		.eq('teacherid', teacherId)
 
 	if (error) {
-		console.error("Error fetching teacher classes with student count:", error);
+		console.error("Error fetching teacher classes with counts:", error);
 		throw error
 	}
 
-	// Map data to include studentCount
-	const classesWithCount = data.map(cls => ({
+	// Map data to include studentCount and subjectCount
+	const classesWithCounts = data.map(cls => ({
 		...cls,
 		// @ts-ignore Supabase typings might not recognize the count directly
-		studentCount: cls.classstudents[0]?.count || 0
+		studentCount: cls.classstudents?.[0]?.count ?? 0, // Use optional chaining and nullish coalescing
+        // @ts-ignore 
+        subjectCount: cls.classsubjects?.[0]?.count ?? 0   // Add subjectCount
 	}));
 	
-	return classesWithCount as Class[]; // Ensure the return type matches the updated Class type
+	return classesWithCounts as Class[]; // Ensure the return type matches the updated Class type
 }
 
 export const getClassById = async (classId: string) => {

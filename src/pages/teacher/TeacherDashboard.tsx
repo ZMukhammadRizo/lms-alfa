@@ -31,7 +31,12 @@ const TeacherDashboard: React.FC = () => {
     const fetchDashboardData = async () => {
       setIsLoading(true);
       try {
-        if (!user?.id) return;
+        if (!user?.id) {
+          console.error("[TeacherDashboard Debug] User ID not found, cannot fetch data.");
+          return;
+        }
+        
+        console.log(`[TeacherDashboard Debug] Fetching data for user ID: ${user.id}`);
         
         const stats: TeacherDashboardStats = await fetchDashboardStats(user.id);
         const schedule: UpcomingClass[] = await fetchTodaySchedule(user.id);

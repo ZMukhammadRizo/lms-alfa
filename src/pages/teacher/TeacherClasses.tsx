@@ -10,6 +10,8 @@ import {
 	FiSearch,
 	FiX,
 	FiPlus,
+	FiUsers,
+	FiBookOpen,
 } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -225,36 +227,28 @@ const CourseCard = styled(motion.div)`
 	border-radius: ${({ theme }) => theme.borderRadius.lg};
 	border: 1px solid ${({ theme }) => theme.colors.border.light};
 	overflow: hidden;
-	transition: all 0.3s ease;
+	transition: all 0.25s ease-out;
 	box-shadow: ${({ theme }) => theme.shadows.sm};
 	display: flex;
 	flex-direction: column;
 	height: 100%;
-	min-height: 280px;
 	position: relative;
 
 	&:hover {
-		border-color: ${({ theme }) => theme.colors.primary[500]};
-		box-shadow: ${({ theme }) => theme.shadows.md};
+		border-color: ${({ theme }) => theme.colors.primary[400]};
+		box-shadow: ${({ theme }) => theme.shadows.lg};
+		transform: scale(1.02);
 	}
 `
 
 const CardTopSection = styled.div`
-	background-color: ${({ theme }) => theme.colors.background.tertiary};
-	padding: 0.75rem 1rem;
-	min-height: 50px;
+	background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[600]} 100%);
+	padding: 1rem 1.25rem;
+	min-height: 60px;
 	position: relative;
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
-`
-
-const TopLeftIndicator = styled.div`
-	width: 12px;
-	height: 12px;
-	border-radius: 50%;
-	background-color: ${({ theme }) => theme.colors.primary[500]};
 `
 
 const TopRightControls = styled.div`
@@ -263,131 +257,12 @@ const TopRightControls = styled.div`
 	gap: 0.5rem;
 `
 
-const CourseLessonsCount = styled.div`
-	padding: 0.3rem 0.8rem;
-	background: ${({ theme }) => theme.colors.background.secondary};
-	border: 1px solid ${({ theme }) => theme.colors.border.light};
-	border-radius: ${props => props.theme.borderRadius.full};
-	font-size: 0.75rem;
-	font-weight: 500;
-	color: ${props => props.theme.colors.text.secondary};
-	z-index: 10;
-	display: flex;
-	align-items: center;
-	gap: 0.25rem;
-	box-shadow: none;
-	white-space: nowrap;
-`
-
-const CourseMenu = styled.div`
-	position: relative;
-	z-index: 20;
-`
-
-const CourseMenuButton = styled.button`
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 32px;
-	height: 32px;
-	border-radius: ${props => props.theme.borderRadius.full};
-	background: ${({ theme }) => theme.colors.background.secondary};
-	border: 1px solid ${({ theme }) => theme.colors.border.light};
-	color: ${props => props.theme.colors.text.secondary};
-	cursor: pointer;
-	transition: all 0.2s ease;
-	box-shadow: none;
-
-	&:hover {
-		background: ${({ theme }) => theme.colors.background.hover};
-		color: ${props => props.theme.colors.text.primary};
-		border-color: ${({ theme }) => theme.colors.border.dark};
-	}
-`
-
-const CourseMenuDropdown = styled(motion.div)<{ isVisible: boolean }>`
-	position: absolute;
-	top: calc(100% + 4px);
-	right: 0;
-	width: 160px;
-	background: ${props => props.theme.colors.background.secondary};
-	border: 1px solid ${props => props.theme.colors.border.light};
-	border-radius: ${props => props.theme.borderRadius.md};
-	box-shadow: ${props => props.theme.shadows.md};
-	overflow: hidden;
-	z-index: 100;
-	padding: 0.25rem 0;
-`
-
-const CourseMenuItem = styled.button`
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	width: 100%;
-	padding: 0.6rem 1rem;
-	border: none;
-	background: transparent;
-	color: ${props => props.theme.colors.text.primary};
-	font-size: 0.85rem;
-	font-weight: 500;
-	text-align: left;
-	cursor: pointer;
-	transition: all 0.2s ease;
-
-	svg {
-		color: ${props => props.theme.colors.text.secondary};
-		width: 14px;
-		height: 14px;
-		flex-shrink: 0;
-	}
-
-	&:hover {
-		background: ${props => props.theme.colors.background.hover};
-	}
-
-	&.delete {
-		color: ${props => props.theme.colors.danger[500]};
-
-		svg {
-			color: ${props => props.theme.colors.danger[500]};
-		}
-
-		&:hover {
-			background: ${props => props.theme.colors.danger[50]};
-			color: ${props => props.theme.colors.danger[700]};
-			svg {
-				color: ${props => props.theme.colors.danger[700]};
-			}
-		}
-	}
-`
-
-const CardBottomSection = styled.div`
-	padding: 1.5rem;
-	flex-grow: 1;
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	text-align: center;
-	cursor: pointer;
-`
-
 const CourseTitle = styled.h3`
-	font-size: 1.75rem;
-	font-weight: 700;
-	margin: 0 0 1rem 0;
-	color: ${props => props.theme.colors.text.primary};
-	transition: color 0.3s ease;
-	line-height: 1.2;
-
-	${CourseCard}:hover & {
-		color: ${props => props.theme.colors.primary[500]};
-	}
-
-	@media (max-width: ${props => props.theme.breakpoints.sm}) {
-		font-size: 1.5rem;
-	}
+	font-size: 1.2rem;
+	font-weight: 600;
+	color: white;
+	margin: 0;
+	line-height: 1.3;
 `
 
 const ViewClassButton = styled(motion.button)`
@@ -461,12 +336,133 @@ const LoadingState = styled.div`
 	gap: 1rem;
 `
 
+const StatsContainer = styled.div`
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+`
+
+const StatItem = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	background-color: ${({ theme }) => theme.colors.background.tertiary};
+	padding: 0.75rem;
+	border-radius: ${({ theme }) => theme.borderRadius.md};
+	border: 1px solid ${({ theme }) => theme.colors.border.light};
+`
+
+const StatIcon = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: ${({ theme }) => theme.colors.primary[500]};
+	font-size: 1.2rem;
+`
+
+const StatContent = styled.div`
+	display: flex;
+	flex-direction: column;
+`
+
+const StatValue = styled.span`
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: ${({ theme }) => theme.colors.text.primary};
+`
+
+const StatLabel = styled.span`
+	font-size: 0.75rem;
+	color: ${({ theme }) => theme.colors.text.secondary};
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+`
+
+const CardFooter = styled.div`
+	margin-top: auto;
+`
+
+const ViewButton = styled(motion.button)`
+	width: 100%;
+	padding: 0.75rem 1rem;
+	border: none;
+	border-radius: ${({ theme }) => theme.borderRadius.md};
+	background: ${props => props.theme.colors.primary[500]};
+	color: white;
+	font-weight: 500;
+	font-size: 0.9rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	transition: background-color 0.2s ease;
+
+	&:hover {
+		background: ${props => props.theme.colors.primary[600]};
+	}
+
+	svg {
+		transition: transform 0.2s ease;
+	}
+
+	&:hover svg {
+		transform: translateX(4px);
+	}
+`
+
+const ActionMenu = styled(motion.div)`
+	position: absolute;
+	top: 45px;
+	right: 10px;
+	background: ${({ theme }) => theme.colors.background.secondary};
+	border-radius: ${({ theme }) => theme.borderRadius.md};
+	box-shadow: ${({ theme }) => theme.shadows.lg};
+	border: 1px solid ${({ theme }) => theme.colors.border.medium};
+	z-index: 10;
+	overflow: hidden;
+`
+
+const ActionMenuItem = styled.button`
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	width: 100%;
+	padding: 0.75rem 1rem;
+	background: none;
+	border: none;
+	color: ${({ theme }) => theme.colors.text.primary};
+	font-size: 0.9rem;
+	text-align: left;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+
+	&:hover {
+		background: ${({ theme }) => theme.colors.background.hover};
+	}
+
+	svg {
+		color: ${({ theme }) => theme.colors.text.secondary};
+		font-size: 1rem;
+	}
+`
+
+const CardContent = styled.div`
+	padding: 1.5rem;
+	flex-grow: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	text-align: center;
+`
+
 const TeacherClasses: React.FC = () => {
 	const navigate = useNavigate()
 	const { classes, loading, error, loadClasses } = useTeacherStore()
 	const [searchTerm, setSearchTerm] = useState<string>('')
 	const [gridColumns, setGridColumns] = useState<number>(3)
-	const [openMenuClass, setOpenMenuClass] = useState<string | null>(null)
 	const [hoverClass, setHoverClass] = useState<string | null>(null)
 	const [, setIsAddClassVisible] = useState<boolean>(false)
 	const [currentUser, setCurrentUser] = useState<any>(null)
@@ -498,22 +494,6 @@ const TeacherClasses: React.FC = () => {
 		getUserData()
 	}, [loadClasses])
 
-	// Close menu when clicking outside
-	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
-			const target = event.target as Element;
-			if (!target.closest('.course-menu-dropdown') && !target.closest('.course-menu-button')) {
-				setOpenMenuClass(null)
-			}
-		}
-
-		document.addEventListener('click', handleClickOutside)
-
-		return () => {
-			document.removeEventListener('click', handleClickOutside)
-		}
-	}, [])
-
 	// Handle search input change
 	const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setSearchTerm(e.target.value)
@@ -535,18 +515,6 @@ const TeacherClasses: React.FC = () => {
 	const viewClass = (classId: string) => {
 		navigate(`/teacher/classes/${classId}`)
 	}
-
-	// Placeholder actions for menu items
-	const editClass = (classId: string) => {
-		console.log(`Edit class: ${classId}`);
-		setOpenMenuClass(null);
-	};
-
-	const deleteClass = (classId: string) => {
-		console.log(`Delete class: ${classId}`);
-		// Add confirmation dialog before actual deletion
-		setOpenMenuClass(null);
-	};
 
 	return (
 		<CoursesContainer>
@@ -582,16 +550,7 @@ const TeacherClasses: React.FC = () => {
 						</HeaderContent>
 
 						<HeaderRight>
-							<AddButton
-								as={motion.button}
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 0.4, duration: 0.5, type: "spring" }}
-								onClick={() => toast("Add Class functionality coming soon!")}
-							>
-								<FiPlus size={16} />
-								<span>Add Class</span>
-							</AddButton>
+							{/* Add Class Button Removed */}
 						</HeaderRight>
 					</CoursesHeader>
 
@@ -610,51 +569,39 @@ const TeacherClasses: React.FC = () => {
 										whileHover={{ y: -5, boxShadow: theme.shadows.md }}
 									>
 										<CardTopSection>
-											<TopLeftIndicator />
+											<CourseTitle>{c.classname || 'N/A'}</CourseTitle>
 											<TopRightControls>
-												<CourseLessonsCount> 
-													{c.studentCount ?? 0} {c.studentCount === 1 ? 'Student' : 'Students'}
-												</CourseLessonsCount>
-												<CourseMenu>
-													<CourseMenuButton
-														onClick={(e: React.MouseEvent) => {
-															e.stopPropagation()
-															setOpenMenuClass(openMenuClass === c.id ? null : c.id)
-														}}
-													>
-														<FiMoreVertical size={18} />
-													</CourseMenuButton>
-
-													{openMenuClass === c.id && (
-														<CourseMenuDropdown
-															isVisible={openMenuClass === c.id}
-															onClick={(e: React.MouseEvent) => e.stopPropagation()}
-														>
-															<CourseMenuItem>
-																<FiEdit size={14} />
-																<span>Edit</span>
-															</CourseMenuItem>
-															<CourseMenuItem className='delete'>
-																<FiX size={14} />
-																<span>Delete</span>
-															</CourseMenuItem>
-														</CourseMenuDropdown>
-													)}
-												</CourseMenu>
 											</TopRightControls>
 										</CardTopSection>
 
-										<CardBottomSection onClick={() => viewClass(c.id)}>
-											<CourseTitle>{c.classname}</CourseTitle>
-											<ViewClassButton
-												as={motion.button}
-												whileHover={{ scale: 1.05 }}
-												whileTap={{ scale: 0.95 }}
+										<CardContent>
+											<StatsContainer>
+												<StatItem>
+													<StatIcon><FiUsers /></StatIcon>
+													<StatContent>
+														<StatValue>{c.studentCount || 0}</StatValue>
+														<StatLabel>Students</StatLabel>
+													</StatContent>
+												</StatItem>
+												<StatItem>
+													<StatIcon><FiBookOpen /></StatIcon>
+													<StatContent>
+														<StatValue>{c.subjectCount || 0}</StatValue>
+														<StatLabel>Subjects</StatLabel>
+													</StatContent>
+												</StatItem>
+											</StatsContainer>
+										</CardContent>
+
+										<CardFooter>
+											<ViewButton
+												onClick={() => viewClass(c.id)}
+												whileHover={{ scale: 1.03 }}
+												whileTap={{ scale: 0.98 }}
 											>
-												<span>View Class</span>
-												<FiChevronRight size={16} />
-											</ViewClassButton>
-										</CardBottomSection>
+												View Class <FiChevronRight />
+											</ViewButton>
+										</CardFooter>
 									</CourseCard>
 								))}
 							</CoursesGrid>
