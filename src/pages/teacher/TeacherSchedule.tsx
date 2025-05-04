@@ -127,12 +127,12 @@ const Header = styled.div`
   align-items: center;
   margin-bottom: 20px;
 `;
-  
+
 const Title = styled.h2`
     font-size: 24px;
-    font-weight: 600;
+  font-weight: 600;
   color: #1e293b;
-    margin: 0;
+  margin: 0;
 `;
 
 const HeaderControls = styled.div`
@@ -416,7 +416,7 @@ const ClassCard = styled.div<{ $top: number, $height: number, $color: string }>`
   }
   
   &:hover .action-buttons {
-    display: flex;
+  display: flex;
   }
 `;
 

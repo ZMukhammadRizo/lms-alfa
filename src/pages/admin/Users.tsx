@@ -851,7 +851,12 @@ const Users: React.FC = () => {
 								<HeaderCell>Email</HeaderCell>
 								<HeaderCell>Role</HeaderCell>
 								<HeaderCell>Status</HeaderCell>
-								<HeaderCell>Parent/Children</HeaderCell>
+								{(activeRole === 'Student' || activeRole === 'Parent') && (
+									<>
+										{activeRole === 'Student' && <HeaderCell>Parent</HeaderCell>}
+										{activeRole === 'Parent' && <HeaderCell>Children</HeaderCell>}
+									</>
+								)}
 								<HeaderCell>Last Login</HeaderCell>
 								<HeaderCell width='100px'>Actions</HeaderCell>
 							</TableRow>
@@ -898,22 +903,24 @@ const Users: React.FC = () => {
 												{user.status === 'active' ? 'Active' : 'Inactive'}
 											</StatusIndicator>
 										</TableCell>
-										<TableCell>
-											{user.role === 'Parent' ? (
-												<ChildrenList parentId={user.id} users={users} />
-											) : user.parent_id || user.parentId ? (
-												<div className="flex items-center text-sm">
-													<FiHome className="mr-1 text-green-500" size={14} />
-													{(() => {
-														const parentId = user.parent_id || user.parentId;
-														const parent = users.find(p => p.id === parentId);
-														return parent ? `${parent.firstName} ${parent.lastName}` : 'Unknown Parent';
-													})()}
-												</div>
-											) : (
-												<span className="text-gray-400">None</span>
-											)}
-										</TableCell>
+										{(activeRole === 'Student' || activeRole === 'Parent') && (
+											<TableCell>
+												{user.role === 'Parent' ? (
+													<ChildrenList parentId={user.id} users={users} />
+												) : user.parent_id || user.parentId ? (
+													<div className="flex items-center text-sm">
+														<FiHome className="mr-1 text-green-500" size={14} />
+														{(() => {
+															const parentId = user.parent_id || user.parentId;
+															const parent = users.find(p => p.id === parentId);
+															return parent ? `${parent.firstName} ${parent.lastName}` : 'Unknown Parent';
+														})()}
+													</div>
+												) : (
+													<span className="text-gray-400">None</span>
+												)}
+											</TableCell>
+										)}
 										<TableCell>{user.lastLogin || 'Never'}</TableCell>
 										<TableCell>
 											<ActionsContainer>

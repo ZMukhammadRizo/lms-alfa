@@ -374,17 +374,6 @@ const Roles: React.FC = () => {
 				<RolesTable>
 					<TableHeader>
 						<HeaderRow>
-							<HeaderCell width='10%'>
-								<CheckboxContainer>
-									<Checkbox
-										type='checkbox'
-										checked={
-											selectedRoles.length === filteredRoles.length && filteredRoles.length > 0
-										}
-										onChange={handleSelectAll}
-									/>
-								</CheckboxContainer>
-							</HeaderCell>
 							<HeaderCell width='20%'>Role Name</HeaderCell>
 							<HeaderCell width='30%'>Description</HeaderCell>
 							<HeaderCell width='30%'>Users</HeaderCell>
@@ -396,15 +385,6 @@ const Roles: React.FC = () => {
 						{filteredRoles.length > 0 ? (
 							filteredRoles.map(role => (
 								<TableRow key={role.id}>
-									<TableCell width='10%'>
-										<CheckboxContainer>
-											<Checkbox
-												type='checkbox'
-												checked={selectedRoles.includes(role.id)}
-												onChange={() => handleSelectRole(role.id)}
-											/>
-										</CheckboxContainer>
-									</TableCell>
 									<TableCell width='20%'>
 										<RoleName>{role.name}</RoleName>
 									</TableCell>
@@ -662,7 +642,7 @@ const TableHeader = styled.div`
 const HeaderRow = styled.div`
 	display: flex;
 	align-items: center;
-	padding: ${props => `${props.theme.spacing[3]} ${props.theme.spacing[4]}`};
+	padding: ${props => `${props.theme.spacing[3]} ${props.theme.spacing[8]}`};
 `
 
 const HeaderCell = styled.div<HeaderCellProps>`
@@ -679,7 +659,8 @@ const TableBody = styled.div``
 const TableRow = styled.div`
 	display: flex;
 	align-items: center;
-	padding: ${props => `${props.theme.spacing[3]} ${props.theme.spacing[4]}`};
+	padding: ${props => `${props.theme.spacing[3]} ${props.theme.spacing[8]}`};
+
 	border-bottom: 1px solid ${props => props.theme.colors.border.lighter};
 	transition: all ${props => props.theme.transition.fast};
 
