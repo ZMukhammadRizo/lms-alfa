@@ -1621,98 +1621,126 @@ const Subjects: React.FC = () => {
   
   // Handle the actual assignment process
   const handleAssignSubjectToGrade = async (grade: string, subjectIds: string[]): Promise<boolean> => {
+    setLoading(true); // Indicate loading start
     try {
       if (!subjectIds.length) {
         toast.error("No subjects selected for assignment");
         return false;
       }
 
-      // Find all class sections for the selected grade
-      const pattern = `${grade}%`; 
-      console.log(`Searching for classes with pattern: ${pattern}`);
+      // 1. Fetch the level ID for the selected grade number
+      const { data: levelData, error: levelError } = await supabase
+        .from('levels')
+        .select('id')
+        .eq('name', grade) // Match the grade number in the 'name' column
+        .single();
+
+      if (levelError || !levelData) {
+        console.error('Error fetching level ID for grade:', grade, levelError);
+        toast.error(`Could not find level information for Grade ${grade}.`);
+        return false;
+      }
+      const levelId = levelData.id;
+      console.log(`Found level ID ${levelId} for Grade ${grade}`);
+
+      // 2. Find all class sections for the fetched level ID
+      // const pattern = `${grade}%`; // REMOVED incorrect pattern matching
+      // console.log(`Searching for classes with pattern: ${pattern}`); 
       
       const { data: sections, error: sectionsError } = await supabase
         .from('classes')
-        .select('*')
-        .like('classname', pattern);
+        .select('id, classname') // Only select necessary fields
+        // .like('classname', pattern); // REMOVED incorrect like query
+        .eq('level_id', levelId); // Use the correct level_id
 
       if (sectionsError) {
         console.error('Error fetching class sections:', sectionsError);
-        toast.error('Failed to fetch class sections');
+        toast.error('Failed to fetch class sections for the level');
         return false;
       }
 
       if (!sections || sections.length === 0) {
-        toast.error(`No class sections found for Grade ${grade}`);
-        return false;
+        toast.info(`No class sections found for Grade ${grade} (Level ID: ${levelId}). No subjects assigned.`);
+        // Consider this a success in the sense that the operation completed without error
+        // return false; 
+        return true; // Or true, depending on desired user feedback
       }
+      
+      console.log(`Found ${sections.length} sections for level ID ${levelId}:`, sections.map(s => s.classname));
 
       let successCount = 0;
       let errorCount = 0;
       let alreadyAssignedCount = 0;
+      let totalRelationshipsAttempted = 0;
 
       // Process each subject ID
       for (const subjectId of subjectIds) {
-        // For each section, create a relationship in classsubjects table
+        // For each section found for the correct level, create a relationship object
         const relationships = sections.map(section => ({
           classid: section.id,
           subjectid: subjectId,
         }));
+        
+        totalRelationshipsAttempted += relationships.length;
 
-        // Check for existing relationships to avoid duplicates
-        for (const rel of relationships) {
-          const { data: existingData, error: checkError } = await supabase
-            .from('classsubjects')
-            .select('*')
-            .eq('classid', rel.classid)
-            .eq('subjectid', rel.subjectid);
-
-          if (checkError) {
-            console.error('Error checking existing relationship:', checkError);
-            errorCount++;
-            continue;
-          }
-
-          // If there are any existing relationships, skip
-          if (existingData && existingData.length > 0) {
-            alreadyAssignedCount++;
-            continue;
-          }
-
-          // Insert the new relationship
-          const { error: insertError } = await supabase
-            .from('classsubjects')
-            .insert([rel]);
-
-          if (insertError) {
-            console.error('Error inserting relationship:', insertError);
-            errorCount++;
-            continue;
-          }
+        // Upsert relationships for the current subject across all found sections
+        // This is more efficient than checking each one individually
+        const { error: upsertError, count: upsertCount } = await supabase
+          .from('classsubjects')
+          .upsert(relationships, { 
+            onConflict: 'classid,subjectid', // Specify conflict columns
+            ignoreDuplicates: true // Important: prevents errors if relationship exists
+          });
           
-          successCount++;
+        if (upsertError) {
+          console.error(`Error upserting relationships for subject ${subjectId}:`, upsertError);
+          errorCount += relationships.length; // Assume all failed for this subject on error
+        } else {
+          // upsertCount is the number of rows inserted or updated.
+          // If ignoreDuplicates=true, it only counts INSERTED rows.
+          // If a relationship already existed, it's ignored and NOT counted.
+          const insertedCount = upsertCount || 0;
+          successCount += insertedCount;
+          alreadyAssignedCount += (relationships.length - insertedCount);
+          console.log(`Subject ${subjectId}: Inserted ${insertedCount}, Ignored ${relationships.length - insertedCount}`);
         }
+        
+        // Old logic removed for efficiency:
+        // // Check for existing relationships to avoid duplicates
+        // for (const rel of relationships) {
+        //   // ... check logic ...
+        //   // Insert the new relationship
+        //   // ... insert logic ...
+        // }
       }
 
-      const totalAttempted = successCount + errorCount + alreadyAssignedCount;
+      // const totalAttempted = successCount + errorCount + alreadyAssignedCount; // Incorrect calculation before
+      
+      console.log(`Assignment Summary: Total Attempted=${totalRelationshipsAttempted}, Success=${successCount}, Errors=${errorCount}, Already Existed/Ignored=${alreadyAssignedCount}`);
       
       if (errorCount > 0 && successCount > 0) {
-        toast.warning(`Assigned ${successCount} new relationships with ${errorCount} errors. ${alreadyAssignedCount} were already assigned.`);
-        return true;
+        toast.warning(`Assigned ${successCount} new subject relationships with ${errorCount} errors. ${alreadyAssignedCount} were already present.`);
       } else if (errorCount > 0 && successCount === 0) {
-        toast.error(`Failed to assign subjects. All ${errorCount} assignments failed.`);
-        return false;
-      } else if (alreadyAssignedCount === totalAttempted) {
+        toast.error(`Failed to assign subjects. Encountered ${errorCount} errors.`);
+      } else if (successCount === 0 && alreadyAssignedCount > 0) {
         toast.info(`All selected subjects were already assigned to Grade ${grade} sections.`);
-        return true;
+      } else if (successCount > 0) {
+        toast.success(`Successfully assigned subjects to ${successCount} section(s) of Grade ${grade}. ${alreadyAssignedCount} relationships already existed.`);
       } else {
-        toast.success(`Successfully assigned ${subjectIds.length} subject(s) to all sections of Grade ${grade}`);
-        return true;
+        // This case might occur if no sections were found initially, or only errors occurred.
+        // The specific messages above should cover most scenarios.
+        toast.info("Subject assignment process completed.");
       }
+      
+      // Return true if there were no errors, or if some successes occurred despite errors
+      return errorCount === 0 || successCount > 0; 
+      
     } catch (error) {
       console.error('Error assigning subjects to grade:', error);
-      toast.error('Failed to assign subjects to grade');
+      toast.error('An unexpected error occurred during subject assignment');
       return false;
+    } finally {
+      setLoading(false); // Indicate loading end
     }
   };
 
