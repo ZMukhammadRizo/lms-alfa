@@ -49,13 +49,13 @@ import TeacherAnnouncements from './pages/teacher/Announcements'
 import TeacherGradesModule from './pages/teacher/GradesModule'
 import TeacherAssignmentFiles from './pages/teacher/TeacherAssignmentFiles'
 import TeacherAssignments from './pages/teacher/TeacherAssignments'
-import TeacherClassDetails from './pages/teacher/TeacherClassDetails'
 import TeacherClasses from './pages/teacher/TeacherClasses'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import TeacherGrades from './pages/teacher/TeacherGrades'
 import TeacherJournalPage from './pages/teacher/TeacherJournalPage'
 import TeacherSchedule from './pages/teacher/TeacherSchedule'
-import TeacherStudents from './pages/teacher/TeacherStudents'
+import { TeacherSubjectDetails } from './pages/teacher/TeacherSubjectDetails'
+import TeacherLessonDetails from './pages/teacher/TeacherLessonDetails'
 import GlobalStyle from './styles/globalStyles'
 import { createTheme } from './styles/theme'
 import TeacherSubmissions from './pages/teacher/TeacherSubmissions'
@@ -149,12 +149,8 @@ function AppContent() {
 						<Route path='dashboard' element={<TeacherDashboard />} />
 						<Route path='profile' element={<ProfilePage />} />
 						<Route path='classes' element={<TeacherClasses />} />
-						<Route path='classes/:id' element={<TeacherClassDetails />} />
-						<Route path='students' element={<TeacherStudents />} />
-						<Route path='assignments' element={<TeacherAssignments />} />
-						<Route path='assignments/files/:id' element={<TeacherAssignmentFiles />} />
-						<Route path='grades' element={<TeacherGrades />} />
-						<Route path='grades/*' element={<TeacherGradesModule />} />
+						<Route path='classes/:classId/subjects/:subjectId' element={<TeacherSubjectDetails />} />
+						<Route path='classes/:classId/subjects/:subjectId/lessons/:lessonId' element={<TeacherLessonDetails />} />
 						<Route path='schedule' element={<TeacherSchedule />} />
 						<Route path='messages' element={<h1>Coming Soon...</h1>} />
 						<Route path='settings' element={<Settings />} />
@@ -162,6 +158,10 @@ function AppContent() {
 						<Route path='journal/:classId' element={<TeacherJournalPage />} />
 						<Route path='journal' element={<TeacherJournalPage />} />
 						<Route path='submissions' element={<TeacherSubmissions />} />
+						<Route path='assignments' element={<TeacherAssignments />} />
+						<Route path='assignments/files/:id' element={<TeacherAssignmentFiles />} />
+						<Route path='grades' element={<TeacherGrades />} />
+						<Route path='grades/*' element={<TeacherGradesModule />} />
 					</Route>
 
 					{/* Student routes */}

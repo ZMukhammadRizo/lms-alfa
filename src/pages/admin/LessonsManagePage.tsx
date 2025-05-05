@@ -5,6 +5,7 @@ import {
 	FiClock,
 	FiEdit2,
 	FiFile,
+	FiFileText,
 	FiPlus,
 	FiSearch,
 	FiTrash2,
@@ -43,6 +44,238 @@ interface Teacher {
 	firstName: string
 	lastName: string
 }
+
+// Helper Functions need to be defined or imported if not already present in this file
+// Assuming getFileNameFromUrl is defined similar to TeacherLessonDetails.tsx
+const getFileNameFromUrl = (url: string): string => {
+	try {
+		const parsedUrl = new URL(url);
+		const pathSegments = parsedUrl.pathname.split('/');
+		const encodedFileName = pathSegments[pathSegments.length - 1];
+		try {
+			if (encodedFileName.length > 30 && encodedFileName.includes('-')) {
+				const originalNameGuess = url.split('/').pop()?.split('-').slice(-1)[0];
+				return originalNameGuess ? decodeURIComponent(originalNameGuess) : 'file';
+			}
+			return decodeURIComponent(encodedFileName);
+		} catch (decodeError) {
+			console.warn("Could not decode filename:", encodedFileName, decodeError);
+			return encodedFileName;
+		}
+	} catch (error) {
+		console.error("Error parsing URL for filename:", error);
+		const segments = url.split('/');
+		return segments[segments.length - 1] || 'file';
+	}
+};
+
+// Add definitions for missing styled components
+const FormGroup = styled.div`
+	margin-bottom: 1.5rem;
+`;
+
+const FormLabel = styled.label`
+	display: block;
+	margin-bottom: 0.5rem;
+	font-weight: 500;
+	color: ${props => props.theme.colors.text.secondary};
+`;
+
+const FormInput = styled.input`
+	width: 100%;
+	padding: 0.75rem;
+	border: 1px solid ${props => props.theme.colors.neutral[300]};
+	border-radius: 0.5rem;
+	font-size: 1rem;
+	box-sizing: border-box; // Ensure padding doesn't increase size
+
+	&:focus {
+		outline: none;
+		border-color: ${props => props.theme.colors.primary[400]};
+		box-shadow: 0 0 0 3px ${props => props.theme.colors.primary[100]};
+	}
+`;
+
+const FormTextarea = styled.textarea`
+	width: 100%;
+	padding: 0.75rem;
+	border: 1px solid ${props => props.theme.colors.neutral[300]};
+	border-radius: 0.5rem;
+	font-size: 1rem;
+	min-height: 80px;
+	box-sizing: border-box;
+
+	&:focus {
+		outline: none;
+		border-color: ${props => props.theme.colors.primary[400]};
+		box-shadow: 0 0 0 3px ${props => props.theme.colors.primary[100]};
+	}
+`;
+
+const FormSelect = styled.select`
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid ${props => props.theme.colors.neutral[300]};
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    background-color: white;
+    box-sizing: border-box;
+
+    &:focus {
+        outline: none;
+        border-color: ${props => props.theme.colors.primary[400]};
+        box-shadow: 0 0 0 3px ${props => props.theme.colors.primary[100]};
+    }
+`;
+
+const FormHelp = styled.p`
+	font-size: 0.8rem;
+	color: ${props => props.theme.colors.text.secondary};
+	margin-top: 0.5rem;
+`;
+
+const FileUploadContainer = styled.div`
+	margin-top: 1rem;
+`;
+
+const FileUploadLabel = styled.label`
+	display: inline-block; // Changed from flex to inline-block for button
+	cursor: pointer;
+`;
+
+const UploadButton = styled.button`
+	display: inline-flex; // Use inline-flex
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.6rem 1rem;
+	background-color: ${props => props.theme.colors.neutral[100]};
+	color: ${props => props.theme.colors.text.secondary};
+	border: 1px solid ${props => props.theme.colors.neutral[300]};
+	border-radius: 0.5rem;
+	font-size: 0.9rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&:hover:not(:disabled) {
+		background-color: ${props => props.theme.colors.neutral[200]};
+	}
+
+	&:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+`;
+
+const UploadedFilesList = styled.div`
+	margin-top: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+`;
+
+const UploadedFileItem = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.5rem 0.75rem;
+	background-color: ${props => props.theme.colors.neutral[50]};
+	border-radius: 0.375rem;
+`;
+
+const UploadedFileName = styled.a`
+	color: ${props => props.theme.colors.primary[600]};
+	text-decoration: none;
+	font-size: 0.9rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	margin-right: 0.5rem; // Add margin to prevent overlap with button
+
+	&:hover {
+		text-decoration: underline;
+	}
+`;
+
+const RemoveFileButton = styled.button`
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	border: none;
+	background-color: transparent;
+	color: ${props => props.theme.colors.neutral[500]};
+	cursor: pointer;
+	flex-shrink: 0; // Prevent button from shrinking
+
+	&:hover {
+		background-color: ${props => props.theme.colors.neutral[100]};
+		color: ${props => props.theme.colors.error[600]};
+	}
+`;
+
+const ButtonContainer = styled.div`
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.75rem;
+	margin-top: 2rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid ${props => props.theme.colors.neutral[200]};
+`;
+
+const CancelButton = styled.button`
+	padding: 0.75rem 1.25rem;
+	background-color: white;
+	color: ${props => props.theme.colors.text.secondary};
+	border: 1px solid ${props => props.theme.colors.neutral[300]};
+	border-radius: 0.5rem;
+	font-size: 0.9rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&:hover {
+		background-color: ${props => props.theme.colors.neutral[50]};
+	}
+`;
+
+const SubmitButton = styled.button`
+	padding: 0.75rem 1.25rem;
+	background-color: ${props => props.theme.colors.primary[600]};
+	color: white;
+	border: none;
+	border-radius: 0.5rem;
+	font-size: 0.9rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&:hover {
+		background-color: ${props => props.theme.colors.primary[700]};
+	}
+`;
+
+// Function to extract storage path from URL
+const getStoragePathFromUrl = (url: string, bucketName: string): string | null => {
+	try {
+		const urlObject = new URL(url);
+		const pathSegments = urlObject.pathname.split('/');
+		// Find the segment matching the bucket name
+		const bucketIndex = pathSegments.findIndex(segment => segment === bucketName);
+		if (bucketIndex > -1 && pathSegments.length > bucketIndex + 1) {
+			// Join the segments *after* the bucket name
+			const storagePath = pathSegments.slice(bucketIndex + 1).join('/');
+			return decodeURIComponent(storagePath); // Decode potential URI encoding
+		}
+		console.warn(`Could not extract path after bucket "${bucketName}" from URL: ${url}`);
+		return null;
+	} catch (e) {
+		console.error(`Error parsing URL for storage path: ${url}`, e);
+		return null;
+	}
+};
 
 const LessonsManagePage: React.FC = () => {
 	const { subjectId } = useParams<{ subjectId: string }>()
@@ -87,6 +320,7 @@ const LessonsManagePage: React.FC = () => {
 	// Fetch subject, lessons, and teachers
 	useEffect(() => {
 		if (!subjectId) {
+			toast.error('Subject ID is missing.')
 			navigate('/admin/subjects')
 			return
 		}
@@ -191,45 +425,74 @@ const LessonsManagePage: React.FC = () => {
 	}
 
 	const handleDeleteLesson = async (id: string) => {
+		if (!window.confirm('Are you sure you want to delete this lesson and its associated files?')) {
+			return;
+		}
+
 		try {
-			// Get lesson to find file URLs
-			const { data: lesson, error: fetchError } = await supabase
+			// Get lesson details to find file URLs
+			const { data: lessonToDelete, error: fetchError } = await supabase
 				.from('lessons')
 				.select('fileurls')
 				.eq('id', id)
 				.single()
 
-			if (fetchError) throw fetchError
-
-			// Delete files from storage if they exist
-			if (lesson.fileurls && Array.isArray(lesson.fileurls) && lesson.fileurls.length > 0) {
-				for (const fileUrl of lesson.fileurls) {
-					const path = fileUrl.replace(
-						`${supabase.supabaseUrl}/storage/v1/object/public/additionalLessonFiles/`,
-						''
-					)
-					if (path) {
-						const { error: deleteFileError } = await supabase.storage
-							.from('additionalLessonFiles')
-							.remove([path])
-
-						if (deleteFileError) {
-							console.error('Error deleting file:', deleteFileError)
-						}
-					}
-				}
+			if (fetchError) {
+				console.error('Error fetching lesson details for deletion:', fetchError)
+				throw new Error('Could not fetch lesson details before deleting.')
 			}
 
-			// Delete lesson
-			const { error: deleteError } = await supabase.from('lessons').delete().eq('id', id)
+			// Delete files from storage if they exist
+			if (lessonToDelete.fileurls && Array.isArray(lessonToDelete.fileurls) && lessonToDelete.fileurls.length > 0) {
+				const bucketName = 'additionalLessonFiles'; // Ensure this bucket name is correct
+				const pathsToRemove: string[] = [];
 
-			if (deleteError) throw deleteError
+				for (const fileUrl of lessonToDelete.fileurls) {
+					const storagePath = getStoragePathFromUrl(fileUrl, bucketName);
+					if (storagePath) {
+						pathsToRemove.push(storagePath);
+					} else {
+						console.warn(`Could not determine storage path for deletion: ${fileUrl}`);
+						// Optionally notify user or skip deletion for this file
+					}
+				}
 
-			setLessons(lessons.filter(lesson => lesson.id !== id))
-			toast.success('Lesson deleted successfully')
+				if (pathsToRemove.length > 0) {
+					console.log('Attempting to delete files from storage:', pathsToRemove);
+					const { error: deleteFilesError } = await supabase.storage
+						.from(bucketName)
+						.remove(pathsToRemove);
+
+					if (deleteFilesError) {
+						console.error('Error deleting files from storage:', deleteFilesError);
+						// Decide if you want to stop the lesson deletion or just warn
+						toast.warn("Failed to delete some associated files from storage. Please check manually.");
+					} else {
+						console.log('Successfully deleted files from storage:', pathsToRemove);
+					}
+				}
+			} else {
+				console.log('No files associated with this lesson to delete from storage.');
+			}
+
+			// Delete the lesson record from the database
+			const { error: deleteLessonError } = await supabase
+				.from('lessons')
+				.delete()
+				.eq('id', id);
+
+			if (deleteLessonError) {
+				console.error('Error deleting lesson record:', deleteLessonError);
+				throw deleteLessonError; // Throw error to be caught below
+			}
+
+			// Update local state
+			setLessons(lessons.filter(lesson => lesson.id !== id));
+			toast.success('Lesson and associated files deleted successfully');
+
 		} catch (error) {
-			console.error('Error deleting lesson:', error)
-			toast.error('Failed to delete lesson')
+			console.error('Error in handleDeleteLesson:', error);
+			toast.error(`Failed to delete lesson: ${error instanceof Error ? error.message : 'Unknown error'}`);
 		}
 	}
 
@@ -238,54 +501,74 @@ const LessonsManagePage: React.FC = () => {
 		if (!files || files.length === 0) return
 
 		setUploadingFiles(true)
+		const bucketName = 'additionalLessonFiles'; // Ensure this is correct
+		const currentFiles = [...uploadedFiles]; // Get current files in modal state
 
 		try {
-			const newUploadedFiles = [...uploadedFiles]
-
 			for (let i = 0; i < files.length; i++) {
 				const file = files[i]
 				const fileExt = file.name.split('.').pop()
-				const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`
-				const filePath = `${fileName}`
+				// Use a more robust unique naming convention if needed
+				const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`
+				const filePath = `${uniqueFileName}` // Path within the bucket
+
+				console.log(`Uploading file ${file.name} as ${filePath} to bucket ${bucketName}`);
 
 				const { error: uploadError, data } = await supabase.storage
-					.from('additionalLessonFiles')
+					.from(bucketName)
 					.upload(filePath, file)
 
-				if (uploadError) throw uploadError
+				if (uploadError) {
+					console.error(`Error uploading file ${file.name}:`, uploadError);
+					throw uploadError; // Throw to be caught below
+				}
 
 				if (data) {
+					// Get public URL
 					const { data: urlData } = supabase.storage
-						.from('additionalLessonFiles')
+						.from(bucketName)
 						.getPublicUrl(filePath)
 
-					newUploadedFiles.push({
-						name: file.name,
-						url: urlData.publicUrl,
-					})
+					if (urlData?.publicUrl) {
+						console.log(`File ${file.name} uploaded successfully. URL: ${urlData.publicUrl}`);
+						// Add the newly uploaded file to the modal state
+						currentFiles.push({
+							name: file.name, // Keep original name for display
+							url: urlData.publicUrl,
+						})
+					} else {
+						console.warn(`File ${file.name} uploaded but could not get public URL.`);
+					}
 				}
 			}
 
-			setUploadedFiles(newUploadedFiles)
-			toast.success('Files uploaded successfully')
+			setUploadedFiles(currentFiles); // Update state with all files (old + new)
+			toast.success(`${files.length} file(s) uploaded successfully`);
 		} catch (error) {
-			console.error('Error uploading files:', error)
-			toast.error('Failed to upload files')
+			console.error('Error during file upload process:', error);
+			toast.error(`Failed to upload files: ${error instanceof Error ? error.message : 'Unknown error'}`);
 		} finally {
 			setUploadingFiles(false)
+			// Clear the file input value to allow re-uploading the same file if needed
+            if (e.target) {
+                e.target.value = '';
+            }
 		}
 	}
 
-	const removeUploadedFile = (index: number) => {
-		const newFiles = [...uploadedFiles]
-		newFiles.splice(index, 1)
-		setUploadedFiles(newFiles)
+	const removeUploadedFile = (indexToRemove: number) => {
+		setUploadedFiles(currentFiles => currentFiles.filter((_, index) => index !== indexToRemove));
 	}
 
 	const validateForm = () => {
 		if (!formData.lessonname.trim()) {
 			toast.error('Lesson name is required')
 			return false
+		}
+		// Add more validation if needed (e.g., teacher selection)
+		if (!formData.teacherid) {
+			toast.error('Please select a teacher for the lesson.');
+			return false;
 		}
 		return true
 	}
@@ -295,51 +578,101 @@ const LessonsManagePage: React.FC = () => {
 
 		if (!validateForm()) return
 
+		// Ensure subjectId is available (should be guaranteed by useEffect check)
+		if (!subjectId) {
+			toast.error("Cannot save lesson: Subject ID is missing.");
+			return;
+		}
+
+		// Prepare lesson data payload
+		const finalFileUrls = uploadedFiles.map(file => file.url);
+		const lessonDataPayload = {
+			lessonname: formData.lessonname,
+			description: formData.description,
+			videourl: formData.videourl || null, // Use null if empty
+			fileurls: finalFileUrls, // Use the current state of uploadedFiles
+			duration: formData.duration || null, // Use null if empty
+			subjectid: subjectId, // Now guaranteed to be string
+			teacherid: formData.teacherid, // Also guaranteed by validation
+		};
+
 		try {
-			const lessonData = {
-				lessonname: formData.lessonname,
-				description: formData.description,
-				videourl: formData.videourl,
-				fileurls: uploadedFiles.map(file => file.url),
-				duration: formData.duration,
-				subjectid: subjectId,
-				teacherid: formData.teacherid || user?.id,
-			}
-
 			if (currentLesson) {
-				// Update existing lesson
-				const { error } = await supabase
+				// ----- UPDATE existing lesson -----
+				console.log('Updating lesson:', currentLesson.id, lessonDataPayload);
+
+				// 1. Identify files to delete from storage
+				const originalUrls = currentLesson.fileurls || [];
+				const urlsToDelete = originalUrls.filter(url => !finalFileUrls.includes(url));
+				const bucketName = 'additionalLessonFiles';
+				const pathsToDelete = urlsToDelete
+					.map(url => getStoragePathFromUrl(url, bucketName))
+					.filter((path): path is string => path !== null); // Filter out null paths
+
+				if (pathsToDelete.length > 0) {
+					console.log('Deleting files removed during edit:', pathsToDelete);
+					const { error: deleteFilesError } = await supabase.storage
+						.from(bucketName)
+						.remove(pathsToDelete);
+					if (deleteFilesError) {
+						console.error("Error removing files from storage during update:", deleteFilesError);
+						toast.warn("Could not remove some old files from storage. Please check manually.");
+						// Continue with update despite storage error? Or stop? For now, continue.
+					}
+				}
+
+				// 2. Update lesson record in database
+				const { data: updatedLesson, error: updateError } = await supabase
 					.from('lessons')
-					.update(lessonData)
+					.update(lessonDataPayload)
 					.eq('id', currentLesson.id)
-
-				if (error) throw error
-
-				setLessons(
-					lessons.map(lesson =>
-						lesson.id === currentLesson.id ? { ...lesson, ...lessonData } : lesson
-					)
-				)
-
-				toast.success('Lesson updated successfully')
-			} else {
-				// Create new lesson
-				const { data, error } = await supabase
-					.from('lessons')
-					.insert([lessonData])
-					.select()
+					.select() // Select the updated record
 					.single()
 
-				if (error) throw error
+				if (updateError) throw updateError;
 
-				setLessons([...lessons, data])
-				toast.success('Lesson created successfully')
+				// 3. Update local state
+                if (updatedLesson) {
+				    setLessons(lessons.map(lesson =>
+					    lesson.id === currentLesson.id ? updatedLesson : lesson
+				    ));
+                } else {
+                    // Fallback if select() fails or returns null, update optimistically
+                    setLessons(lessons.map(lesson =>
+					    lesson.id === currentLesson.id ? { ...lesson, ...lessonDataPayload, id: lesson.id } : lesson
+				    ));
+                }
+
+				toast.success('Lesson updated successfully');
+
+			} else {
+				// ----- CREATE new lesson -----
+				console.log('Creating new lesson:', lessonDataPayload);
+
+				const { data: newLesson, error: insertError } = await supabase
+					.from('lessons')
+					.insert([lessonDataPayload])
+					.select()
+					.single();
+
+				if (insertError) throw insertError;
+
+				if (newLesson) {
+					setLessons([...lessons, newLesson]); // Add the new lesson to local state
+				} else {
+                    console.warn("New lesson created but couldn't retrieve the full record.");
+                    // May need to refetch or update optimistically
+                }
+				toast.success('Lesson created successfully');
 			}
 
-			setShowAddModal(false)
+			setShowAddModal(false); // Close modal on success
+			setCurrentLesson(null); // Reset current lesson state
+			setUploadedFiles([]); // Clear modal file state
+
 		} catch (error) {
-			console.error('Error saving lesson:', error)
-			toast.error('Failed to save lesson')
+			console.error('Error saving lesson:', error);
+			toast.error(`Failed to save lesson: ${error instanceof Error ? error.message : 'Unknown error'}`);
 		}
 	}
 
@@ -421,21 +754,25 @@ const LessonsManagePage: React.FC = () => {
 									<FilesContainer>
 										<FilesHeader>
 											<FiFile />
-											<span>Additional Files</span>
+											<span>Files ({lesson.fileurls.length})</span>
 										</FilesHeader>
 										<FilesList>
 											{lesson.fileurls.map((url, index) => {
-												const fileName = url.split('/').pop() || `File ${index + 1}`
+												const fileName = getFileNameFromUrl(url) || `file-${index}`;
 												return (
 													<FileItem
-														key={index}
+														key={url + index}
 														href={url}
 														target='_blank'
 														rel='noopener noreferrer'
+														title={fileName}
 													>
-														{fileName}
+														<FiFileText size={16} style={{ marginRight: '8px', flexShrink: 0 }} />
+														<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+															{fileName}
+														</span>
 													</FileItem>
-												)
+												);
 											})}
 										</FilesList>
 									</FilesContainer>
@@ -454,7 +791,9 @@ const LessonsManagePage: React.FC = () => {
 					))
 				) : (
 					<EmptyState>
-						<EmptyStateText>No lessons found for this subject</EmptyStateText>
+						<EmptyStateText>
+							{searchTerm ? 'No lessons match your search.' : 'No lessons found for this subject.'}
+						</EmptyStateText>
 						<AddLessonButton onClick={handleAddLesson}>
 							<FiPlus />
 							<span>Add First Lesson</span>
@@ -480,8 +819,9 @@ const LessonsManagePage: React.FC = () => {
 						</ModalHeader>
 						<ModalBody>
 							<form onSubmit={handleSubmit}>
+								{/* Form Inputs */}
 								<FormGroup>
-									<FormLabel htmlFor='lessonname'>Lesson Name</FormLabel>
+									<FormLabel htmlFor='lessonname'>Lesson Name *</FormLabel>
 									<FormInput
 										id='lessonname'
 										name='lessonname'
@@ -498,7 +838,7 @@ const LessonsManagePage: React.FC = () => {
 										name='description'
 										value={formData.description}
 										onChange={handleInputChange}
-										placeholder='Enter lesson description'
+										placeholder='Enter lesson description (optional)'
 										rows={3}
 									/>
 								</FormGroup>
@@ -509,9 +849,9 @@ const LessonsManagePage: React.FC = () => {
 										name='videourl'
 										value={formData.videourl}
 										onChange={handleInputChange}
-										placeholder='e.g. https://www.youtube.com/embed/abcXYZ'
+										placeholder='e.g., https://www.youtube.com/embed/your_video_id'
 									/>
-									<FormHelp>Enter a YouTube embed URL for the lesson video</FormHelp>
+									<FormHelp>Paste the embed URL from YouTube (optional)</FormHelp>
 								</FormGroup>
 								<FormGroup>
 									<FormLabel htmlFor='duration'>Duration</FormLabel>
@@ -520,18 +860,21 @@ const LessonsManagePage: React.FC = () => {
 										name='duration'
 										value={formData.duration}
 										onChange={handleInputChange}
-										placeholder='e.g. 45 minutes'
+										placeholder='e.g., 45 minutes (optional)'
 									/>
 								</FormGroup>
 								<FormGroup>
-									<FormLabel htmlFor='teacherid'>Teacher</FormLabel>
+									<FormLabel htmlFor='teacherid'>Teacher *</FormLabel>
 									<FormSelect
 										id='teacherid'
 										name='teacherid'
 										value={formData.teacherid}
 										onChange={handleInputChange}
+										required // Make teacher selection mandatory
 									>
-										<option value=''>Select a teacher</option>
+										<option value='' disabled={formData.teacherid !== ''}>
+                                            -- Select a teacher --
+                                        </option>
 										{teachers.map(teacher => (
 											<option key={teacher.id} value={teacher.id}>
 												{teacher.firstName} {teacher.lastName}
@@ -539,22 +882,26 @@ const LessonsManagePage: React.FC = () => {
 										))}
 									</FormSelect>
 								</FormGroup>
+
+								{/* File Upload Section */}
 								<FormGroup>
 									<FormLabel>Additional Files</FormLabel>
 									<FileUploadContainer>
-										<FileUploadLabel>
+										<FileUploadLabel htmlFor='lesson-file-upload'> {/* Link label to input */}
 											<input
+												id='lesson-file-upload' // Add id for label linking
 												type='file'
 												onChange={handleFileUpload}
 												multiple
 												disabled={uploadingFiles}
 												style={{ display: 'none' }}
 											/>
-											<UploadButton type='button' disabled={uploadingFiles}>
+											<UploadButton type='button' disabled={uploadingFiles} onClick={() => document.getElementById('lesson-file-upload')?.click()}> {/* Trigger input click */}
 												<FiUpload />
 												<span>{uploadingFiles ? 'Uploading...' : 'Upload Files'}</span>
 											</UploadButton>
 										</FileUploadLabel>
+										{/* Display Uploaded Files */}
 										{uploadedFiles.length > 0 && (
 											<UploadedFilesList>
 												{uploadedFiles.map((file, index) => (
@@ -563,12 +910,15 @@ const LessonsManagePage: React.FC = () => {
 															href={file.url}
 															target='_blank'
 															rel='noopener noreferrer'
+															title={file.name} // Show original name on hover
 														>
-															{file.name}
+															{file.name} {/* Display original name */}
 														</UploadedFileName>
 														<RemoveFileButton
 															type='button'
 															onClick={() => removeUploadedFile(index)}
+															title="Remove this file" // Add title
+															disabled={uploadingFiles} // Disable remove while uploading
 														>
 															<FiX />
 														</RemoveFileButton>
@@ -576,13 +926,16 @@ const LessonsManagePage: React.FC = () => {
 												))}
 											</UploadedFilesList>
 										)}
+                                        <FormHelp>Upload PDFs, documents, images, etc.</FormHelp>
 									</FileUploadContainer>
 								</FormGroup>
+
+								{/* Action Buttons */}
 								<ButtonContainer>
 									<CancelButton type='button' onClick={() => setShowAddModal(false)}>
 										Cancel
 									</CancelButton>
-									<SubmitButton type='submit'>
+									<SubmitButton type='submit' disabled={uploadingFiles}> {/* Disable submit while uploading */}
 										{currentLesson ? 'Update Lesson' : 'Create Lesson'}
 									</SubmitButton>
 								</ButtonContainer>
@@ -795,17 +1148,18 @@ const VideoIcon = styled.div`
 `
 
 const FilesContainer = styled.div`
-	padding: 1rem;
-	background-color: ${props => props.theme.colors.neutral[50]};
-	border-radius: 0.5rem;
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: 1px solid ${({ theme }) => theme.colors.border.light};
 `
 
 const FilesHeader = styled.div`
 	display: flex;
 	align-items: center;
-	gap: 0.75rem;
+	gap: 0.5rem;
+	font-size: 0.9rem;
 	font-weight: 500;
-	color: ${props => props.theme.colors.text.primary};
+	color: ${({ theme }) => theme.colors.text.secondary};
 	margin-bottom: 0.75rem;
 `
 
@@ -816,17 +1170,24 @@ const FilesList = styled.div`
 `
 
 const FileItem = styled.a`
-	display: block;
-	color: ${props => props.theme.colors.primary[600]};
+	display: flex;
+	align-items: center;
+	padding: 0.5rem 0.75rem;
+	margin-bottom: 0.5rem;
+	border-radius: ${({ theme }) => theme.borderRadius.md};
+	background-color: ${({ theme }) => theme.colors.background.tertiary};
+	color: ${({ theme }) => theme.colors.text.secondary};
 	text-decoration: none;
-	font-size: 0.9rem;
-	padding: 0.5rem;
-	border-radius: 0.25rem;
-	transition: all 0.2s ease;
+	transition: background-color 0.2s ease, color 0.2s ease;
+	overflow: hidden;
 
 	&:hover {
-		background-color: ${props => props.theme.colors.neutral[100]};
-		color: ${props => props.theme.colors.primary[700]};
+		background-color: ${({ theme }) => theme.colors.background.hover};
+		color: ${({ theme }) => theme.colors.primary[500]};
+	}
+
+	&:last-child {
+		margin-bottom: 0;
 	}
 `
 
@@ -963,183 +1324,4 @@ const ModalBody = styled.div`
 	padding: 1.5rem;
 `
 
-const FormGroup = styled.div`
-	margin-bottom: 1.5rem;
-`
-
-const FormLabel = styled.label`
-	display: block;
-	font-size: 0.9rem;
-	font-weight: 500;
-	color: ${props => props.theme.colors.text.primary};
-	margin-bottom: 0.5rem;
-`
-
-const FormInput = styled.input`
-	width: 100%;
-	padding: 0.75rem;
-	border: 1px solid ${props => props.theme.colors.neutral[300]};
-	border-radius: 0.5rem;
-	font-size: 1rem;
-
-	&:focus {
-		outline: none;
-		border-color: ${props => props.theme.colors.primary[500]};
-		box-shadow: 0 0 0 3px ${props => props.theme.colors.primary[100]};
-	}
-`
-
-const FormHelp = styled.div`
-	font-size: 0.8rem;
-	color: ${props => props.theme.colors.text.secondary};
-	margin-top: 0.5rem;
-`
-
-const FormTextarea = styled.textarea`
-	width: 100%;
-	padding: 0.75rem;
-	border: 1px solid ${props => props.theme.colors.neutral[300]};
-	border-radius: 0.5rem;
-	font-size: 1rem;
-	resize: vertical;
-	min-height: 100px;
-
-	&:focus {
-		outline: none;
-		border-color: ${props => props.theme.colors.primary[500]};
-		box-shadow: 0 0 0 3px ${props => props.theme.colors.primary[100]};
-	}
-`
-
-const FormSelect = styled.select`
-	width: 100%;
-	padding: 0.75rem;
-	border: 1px solid ${props => props.theme.colors.neutral[300]};
-	border-radius: 0.5rem;
-	font-size: 1rem;
-	background-color: white;
-
-	&:focus {
-		outline: none;
-		border-color: ${props => props.theme.colors.primary[500]};
-		box-shadow: 0 0 0 3px ${props => props.theme.colors.primary[100]};
-	}
-`
-
-const FileUploadContainer = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-`
-
-const FileUploadLabel = styled.label`
-	display: block;
-`
-
-const UploadButton = styled.button`
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.75rem 1.25rem;
-	background-color: ${props => props.theme.colors.neutral[100]};
-	color: ${props => props.theme.colors.text.primary};
-	border: 1px dashed ${props => props.theme.colors.neutral[300]};
-	border-radius: 0.5rem;
-	font-size: 0.9rem;
-	font-weight: 500;
-	cursor: pointer;
-	transition: all 0.2s ease;
-	width: 100%;
-	justify-content: center;
-
-	&:hover {
-		background-color: ${props => props.theme.colors.neutral[200]};
-	}
-
-	&:disabled {
-		opacity: 0.7;
-		cursor: not-allowed;
-	}
-`
-
-const UploadedFilesList = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-`
-
-const UploadedFileItem = styled.div`
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 0.75rem;
-	background-color: ${props => props.theme.colors.neutral[50]};
-	border-radius: 0.5rem;
-`
-
-const UploadedFileName = styled.a`
-	color: ${props => props.theme.colors.primary[600]};
-	text-decoration: none;
-	font-size: 0.9rem;
-
-	&:hover {
-		text-decoration: underline;
-	}
-`
-
-const RemoveFileButton = styled.button`
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 28px;
-	height: 28px;
-	border-radius: 0.25rem;
-	border: none;
-	background-color: ${props => props.theme.colors.neutral[200]};
-	color: ${props => props.theme.colors.text.secondary};
-	cursor: pointer;
-	transition: all 0.2s ease;
-
-	&:hover {
-		background-color: ${props => props.theme.colors.danger[100]};
-		color: ${props => props.theme.colors.danger[600]};
-	}
-`
-
-const ButtonContainer = styled.div`
-	display: flex;
-	justify-content: flex-end;
-	gap: 1rem;
-	margin-top: 1.5rem;
-`
-
-const Button = styled.button`
-	padding: 0.75rem 1.5rem;
-	border-radius: 0.5rem;
-	font-size: 0.9rem;
-	font-weight: 500;
-	cursor: pointer;
-	transition: all 0.2s ease;
-`
-
-const CancelButton = styled(Button)`
-	background-color: white;
-	color: ${props => props.theme.colors.text.primary};
-	border: 1px solid ${props => props.theme.colors.neutral[300]};
-
-	&:hover {
-		background-color: ${props => props.theme.colors.neutral[100]};
-	}
-`
-
-const SubmitButton = styled(Button)`
-	background-color: ${props => props.theme.colors.primary[600]};
-	color: white;
-	border: none;
-
-	&:hover {
-		background-color: ${props => props.theme.colors.primary[700]};
-	}
-`
-
-export default LessonsManagePage
+export default LessonsManagePage;

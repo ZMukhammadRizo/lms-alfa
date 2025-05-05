@@ -13,7 +13,6 @@ import {
 	FiMessageSquare,
 	FiSettings,
 	FiUser,
-	FiUsers,
 	FiX,
 } from 'react-icons/fi'
 import { NavLink, useLocation } from 'react-router-dom'
@@ -239,13 +238,6 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 									onMobileClick={handleNavItemClick}
 								/>
 								<MenuItem
-									icon={<FiUsers />}
-									label='Students'
-									to='/teacher/students'
-									isCollapsed={isMobile ? false : isCollapsed}
-									onMobileClick={handleNavItemClick}
-								/>
-								<MenuItem
 									icon={<FiClipboard />}
 									label='Assignments'
 									to='/teacher/assignments'
@@ -457,7 +449,7 @@ const MobileMenuButton = styled.button`
 
 	&:hover {
 		background: ${props => props.theme.colors.background.secondary};
-		border-color: ${props => props.theme.colors.border.medium};
+		border-color: ${props => props.theme.colors.border.light};
 	}
 
 	svg {
@@ -580,126 +572,3 @@ const SectionLabel = styled(motion.div)`
 	margin-bottom: ${props => props.theme.spacing[3]};
 	letter-spacing: 0.5px;
 `
-
-interface MenuItemContainerProps {
-	$isActive: boolean
-	$isCollapsed: boolean
-}
-
-const MenuItemContainer = styled(NavLink)<MenuItemContainerProps>`
-	display: flex;
-	align-items: center;
-	padding: ${props => props.theme.spacing[4]} ${props => props.theme.spacing[4]};
-	position: relative;
-	text-decoration: none;
-	color: ${props =>
-		props.$isActive ? props.theme.colors.primary[600] : props.theme.colors.text.secondary};
-	font-weight: ${props => (props.$isActive ? '600' : '400')};
-	font-size: 1rem;
-	transition: all 0.15s ease;
-	background: transparent;
-
-	&:hover {
-		background-color: ${props => props.theme.colors.background.tertiary};
-		color: ${props =>
-			props.$isActive ? props.theme.colors.primary[600] : props.theme.colors.text.primary};
-	}
-
-	${({ $isCollapsed }) =>
-		$isCollapsed &&
-		css`
-			justify-content: center;
-			padding: ${props => props.theme.spacing[4]} 0;
-		`}
-`
-
-const IconWrapper = styled.div`
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 1.5rem;
-	min-width: 28px;
-`
-
-const MenuLabel = styled(motion.span)`
-	margin-left: ${props => props.theme.spacing[4]};
-	white-space: nowrap;
-	font-size: 1rem;
-`
-
-const ActiveIndicator = styled(motion.div)`
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 4px;
-	height: 100%;
-	background-color: ${props => props.theme.colors.primary[600]};
-	border-radius: 0 ${props => props.theme.borderRadius.sm} ${props => props.theme.borderRadius.sm} 0;
-`
-
-const ProfileSection = styled.div<CollapsibleProps>`
-	display: flex;
-	align-items: center;
-	padding: ${props => props.theme.spacing[4]};
-	border-top: 1px solid ${props => props.theme.colors.border.light};
-	gap: ${props => props.theme.spacing[3]};
-	background: #ffffff;
-
-	${({ $isCollapsed }) =>
-		$isCollapsed &&
-		css`
-			justify-content: center;
-			padding: ${props => props.theme.spacing[3]} 0;
-		`}
-`
-
-const ProfileImage = styled.div`
-	width: 36px;
-	height: 36px;
-	border-radius: 50%;
-	background-color: ${props => props.theme.colors.primary[500]};
-	overflow: hidden;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	color: white;
-	font-weight: 600;
-`
-
-const ProfileInfo = styled(motion.div)`
-	display: flex;
-	flex-direction: column;
-	flex: 1;
-	min-width: 0;
-`
-
-const ProfileName = styled.div`
-	font-weight: 600;
-	font-size: ${props => props.theme.spacing[3.5]};
-	color: ${props => props.theme.colors.text.primary};
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-`
-
-const ProfileRole = styled.div`
-	font-size: ${props => props.theme.spacing[3]};
-	color: ${props => props.theme.colors.text.tertiary};
-`
-
-const SidebarLogoutButton = styled(LogoutButton)`
-	padding: 0.5rem;
-	background: transparent;
-
-	svg {
-		color: ${props => props.theme.colors.text.secondary};
-	}
-
-	&:hover {
-		svg {
-			color: ${props => props.theme.colors.danger[500]};
-		}
-	}
-`
-
-export default TeacherSidebar
