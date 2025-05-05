@@ -3,13 +3,13 @@ import React, { useEffect, useState } from 'react'
 import { FiBookOpen, FiClipboard, FiLayers, FiUsers } from 'react-icons/fi'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
-import { getClassInfo } from '../../../services/gradesService'
 import useGradesStore from '../../../store/gradesStore'
 import ClassSelect from './ClassSelect'
 import ClassesList from './ClassesList' // New component for direct class list
 import GradeLevelSelect from './GradeLevelSelect'
 import GradesJournal from './GradesJournal'
 import SubjectSelect from './SubjectSelect'
+import { getClassInfo } from '../../../services/gradesService'
 
 interface Breadcrumb {
 	name: string
@@ -29,7 +29,7 @@ const GradesModule: React.FC = () => {
 			const parts = path.split('/').filter(part => part)
 
 			const newBreadcrumbs: Breadcrumb[] = [
-				{ name: 'Grades', path: '/admin/grades', icon: <FiClipboard /> },
+				{ name: 'Grades', path: '/teacher/grades', icon: <FiClipboard /> },
 			]
 
 			// Levels route
@@ -42,8 +42,22 @@ const GradesModule: React.FC = () => {
 
 				newBreadcrumbs.push({
 					name: levelName,
-					path: `/admin/grades/levels/${gradeLevel}/classes`,
+					path: `/teacher/grades/levels/${gradeLevel}/classes`,
 					icon: <FiLayers />,
+				})
+			}
+
+			// Direct class route
+			if (parts.includes('classes') && !parts.includes('levels') && parts.length > 3) {
+				const classId = parts[parts.indexOf('classes') + 1]
+
+				// Get class name from store if available
+				const className = (await getClassName(classId)) || `Class ${classId.toUpperCase()}`
+
+				newBreadcrumbs.push({
+					name: className,
+					path: `/teacher/grades/classes/${classId}`,
+					icon: <FiUsers />,
 				})
 			}
 
@@ -57,7 +71,7 @@ const GradesModule: React.FC = () => {
 
 				newBreadcrumbs.push({
 					name: className,
-					path: `/admin/grades/levels/${gradeLevel}/classes/${classId}/subjects`,
+					path: `/teacher/grades/levels/${gradeLevel}/classes/${classId}/subjects`,
 					icon: <FiUsers />,
 				})
 			}
@@ -72,14 +86,14 @@ const GradesModule: React.FC = () => {
 					const classId = parts[parts.indexOf('classes') + 1]
 					newBreadcrumbs.push({
 						name: subjectName,
-						path: `/admin/grades/levels/${gradeLevel}/classes/${classId}/subjects/${subjectId}`,
+						path: `/teacher/grades/levels/${gradeLevel}/classes/${classId}/subjects/${subjectId}`,
 						icon: <FiBookOpen />,
 					})
 				} else {
 					const classId = parts[parts.indexOf('classes') + 1]
 					newBreadcrumbs.push({
 						name: subjectName,
-						path: `/admin/grades/classes/${classId}/subjects/${subjectId}`,
+						path: `/teacher/grades/classes/${classId}/subjects/${subjectId}`,
 						icon: <FiBookOpen />,
 					})
 				}
@@ -96,8 +110,8 @@ const GradesModule: React.FC = () => {
 		const loadData = async () => {
 			console.log('GradesModule: Loading initial data...')
 			try {
-				console.log('Fetching all levels...')
-				await gradesStore.fetchAllLevels()
+				console.log('Fetching teacher levels...')
+				await gradesStore.fetchTeacherLevels()
 				console.log('Fetched levels:', gradesStore.levels)
 
 				const path = location.pathname
@@ -105,8 +119,8 @@ const GradesModule: React.FC = () => {
 
 				// Only fetch all classes if we're on the main classes route and not on a level-specific route
 				if (parts.includes('classes') && !parts.includes('levels')) {
-					console.log('Fetching all classes for main classes view...')
-					await gradesStore.fetchAllClasses()
+					console.log('Fetching all teacher classes for main classes view...')
+					await gradesStore.fetchTeacherClasses()
 					console.log('Fetched classes:', gradesStore.classes)
 				}
 
@@ -195,7 +209,7 @@ const GradesModule: React.FC = () => {
 			<ModuleContent>
 				<Routes>
 					{/* Default route redirects to the classes list */}
-					<Route path='/' element={<Navigate to='levels' replace />} />
+					<Route path='/' element={<Navigate to='classes' replace />} />
 
 					{/* Level-based navigation (grouped by grade levels) */}
 					<Route path='levels' element={<GradeLevelSelect />} />

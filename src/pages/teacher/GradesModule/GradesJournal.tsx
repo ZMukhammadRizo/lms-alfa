@@ -4,10 +4,8 @@ import { useParams } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { Variants, motion } from 'framer-motion'
+import UnifiedJournalTable from '../../../components/common/UnifiedJournalTable'
 import { ErrorMessage } from '../../../components/styled/TeacherComponents'
-import { AttendanceTab } from '../../../components/teacher/AttendanceTab'
-import StudentJournalTable from '../../../components/teacher/StudentJournalTable'
-import { Tabs } from '../../../components/teacher/Tabs'
 import { getClassInfo, getGradeInfo } from '../../../services/gradesService'
 import { supabase } from '../../../services/supabaseClient'
 import useAttendanceStore from '../../../store/attendanceStore'
@@ -150,7 +148,14 @@ const convertDataForJournalTable = (
 		studentId: string
 		lessonId: string
 		score: number
-	}>
+	}>,
+	attendance: Array<{
+		id: string
+		lesson_id: string
+		student_id: string
+		status: string
+		noted_at?: string
+	}> = []
 ) => {
 	// Create a lesson map for faster lookups
 	const lessonMap = new Map<string, Lesson>()
@@ -169,6 +174,7 @@ const convertDataForJournalTable = (
 		date: lesson.date,
 		topic: lesson.title,
 		homework: '',
+		id: lesson.id,
 	}))
 
 	// Convert grades to match the JournalData format (ensuring there are no nulls)
@@ -187,18 +193,56 @@ const convertDataForJournalTable = (
 				return null
 			}
 
+			// Find the attendance record for this student and lesson
+			const attendanceRecord = attendance.find(
+				a => a.student_id === grade.studentId && a.lesson_id === grade.lessonId
+			)
+
 			return {
 				studentId: grade.studentId,
 				date: lesson.date,
 				grade: grade.score,
+				// Include attendance status or default to 'absent'
+				attendance: attendanceRecord?.status || 'absent',
 			}
 		})
-		.filter((grade): grade is { studentId: string; date: string; grade: number } => grade !== null)
+		.filter(
+			(grade): grade is { studentId: string; date: string; grade: number; attendance: string } =>
+				grade !== null
+		)
+
+	// Add attendance-only records (where there's no grade but there is attendance)
+	const attendanceOnlyRecords = attendance
+		.filter(att => {
+			// Skip if we already have a grade record for this student/lesson
+			const hasGradeRecord = grades.some(
+				g => g.studentId === att.student_id && g.lessonId === att.lesson_id
+			)
+			return !hasGradeRecord
+		})
+		.map(att => {
+			const lesson = lessonMap.get(att.lesson_id)
+			if (!lesson) return null
+
+			return {
+				studentId: att.student_id,
+				date: lesson.date,
+				grade: 0, // Default grade when attendance exists but no grade
+				attendance: att.status,
+			}
+		})
+		.filter(
+			(record): record is { studentId: string; date: string; grade: number; attendance: string } =>
+				record !== null
+		)
+
+	// Combine grade records and attendance-only records
+	const allRecords = [...convertedGrades, ...attendanceOnlyRecords]
 
 	return {
 		students: convertedStudents,
 		lessons: convertedLessons,
-		grades: convertedGrades,
+		grades: allRecords,
 	}
 }
 
@@ -244,6 +288,8 @@ const GradesJournal: React.FC = () => {
 	const quarterDropdownRef = useRef<HTMLDivElement>(null)
 	const gradesStore = useGradesStore()
 	const attendanceStore = useAttendanceStore()
+
+	const attendance = useAttendanceStore(state => state.attendance)
 
 	// Inside the component, add a ref to track if we're already fetching
 	const isFetchingRef = useRef(false)
@@ -300,6 +346,41 @@ const GradesJournal: React.FC = () => {
 			}
 		} catch (error) {
 			console.error('Error fetching quarters:', error)
+		}
+	}
+
+	// Add a new function to fetch attendance records directly from Supabase
+	const fetchAttendanceRecords = async () => {
+		try {
+			if (!students.length || !lessons.length) {
+				console.log('No students or lessons to fetch attendance for')
+				return
+			}
+
+			console.log('Fetching attendance records for students and lessons')
+
+			// Get student IDs and lesson IDs
+			const studentIds = students.map(student => student.id)
+			const lessonIds = lessons.map(lesson => lesson.id)
+
+			// Fetch attendance records for these students and lessons
+			const { data, error } = await supabase
+				.from('attendance')
+				.select('*')
+				.in('student_id', studentIds)
+				.in('lesson_id', lessonIds)
+
+			if (error) {
+				console.error('Error fetching attendance records:', error)
+				return
+			}
+
+			console.log('Fetched attendance records:', data?.length || 0)
+
+			// Update the store with the fetched records
+			attendanceStore.setAttendance(data || [])
+		} catch (err) {
+			console.error('Error in fetchAttendanceRecords:', err)
 		}
 	}
 
@@ -444,6 +525,9 @@ const GradesJournal: React.FC = () => {
 				console.error('Missing required parameters for fetching scores')
 				throw new Error('Missing required parameters for fetching scores')
 			}
+
+			// After loading students and lessons, fetch attendance
+			await fetchAttendanceRecords()
 		} catch (err) {
 			console.error('INIT DATA ERROR:', err)
 			setError('Error loading data. Please try again.')
@@ -971,6 +1055,97 @@ const GradesJournal: React.FC = () => {
 		handleSaveGrade(studentId, lessonId, value)
 	}
 
+	// Update the handleAttendanceChange function
+	const handleAttendanceChange = async (studentId: string, lessonId: string, status: string) => {
+		try {
+			console.log('Updating attendance:', {
+				studentId,
+				lessonId,
+				status,
+				quarterId: selectedQuarterId,
+			})
+
+			// Check if there's an existing attendance record
+			const existingAttendance = attendance.find(
+				a => a.student_id === studentId && a.lesson_id === lessonId
+			)
+
+			if (existingAttendance) {
+				// Update existing attendance
+				const { error } = await supabase
+					.from('attendance')
+					.update({
+						status: status,
+						noted_at: new Date().toISOString(),
+					})
+					.eq('student_id', studentId)
+					.eq('lesson_id', lessonId)
+
+				if (error) throw error
+			} else {
+				// Create new attendance record
+				const { error } = await supabase.from('attendance').insert({
+					student_id: studentId,
+					lesson_id: lessonId,
+					quarter_id: selectedQuarterId,
+					status: status,
+					noted_at: new Date().toISOString(),
+				})
+
+				if (error) throw error
+			}
+
+			// Fetch attendance records again after update
+			await fetchAttendanceRecords()
+
+			console.log('Attendance updated successfully')
+		} catch (error) {
+			console.error('Error updating attendance:', error)
+		}
+	}
+
+	// Add a handler for comment updates
+	const handleCommentChange = async (studentId: string, lessonId: string, comment: string) => {
+		try {
+			console.log('Updating comment:', { studentId, lessonId, comment })
+
+			// Check if there's an existing record
+			const existingRecord =
+				attendanceStore.attendance.find(
+					a => a.student_id === studentId && a.lesson_id === lessonId
+				) || grades.find(g => g.studentId === studentId && g.lessonId === lessonId)
+
+			if (existingRecord) {
+				// Update existing record
+				const { error } = await supabase
+					.from('scores')
+					.update({
+						comment,
+					})
+					.eq('student_id', studentId)
+					.eq('lesson_id', lessonId)
+
+				if (error) throw error
+			} else {
+				// Create new record with comment
+				const { error } = await supabase.from('scores').insert({
+					student_id: studentId,
+					lesson_id: lessonId,
+					quarter_id: selectedQuarterId,
+					comment,
+					grade: 0, // Default grade
+					attendance: 'absent', // Default attendance
+				})
+
+				if (error) throw error
+			}
+
+			console.log('Comment updated successfully')
+		} catch (error) {
+			console.error('Error updating comment:', error)
+		}
+	}
+
 	// Function to convert students for the AttendanceTab
 	const convertStudentsForAttendance = useCallback(() => {
 		// Filter out students with missing or invalid IDs
@@ -990,6 +1165,13 @@ const GradesJournal: React.FC = () => {
 		},
 		[quarters]
 	)
+
+	// Add a useEffect to refetch attendance when students or lessons change
+	useEffect(() => {
+		if (students.length > 0 && lessons.length > 0) {
+			fetchAttendanceRecords()
+		}
+	}, [students, lessons])
 
 	return (
 		<PageContainer>
@@ -1021,17 +1203,44 @@ const GradesJournal: React.FC = () => {
 										setSearchQuery={setSearchQuery}
 									/>
 
-									{/* Tabs container */}
-									<Tabs tabs={['Grades', 'Attendance']}>
-										{/* Grades Tab */}
-										<StudentJournalTable
-											data={convertDataForJournalTable(filteredStudents, lessons, grades)}
-											onGradeChange={handleJournalTableGradeChange}
-										/>
-
-										{/* Attendance Tab */}
-										<AttendanceTab students={convertStudentsForAttendance()} lessons={lessons} />
-									</Tabs>
+									<UnifiedJournalTable
+										data={{
+											students: convertDataForJournalTable(
+												filteredStudents,
+												lessons,
+												grades,
+												attendanceStore.attendance.map(attendance => ({
+													...attendance,
+													status: attendance.status || '',
+												}))
+											).students,
+											lessons: convertDataForJournalTable(
+												filteredStudents,
+												lessons,
+												grades,
+												attendanceStore.attendance.map(attendance => ({
+													...attendance,
+													status: attendance.status || '',
+												}))
+											).lessons,
+											grades: convertDataForJournalTable(
+												filteredStudents,
+												lessons,
+												grades,
+												attendanceStore.attendance.map(attendance => ({
+													...attendance,
+													status: attendance.status || '',
+												}))
+											).grades,
+											attendance: attendanceStore.attendance.map(att => ({
+												...att,
+												status: att.status || '',
+											})),
+										}}
+										onGradeChange={handleJournalTableGradeChange}
+										onAttendanceChange={handleAttendanceChange}
+										onCommentChange={handleCommentChange}
+									/>
 								</Flex>
 							</>
 						)}
