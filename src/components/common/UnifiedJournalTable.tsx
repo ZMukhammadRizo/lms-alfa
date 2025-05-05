@@ -1173,32 +1173,47 @@ const CommentButton = styled.div`
 // New components for attendance dropdown
 const AttendanceButtonContainer = styled.div`
 	position: relative;
+	display: flex;
+	align-items: center;
 `
 
 const AttendanceDropdown = styled.div`
 	position: absolute;
-	top: calc(100% + 4px);
-	left: 50%;
-	transform: translateX(-50%);
-	margin-top: 0;
-	background-color: white;
-	border-radius: 8px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-	overflow: hidden;
-	z-index: 1000000000000000000;
-	width: 120px;
-	border: 1px solid ${props => props.theme.colors.border.light};
+	top: 50%;
+	left: 100%;
+	transform: translateY(-50%);
+	min-width: 120px;
+	background-color: ${props => props.theme.colors.background.secondary};
+	border: 1px solid ${props => props.theme.colors.border.medium};
+	border-radius: ${props => props.theme.borderRadius.md};
+	box-shadow: ${props => props.theme.shadows.lg};
+	padding: ${props => props.theme.spacing[2]} 0;
+	z-index: ${props => props.theme.zIndices.dropdown};
+	margin-left: ${props => props.theme.spacing[2]};
 `
 
-const AttendanceOption = styled.div`
+interface AttendanceOptionProps {
+	$isSelected: boolean;
+	$color: string;
+}
+
+const AttendanceOption = styled.div<AttendanceOptionProps>`
 	display: flex;
 	align-items: center;
-	padding: 8px 12px;
+	gap: ${props => props.theme.spacing[2]};
+	padding: ${props => props.theme.spacing[2]} ${props => props.theme.spacing[3]};
 	cursor: pointer;
-	transition: background-color 0.2s;
+	font-size: 0.9rem;
+	color: ${props => props.theme.colors.text.primary};
+	background-color: ${props => props.$isSelected ? props.theme.colors.background.tertiary : 'transparent'};
+	font-weight: ${props => props.$isSelected ? '600' : '400'};
 
 	&:hover {
-		background-color: ${props => props.theme.colors.background.lighter};
+		background-color: ${props => props.theme.colors.background.hover};
+	}
+
+	span {
+		// Style for the icon if needed
 	}
 `
 

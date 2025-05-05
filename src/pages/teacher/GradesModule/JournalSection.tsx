@@ -120,7 +120,7 @@ const JournalSection: React.FC<JournalSectionProps> = ({
 														onClick={() => handleGradeChange(student.id, lesson.id, null)}
 														title='Click to add grade'
 													>
-														<span>+</span>
+														<span>+</span>	
 													</EmptyGradeBadge>
 												</div>
 											)}
