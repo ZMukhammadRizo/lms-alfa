@@ -82,10 +82,10 @@ const SubjectSelect: React.FC = () => {
 		// Determine which route pattern to use based on whether we have a gradeLevel
 		if (gradeLevel) {
 			navigate(
-				`/admin/grades/levels/${gradeLevel}/classes/${classId}/subjects/${subjectId}/journal`
+				`/teacher/grades/levels/${gradeLevel}/classes/${classId}/subjects/${subjectId}/journal`
 			)
 		} else {
-			navigate(`/admin/grades/classes/${classId}/subjects/${subjectId}/journal`)
+			navigate(`/teacher/grades/classes/${classId}/subjects/${subjectId}/journal`)
 		}
 	}
 
