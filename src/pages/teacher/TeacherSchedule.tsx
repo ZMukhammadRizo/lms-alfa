@@ -968,13 +968,24 @@ const TeacherSchedule: React.FC = () => {
 
   // Fetch timetable data from Supabase
   const fetchTimetableData = async () => {
+    if (!user?.id) {
+        console.error("[Debug] Cannot fetch timetable, user ID not available.");
+        setError('User not authenticated.');
+        setIsLoading(false);
+        return;
+    }
+
+    console.log(`[Debug] Fetching timetable for teacher ID: ${user.id}`);
+
     try {
       setIsLoading(true);
       setError(null); // Clear previous errors
       
       const { data: timetableData, error: timetableError } = await supabase
         .from('timetable')
-        .select('*, subjects(id, subjectname), classes(id, classname), users(firstName, lastName)');
+        // Use the other foreign key hint: timetable_subjectId_fkey1
+        .select('*, subjects!timetable_subjectId_fkey(*), classes(id, classname), users(firstName, lastName)') 
+        .eq('teacherId', user.id); 
       
       if (timetableError) {
         console.error('Error fetching timetable:', timetableError);
@@ -992,146 +1003,90 @@ const TeacherSchedule: React.FC = () => {
       
       console.log('Raw timetable data:', timetableData);
       
-      // Inspect the first record to see the actual database column names
-      if (timetableData.length > 0) {
-        console.log('Database schema column names:');
-        const firstRecord = timetableData[0];
-        Object.keys(firstRecord).forEach(key => {
-          console.log(`- ${key}: ${typeof firstRecord[key]} = ${JSON.stringify(firstRecord[key])}`);
-        });
-      }
-      
-      // Convert timetable data to ClassEvent format, ensuring all IDs are valid numbers
       const formattedEvents: ClassEvent[] = timetableData.map((item: any, index) => {
-        // Extract or default the values we need
-        // Always use the index+1 as a fallback ID to ensure we have a valid number
-        let id = index + 1; // Default fallback ID 
-        
-        // Try to use the database ID if it's valid
-        if (item.id !== undefined && item.id !== null) {
-          const parsedId = parseInt(String(item.id));
-          if (!isNaN(parsedId)) {
-            id = parsedId;
-          }
-        }
-        
-        // Get title from direct field or use subject name as fallback
-        const title = item.title || 
-                     (item.subjects?.subjectname ? `${item.subjects.subjectname} Class` : 'Untitled Lesson');
-        
-        // Get course name from either related subject or find it from our allCourses list using subject ID
-        let courseName = 'Unknown Course';
-        
-        if (item.subjects?.subjectname) {
-          courseName = item.subjects.subjectname;
-        } else if (item.subjectId) {
-          // Try to find the subject name from our list of all courses
-          const subjectMatch = allCourses.find(c => c.id === item.subjectId);
-          if (subjectMatch) {
-            courseName = subjectMatch.name;
-          }
-        }
-        
-        // Parse time values from various possible field formats
-        let startTime = 9; // Default to 9 AM
-        
-        if (item.start_time !== undefined && item.start_time !== null) {
-          startTime = typeof item.start_time === 'string' ? parseInt(item.start_time) : item.start_time;
-        } else if (item.startTime !== undefined && item.startTime !== null) {
-          // Handle time object format (HH:MM:SS)
-          if (typeof item.startTime === 'string' && item.startTime.includes(':')) {
-            startTime = parseInt(item.startTime.split(':')[0]);
-          } else if (typeof item.startTime === 'object' && item.startTime.hours !== undefined) {
-            startTime = item.startTime.hours;
-          }
-        }
-        
-        let endTime = startTime + 1; // Default to 1 hour length
-        
-        if (item.end_time !== undefined && item.end_time !== null) {
-          endTime = typeof item.end_time === 'string' ? parseInt(item.end_time) : item.end_time;
-        } else if (item.endTime !== undefined && item.endTime !== null) {
-          // Handle time object format (HH:MM:SS)
-          if (typeof item.endTime === 'string' && item.endTime.includes(':')) {
-            endTime = parseInt(item.endTime.split(':')[0]);
-          } else if (typeof item.endTime === 'object' && item.endTime.hours !== undefined) {
-            endTime = item.endTime.hours;
-          }
-        }
-        
-        // Parse minutes if available
-        const startMinute = item.start_minute || item.startMinute || 0;
-        const endMinute = item.end_minute || item.endMinute || 0;
-        
-        // Parse day value (0-6 for Monday-Sunday)
-        let day = 0; // Default to Monday
-        if (item.day !== undefined && item.day !== null) {
-          if (typeof item.day === 'string') {
-            day = parseInt(item.day);
-          } else if (typeof item.day === 'object' && (item.day instanceof Date || 'getDate' in item.day)) {
-            // Get day of week from Date (0 = Sunday, 1 = Monday)
-            try {
-              const dateObj = item.day instanceof Date ? item.day : new Date(item.day);
-              day = dateObj.getDay();
-              if (day === 0) day = 6; // Convert Sunday from 0 to 6
-              else day -= 1; // Shift other days down by 1
-            } catch (e) {
-              console.error('Error parsing date object:', e);
-              day = 0; // Default to Monday on error
+         let id = index + 1; 
+         if (item.id !== undefined && item.id !== null) {
+           const parsedId = parseInt(String(item.id));
+           if (!isNaN(parsedId)) {
+             id = parsedId;
+           }
+         }
+         const title = item.title || 
+                      (item.subjects?.subjectname ? `${item.subjects.subjectname} Class` : 'Untitled Lesson');
+         let courseName = 'Unknown Course';
+         if (item.subjects?.subjectname) {
+           courseName = item.subjects.subjectname;
+         } else if (item.subjectid) { 
+           // Use the correct variable name 'allCourses' if that's what was used originally
+           const subjectMatch = allCourses.find(c => c.id === item.subjectid); 
+           if (subjectMatch) {
+             courseName = subjectMatch.name;
+           }
+         }
+         let startTime = 9; 
+         // Keep original time parsing logic...
+         if (item.start_time !== undefined && item.start_time !== null) {
+            startTime = typeof item.start_time === 'string' ? parseInt(item.start_time.split(':')[0]) : item.start_time;
+         } else if (item.startTime !== undefined && item.startTime !== null) {
+            if (typeof item.startTime === 'string' && item.startTime.includes(':')) {
+                startTime = parseInt(item.startTime.split(':')[0]);
+            } else if (typeof item.startTime === 'number') {
+                startTime = item.startTime;
             }
-          } else {
-            day = typeof item.day === 'number' ? item.day : 0;
-          }
-          
-          // Ensure day is between 0-6
-          day = day % 7;
-        }
-        
-        // Other fields
-        const location = item.location || item.room || '';
-        
-        // Get teacher info from either direct field or relationship
-        const teacher = item.teacher || 
-                       (item.users ? `${item.users.firstName} ${item.users.lastName}` : '') ||
-                       '';
-        
-        // Store class info separately - keep className for UI purposes
-        const classId = item.classId || item.class_id || '';
-        // Get className from the classes relation if available
-        const className = item.classes?.classname || '';
-        
-        const students = item.students || item.student_count || 0;
-        
-        // Find course color or generate one
-        const courseObj = allCourses.find(c => c.name === courseName);
-        const color = item.color || 
-                     courseObj?.color || 
-                     courseColors[courseName as keyof typeof courseColors] || 
-                     getRandomColor(courseName);
-        
-        return {
-          id,  // Use our validated ID
-          title,
-          subjectid: item.subjectId || '',
-          startTime,
-          startMinute,
-          endTime,
-          endMinute,
-          day,
-          location,
-          teacherid: item.teacherId || '',
-          students,
-          color,
-          // Add these for display purposes
-          course: courseName,
-          teacher,
-          classId,
-          className // Only for UI display
-        };
-      });
-      
-      console.log('Formatted timetable events:', formattedEvents);
-      setClassEvents(formattedEvents);
+         } 
+         // ... keep parsing for endTime, startMinute, endMinute, day, location, teacher, classId, className, students ...
+          let endTime = startTime + 1;
+         if (item.end_time !== undefined && item.end_time !== null) {
+            endTime = typeof item.end_time === 'string' ? parseInt(item.end_time.split(':')[0]) : item.end_time;
+         } else if (item.endTime !== undefined && item.endTime !== null) {
+            if (typeof item.endTime === 'string' && item.endTime.includes(':')) {
+                endTime = parseInt(item.endTime.split(':')[0]);
+            } else if (typeof item.endTime === 'number') {
+                endTime = item.endTime;
+            }
+         }
+         const startMinute = item.start_minute || item.startMinute || (typeof item.startTime === 'string' && item.startTime.includes(':') ? parseInt(item.startTime.split(':')[1]) : 0);
+         const endMinute = item.end_minute || item.endMinute || (typeof item.endTime === 'string' && item.endTime.includes(':') ? parseInt(item.endTime.split(':')[1]) : 0);
+         let day = 0; 
+         if (item.day !== undefined && item.day !== null) {
+           day = item.day;
+         } else if (item.dayOfWeek !== undefined && item.dayOfWeek !== null) {
+           day = item.dayOfWeek; 
+         }
+         day = Number.isInteger(day) ? day % 7 : 0;
+         const location = item.location || item.room || '';
+         const teacher = item.teacher || 
+                        (item.users ? `${item.users.firstName} ${item.users.lastName}` : '') ||
+                        '';
+         const classId = item.classid || item.classId || ''; 
+         const className = item.classes?.classname || 'Unknown Class'; 
+         const students = item.students || item.student_count || 0;
+         const courseObj = allCourses.find(c => c.id === item.subjectid); 
+         const color = item.color || 
+                      courseObj?.color || 
+                      getRandomColor(courseName); 
+
+         return {
+           id,
+           title,
+           subjectid: item.subjectid || '',
+           startTime,
+           startMinute,
+           endTime,
+           endMinute,
+           day,
+           location,
+           teacherid: item.teacherid || '',
+           students,
+           color,
+           course: courseName,
+           teacher,
+           classId,
+           className
+         };
+       });
+       console.log('Formatted timetable events:', formattedEvents);
+       setClassEvents(formattedEvents); 
       
     } catch (error) {
       console.error('Error processing timetable data:', error);

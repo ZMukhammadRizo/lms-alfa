@@ -12,113 +12,84 @@ import {
 	FiPlus,
 	FiUsers,
 	FiBookOpen,
+	FiArrowLeft,
+	FiGrid,
+	FiList,
+	FiSlash,
 } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
-import styled from 'styled-components'
+import styled, { useTheme } from 'styled-components'
 import { useTeacherStore } from '../../stores/teacherStore'
 import { Class } from '../../types/teacher'
 import supabase from '../../config/supabaseClient'
-import { useTheme } from 'styled-components'
 import { toast } from 'react-hot-toast'
+import { Subject } from '../../types/Subject'
 
-// No need to define these interfaces again as they're imported from coursesData.ts
-
-const CoursesContainer = styled.div`
-	padding: 2rem;
+const PageContainer = styled.div`
+	padding: clamp(1.5rem, 4vw, 3rem);
+	background-color: ${({ theme }) => theme.colors.background.primary};
 	min-height: 100vh;
-	background: ${({ theme }) => theme.colors.background.primary};
-	transition: background-color 0.3s ease;
-
-	@media (max-width: ${props => props.theme.breakpoints.md}) {
-		padding: 1rem;
-	}
 `
 
-const CoursesHeader = styled.div`
-	margin-bottom: 2rem;
+const PageHeader = styled(motion.div)`
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1.5rem;
+	margin-bottom: 2.5rem;
+	padding: 1.5rem;
 	background-color: ${({ theme }) => theme.colors.background.secondary};
 	border-radius: ${({ theme }) => theme.borderRadius.xl};
-	padding: 2rem;
-	box-shadow: ${({ theme }) => theme.shadows.sm};
 	border: 1px solid ${({ theme }) => theme.colors.border.light};
-	position: relative;
-
-	@media (max-width: ${props => props.theme.breakpoints.md}) {
-		padding: 1.5rem;
-	}
+	box-shadow: ${({ theme }) => theme.shadows.sm};
 `
 
-const HeaderContent = styled.div`
-	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
-	margin-bottom: 2rem;
-	gap: 1.5rem;
-	position: relative;
-	z-index: 1;
+const HeaderTitleSection = styled.div``
 
-	@media (max-width: ${props => props.theme.breakpoints.lg}) {
-		flex-direction: column;
-		align-items: stretch;
-	}
-`
-
-const SectionTitle = styled.h1`
-	font-size: 2rem;
+const PageTitle = styled.h1`
+	font-size: clamp(1.8rem, 5vw, 2.2rem);
 	font-weight: 700;
-	color: ${props => props.theme.colors.text.primary};
+	color: ${({ theme }) => theme.colors.text.primary};
 	margin: 0 0 0.25rem 0;
 `
 
-const SectionSubtitle = styled.p`
+const PageSubtitle = styled.p`
 	font-size: 1rem;
-	color: ${props => props.theme.colors.text.secondary};
+	color: ${({ theme }) => theme.colors.text.secondary};
 	margin: 0;
-	max-width: 500px;
+	max-width: 45ch;
 `
 
-const SearchFilterBar = styled.div`
+const HeaderControls = styled.div`
 	display: flex;
-	gap: 1rem;
 	align-items: center;
-	flex-wrap: wrap;
-	position: relative;
-	z-index: 1;
-
-	@media (max-width: ${props => props.theme.breakpoints.lg}) {
-		width: 100%;
-	}
+	gap: 1rem;
 `
 
-const SearchBar = styled.div`
+const SearchInputContainer = styled.div`
 	display: flex;
-	flex-grow: 1;
 	align-items: center;
 	gap: 0.75rem;
 	padding: 0.6rem 1rem;
 	background: ${({ theme }) => theme.colors.background.primary};
 	border: 1px solid ${({ theme }) => theme.colors.border.light};
 	border-radius: ${({ theme }) => theme.borderRadius.lg};
-	transition: all 0.3s ease;
-	box-shadow: none;
+	transition: all 0.2s ease;
+	min-width: 240px;
 
 	&:focus-within {
 		border-color: ${({ theme }) => theme.colors.primary[500]};
-		box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500] + '40'};
+		box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[500] + '30'};
 	}
 
 	svg {
 		color: ${({ theme }) => theme.colors.text.tertiary};
 		flex-shrink: 0;
 	}
-
-	@media (min-width: ${props => props.theme.breakpoints.lg}) {
-		min-width: 250px;
-		flex-grow: 0;
-	}
 `
 
-const SearchInput = styled.input`
+const SearchInputStyled = styled.input`
 	width: 100%;
 	border: none;
 	background: transparent;
@@ -131,21 +102,16 @@ const SearchInput = styled.input`
 	}
 `
 
-const ViewToggleContainer = styled.div`
+const ViewToggleGroup = styled.div`
 	display: flex;
 	align-items: center;
 	background: ${({ theme }) => theme.colors.background.primary};
 	border: 1px solid ${({ theme }) => theme.colors.border.light};
 	border-radius: ${({ theme }) => theme.borderRadius.lg};
 	padding: 0.25rem;
-	box-shadow: none;
-	flex-shrink: 0;
 `
 
-const ViewToggleBtn = styled.button<{ $isActive: boolean }>`
-	display: flex;
-	align-items: center;
-	justify-content: center;
+const ToggleButton = styled.button<{ $isActive: boolean }>`
 	padding: 0.5rem;
 	border-radius: ${({ theme }) => theme.borderRadius.md};
 	background-color: ${({ theme, $isActive }) =>
@@ -155,11 +121,15 @@ const ViewToggleBtn = styled.button<{ $isActive: boolean }>`
 	border: none;
 	cursor: pointer;
 	transition: all 0.2s ease;
-	box-shadow: ${({ $isActive }) => $isActive ? '0 1px 3px rgba(0,0,0,0.05)' : 'none'};
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: ${({ theme, $isActive }) => $isActive ? theme.shadows.sm : theme.shadows.none};
 
-	&:hover {
+	&:hover:not(:disabled) {
 		color: ${({ theme }) => theme.colors.primary[500]};
-		background-color: ${({ theme, $isActive }) => !$isActive && theme.colors.background.hover};
+		background-color: ${({ theme, $isActive }) =>
+			!$isActive && theme.colors.background.hover};
 	}
 
 	svg {
@@ -167,308 +137,183 @@ const ViewToggleBtn = styled.button<{ $isActive: boolean }>`
 	}
 `
 
-const HeaderRight = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-`
-
-const AddButton = styled(motion.button)`
-	border: none;
-	background: ${props => props.theme.colors.primary[500]};
-	color: white;
-	border-radius: ${props => props.theme.borderRadius.md};
-	padding: 0.6rem 1.25rem;
-	cursor: pointer;
-	transition: all 0.3s ease;
-	display: inline-flex;
-	align-items: center;
-	gap: 0.4rem;
-	font-weight: 500;
-	font-size: 0.85rem;
-	box-shadow: ${({ theme }) => theme.shadows.sm};
-
-	&:hover {
-		background: ${props => props.theme.colors.primary[600]};
-		box-shadow: ${({ theme }) => theme.shadows.md};
-	}
-
-	svg {
-		transition: transform 0.3s ease;
-	}
-
-	&:hover svg {
-		transform: translateX(3px);
-	}
-`
-
-const CoursesGridContainer = styled.div`
-	padding: 0;
-	margin-top: 2rem;
-`
-
-const CoursesGrid = styled(motion.div)<{ $columns: number }>`
+const ContentGrid = styled(motion.div)`
 	display: grid;
-	grid-template-columns: repeat(${props => props.$columns === 1 ? 1 : 'auto-fill'}, minmax(280px, 1fr));
-	gap: 1.5rem;
-
-	@media (max-width: ${props => props.theme.breakpoints.md}) {
-		grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-		gap: 1rem;
-	}
-	@media (max-width: ${props => props.theme.breakpoints.sm}) {
-		grid-template-columns: 1fr;
-		gap: 1rem;
-	}
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 1.75rem;
 `
 
-const CourseCard = styled(motion.div)`
+const ItemCard = styled(motion.div)`
 	background: ${({ theme }) => theme.colors.background.secondary};
-	border-radius: ${({ theme }) => theme.borderRadius.lg};
+	border-radius: ${({ theme }) => theme.borderRadius.xl};
 	border: 1px solid ${({ theme }) => theme.colors.border.light};
+	border-top: 4px solid ${({ theme }) => theme.colors.primary[500]};
 	overflow: hidden;
 	transition: all 0.25s ease-out;
 	box-shadow: ${({ theme }) => theme.shadows.sm};
 	display: flex;
 	flex-direction: column;
 	height: 100%;
-	position: relative;
+	cursor: pointer;
 
 	&:hover {
-		border-color: ${({ theme }) => theme.colors.primary[400]};
-		box-shadow: ${({ theme }) => theme.shadows.lg};
-		transform: scale(1.02);
+		border-color: ${({ theme }) => theme.colors.primary[300]};
+		box-shadow: ${({ theme }) => theme.shadows.md};
+		transform: translateY(-4px);
 	}
 `
 
-const CardTopSection = styled.div`
-	background: linear-gradient(135deg, ${({ theme }) => theme.colors.primary[500]} 0%, ${({ theme }) => theme.colors.primary[600]} 100%);
-	padding: 1rem 1.25rem;
-	min-height: 60px;
-	position: relative;
+const CardBody = styled.div`
+	padding: 1.5rem;
+	flex-grow: 1;
 	display: flex;
-	justify-content: space-between;
-	align-items: center;
+	flex-direction: column;
 `
 
-const TopRightControls = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-`
-
-const CourseTitle = styled.h3`
-	font-size: 1.2rem;
+const CardTitle = styled.h3`
+	font-size: 1.3rem;
 	font-weight: 600;
-	color: white;
-	margin: 0;
+	color: ${({ theme }) => theme.colors.text.primary};
+	margin: 0 0 0.5rem 0;
 	line-height: 1.3;
 `
 
-const ViewClassButton = styled(motion.button)`
-	border: none;
-	background: ${props => props.theme.colors.primary[500]};
-	color: white;
-	border-radius: ${props => props.theme.borderRadius.md};
-	padding: 0.6rem 1.25rem;
-	cursor: pointer;
-	transition: all 0.3s ease;
-	display: inline-flex;
-	align-items: center;
-	gap: 0.4rem;
-	font-weight: 500;
+const CardSubtitle = styled.span`
 	font-size: 0.85rem;
-	box-shadow: ${({ theme }) => theme.shadows.sm};
-
-	&:hover {
-		background: ${props => props.theme.colors.primary[600]};
-		box-shadow: ${({ theme }) => theme.shadows.md};
-	}
-
-	svg {
-		transition: transform 0.3s ease;
-	}
-
-	&:hover svg {
-		transform: translateX(3px);
-	}
-`
-
-const EmptyState = styled.div`
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	text-align: center;
-	padding: 3rem 1rem;
-	margin-top: 1rem;
-	min-height: 200px;
-`
-
-const EmptyStateIcon = styled.div`
-	font-size: 2.5rem;
-	color: ${props => props.theme.colors.text.tertiary};
+	color: ${({ theme }) => theme.colors.text.tertiary};
 	margin-bottom: 1rem;
+	display: block;
 `
 
-const EmptyStateTitle = styled.h3`
-	font-size: 1.1rem;
-	font-weight: 600;
-	color: ${props => props.theme.colors.text.primary};
-	margin: 0 0 0.5rem 0;
-`
-
-const EmptyStateDescription = styled.p`
-	font-size: 0.9rem;
-	color: ${props => props.theme.colors.text.secondary};
-	margin: 0;
-	max-width: 400px;
-`
-
-const LoadingState = styled.div`
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	min-height: 200px;
-	font-size: 1rem;
-	color: ${props => props.theme.colors.text.secondary};
-	gap: 1rem;
-`
-
-const StatsContainer = styled.div`
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: 1rem;
-	margin-bottom: 1.5rem;
-`
-
-const StatItem = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 0.6rem;
-	background-color: ${({ theme }) => theme.colors.background.tertiary};
-	padding: 0.75rem;
-	border-radius: ${({ theme }) => theme.borderRadius.md};
-	border: 1px solid ${({ theme }) => theme.colors.border.light};
-`
-
-const StatIcon = styled.div`
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	color: ${({ theme }) => theme.colors.primary[500]};
-	font-size: 1.2rem;
-`
-
-const StatContent = styled.div`
-	display: flex;
-	flex-direction: column;
-`
-
-const StatValue = styled.span`
-	font-size: 1.1rem;
-	font-weight: 600;
-	color: ${({ theme }) => theme.colors.text.primary};
-`
-
-const StatLabel = styled.span`
-	font-size: 0.75rem;
+const CardDescription = styled.p`
 	color: ${({ theme }) => theme.colors.text.secondary};
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
+	font-size: 0.9rem;
+	line-height: 1.6;
+	margin: 0 0 1.5rem 0;
+	flex-grow: 1;
 `
 
 const CardFooter = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 	margin-top: auto;
+	padding-top: 1rem;
+	border-top: 1px solid ${({ theme }) => theme.colors.border.light};
 `
 
-const ViewButton = styled(motion.button)`
-	width: 100%;
-	padding: 0.75rem 1rem;
-	border: none;
-	border-radius: ${({ theme }) => theme.borderRadius.md};
-	background: ${props => props.theme.colors.primary[500]};
-	color: white;
-	font-weight: 500;
-	font-size: 0.9rem;
-	cursor: pointer;
+const CardStat = styled.div`
 	display: flex;
 	align-items: center;
-	justify-content: center;
 	gap: 0.5rem;
-	transition: background-color 0.2s ease;
+	font-size: 0.85rem;
+	color: ${({ theme }) => theme.colors.text.secondary};
 
-	&:hover {
-		background: ${props => props.theme.colors.primary[600]};
+	svg {
+		color: ${({ theme }) => theme.colors.primary[500]};
+		font-size: 1rem;
+		flex-shrink: 0;
 	}
+`
+
+const ViewDetailsButton = styled.div`
+	font-size: 0.85rem;
+	font-weight: 500;
+	color: ${({ theme }) => theme.colors.primary[500]};
+	display: flex;
+	align-items: center;
+	gap: 0.3rem;
 
 	svg {
 		transition: transform 0.2s ease;
 	}
 
-	&:hover svg {
-		transform: translateX(4px);
+	${ItemCard}:hover & svg {
+		transform: translateX(3px);
 	}
 `
 
-const ActionMenu = styled(motion.div)`
-	position: absolute;
-	top: 45px;
-	right: 10px;
-	background: ${({ theme }) => theme.colors.background.secondary};
-	border-radius: ${({ theme }) => theme.borderRadius.md};
-	box-shadow: ${({ theme }) => theme.shadows.lg};
-	border: 1px solid ${({ theme }) => theme.colors.border.medium};
-	z-index: 10;
-	overflow: hidden;
+const SubjectListHeader = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 2rem;
+	flex-wrap: wrap;
+	gap: 1rem;
 `
 
-const ActionMenuItem = styled.button`
+const StyledBackButton = styled.button`
+	background: transparent;
+	border: none;
+	color: ${props => props.theme.colors.text.secondary};
 	display: flex;
 	align-items: center;
-	gap: 0.75rem;
-	width: 100%;
-	padding: 0.75rem 1rem;
-	background: none;
-	border: none;
-	color: ${({ theme }) => theme.colors.text.primary};
-	font-size: 0.9rem;
-	text-align: left;
+	gap: 0.5rem;
 	cursor: pointer;
-	transition: background-color 0.15s ease;
+	padding: 0.5rem 0;
+	font-size: 0.95rem;
+	transition: all 0.2s ease;
 
 	&:hover {
-		background: ${({ theme }) => theme.colors.background.hover};
+		color: ${props => props.theme.colors.primary[500]};
+	}
+`
+
+const ViewStudentsButton = styled.button`
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.6rem 1.2rem;
+	background: ${({ theme }) => theme.colors.primary[50]};
+	color: ${({ theme }) => theme.colors.primary[600]};
+	border: 1px solid ${({ theme }) => theme.colors.primary[200]};
+	border-radius: ${({ theme }) => theme.borderRadius.md};
+	font-size: 0.9rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	box-shadow: ${({ theme }) => theme.shadows.sm};
+
+	&:hover {
+		background: ${({ theme }) => theme.colors.primary[100]};
+		border-color: ${({ theme }) => theme.colors.primary[300]};
+		box-shadow: ${({ theme }) => theme.shadows.sm};
 	}
 
 	svg {
-		color: ${({ theme }) => theme.colors.text.secondary};
-		font-size: 1rem;
+		font-size: 1.1rem;
 	}
 `
 
-const CardContent = styled.div`
-	padding: 1.5rem;
-	flex-grow: 1;
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
+const LoadingState = styled.div`
+	padding: 4rem;
 	text-align: center;
+	color: ${({ theme }) => theme.colors.text.secondary};
+	font-size: 1.1rem;
+`
+
+const EmptyState = styled.div`
+	padding: 4rem;
+	text-align: center;
+	color: ${({ theme }) => theme.colors.text.secondary};
 `
 
 const TeacherClasses: React.FC = () => {
 	const navigate = useNavigate()
-	const { classes, loading, error, loadClasses } = useTeacherStore()
-	const [searchTerm, setSearchTerm] = useState<string>('')
-	const [gridColumns, setGridColumns] = useState<number>(3)
-	const [hoverClass, setHoverClass] = useState<string | null>(null)
-	const [, setIsAddClassVisible] = useState<boolean>(false)
+	const { classes, loading: loadingClasses, error, loadClasses } = useTeacherStore()
+	const [searchQuery, setSearchQuery] = useState('')
+	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+	const [filteredClasses, setFilteredClasses] = useState<Class[]>(classes)
+	const [selectedClassId, setSelectedClassId] = useState<string | null>(null)
+	const [selectedClassName, setSelectedClassName] = useState<string | null>(null)
+	const [subjects, setSubjects] = useState<Subject[]>([])
+	const [loadingSubjects, setLoadingSubjects] = useState(false)
 	const [currentUser, setCurrentUser] = useState<any>(null)
-	const theme = useTheme();
+	const [studentCounts, setStudentCounts] = useState<{ [classId: string]: number | null }>({})
+	const [lessonCounts, setLessonCounts] = useState<{ [subjectId: string]: number }>({})
+	const [loadingCounts, setLoadingCounts] = useState(false)
+	const theme = useTheme()
 
-	// Get current authenticated user
 	useEffect(() => {
 		const getUserData = async () => {
 			try {
@@ -481,147 +326,276 @@ const TeacherClasses: React.FC = () => {
 				
 				if (user) {
 					setCurrentUser(user)
-					// Load classes with the authenticated user's ID
 					loadClasses(user.id)
 				} else {
 					console.error("No authenticated user found")
 				}
 			} catch (err) {
 				console.error("Error in getUserData:", err)
+				toast.error("Could not fetch user data.")
 			}
 		}
 		
 		getUserData()
 	}, [loadClasses])
 
-	// Handle search input change
-	const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setSearchTerm(e.target.value)
+	useEffect(() => {
+		const fetchCounts = async () => {
+			if (!classes || classes.length === 0) return
+			
+			setLoadingCounts(true)
+			const counts: { [classId: string]: number | null } = {}
+			const countPromises = classes.map(async (classItem) => {
+				const { count, error } = await supabase
+					.from('classstudents')
+					.select('id', { count: 'exact', head: true })
+					.eq('classid', classItem.id)
+				return { classId: classItem.id, count: error ? null : count ?? 0 }
+			})
+			try {
+				const results = await Promise.all(countPromises)
+				results.forEach(result => { counts[result.classId] = result.count })
+				setStudentCounts(counts)
+			} catch (err) {
+				console.error("Error fetching student counts:", err)
+				classes.forEach(c => counts[c.id] = null)
+				setStudentCounts(counts)
+			} finally {
+				setLoadingCounts(false)
+			}
+		}
+
+		if (!loadingClasses && classes.length > 0) fetchCounts()
+	}, [classes, loadingClasses])
+
+	useEffect(() => {
+		const filtered = classes.filter(classItem =>
+			classItem.classname.toLowerCase().includes(searchQuery.toLowerCase())
+		)
+		setFilteredClasses(filtered)
+	}, [classes, searchQuery])
+
+	const fetchSubjectsAndLessonCounts = async (classId: string) => {
+		setLoadingSubjects(true)
+		setLessonCounts({})
+		try {
+			const { data: classSubjects, error: csError } = await supabase
+				.from('classsubjects')
+				.select('subjectid')
+				.eq('classid', classId)
+
+			if (csError) throw csError
+
+			if (classSubjects && classSubjects.length > 0) {
+				const subjectIds = classSubjects.map(cs => cs.subjectid)
+				
+				const { data: subjectData, error: subjError } = await supabase
+					.from('subjects')
+					.select('*')
+					.in('id', subjectIds)
+
+				if (subjError) throw subjError
+				
+				setSubjects(subjectData || [])
+
+				const lessonCountPromises = subjectIds.map(async (id) => {
+					const { count, error } = await supabase
+						.from('lessons')
+						.select('id', { count: 'exact', head: true })
+						.eq('subjectid', id)
+					return { subjectId: id, count: error ? 0 : count ?? 0 }
+				})
+				const lessonResults = await Promise.all(lessonCountPromises)
+				const newLessonCounts: { [subjectId: string]: number } = {}
+				lessonResults.forEach(res => { newLessonCounts[res.subjectId] = res.count })
+				setLessonCounts(newLessonCounts)
+
+			} else {
+				setSubjects([])
+			}
+		} catch (error) {
+			console.error('Error fetching subjects/lessons:', error)
+			toast.error('Failed to load subjects')
+			setSubjects([])
+		} finally {
+			setLoadingSubjects(false)
+		}
 	}
 
-	// Filter classes based on search term and selected filter
-	const filteredClasses = classes.filter(c => {
-		const matchesSearch =
-			c.classname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			(c.subjects?.name && c.subjects.name.toLowerCase().includes(searchTerm.toLowerCase()));
+	const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		setSearchQuery(e.target.value)
+	}
 
-		// Only include classes assigned to this teacher
-		const isTeacherClass = currentUser ? c.teacherid === currentUser.id : false;
-		
-		return matchesSearch && isTeacherClass;
-	})
+	const handleClassClick = (classId: string, className: string) => {
+		setSelectedClassId(classId)
+		setSelectedClassName(className)
+		fetchSubjectsAndLessonCounts(classId)
+	}
 
-	// Handler for viewing class
-	const viewClass = (classId: string) => {
-		navigate(`/teacher/classes/${classId}`)
+	const handleBackToClasses = () => {
+		setSelectedClassId(null)
+		setSelectedClassName(null)
+		setSubjects([])
+		setLessonCounts({})
+	}
+
+	const handleSubjectClick = (subjectId: string) => {
+		if (selectedClassId) {
+			navigate(`/teacher/classes/${selectedClassId}/subjects/${subjectId}`)
+		}
+	}
+
+	const containerVariants = {
+		hidden: { opacity: 0 },
+		visible: {
+			opacity: 1,
+			transition: { staggerChildren: 0.08 }
+		}
+	}
+
+	const itemVariants = {
+		hidden: { opacity: 0, y: 20 },
+		visible: { opacity: 1, y: 0 }
 	}
 
 	return (
-		<CoursesContainer>
-			<AnimatePresence mode='wait'>
-				<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-					<CoursesHeader>
-						<HeaderContent>
-							<div>
-								<SectionTitle>My Classes</SectionTitle>
-								<SectionSubtitle>View and manage class materials</SectionSubtitle>
-							</div>
+		<PageContainer>
+			<PageHeader layout>
+				<HeaderTitleSection>
+					<PageTitle>My Classes</PageTitle>
+					<PageSubtitle>Manage your classes, subjects, and lessons</PageSubtitle>
+				</HeaderTitleSection>
+				<HeaderControls>
+					<SearchInputContainer>
+						<FiSearch size={18} />
+						<SearchInputStyled
+							type="text"
+							placeholder="Search classes..."
+							value={searchQuery}
+							onChange={handleSearchChange}
+							disabled={!!selectedClassId}
+						/>
+					</SearchInputContainer>
+				</HeaderControls>
+			</PageHeader>
 
-							<SearchFilterBar>
-								<SearchBar>
-									<FiSearch size={18} color={theme.colors.text.tertiary} />
-									<SearchInput
-										type='text'
-										placeholder='Search courses...'
-										value={searchTerm}
-										onChange={handleSearchChange}
-									/>
-								</SearchBar>
+			<AnimatePresence mode="wait">
+				{selectedClassId ? (
+					<motion.div
+						key="subjects-view"
+						initial={{ opacity: 0, x: 50 }}
+						animate={{ opacity: 1, x: 0 }}
+						exit={{ opacity: 0, x: -50 }}
+						transition={{ duration: 0.3, ease: "easeInOut" }}
+					>
+						<SubjectListHeader>
+							<StyledBackButton onClick={handleBackToClasses}>
+								<FiArrowLeft /> Back to Classes
+							</StyledBackButton>
+							<PageTitle style={{ fontSize: '1.8rem', marginBottom: 0 }}>
+								{selectedClassName} - Subjects
+							</PageTitle>
+						</SubjectListHeader>
 
-								<ViewToggleContainer>
-									<ViewToggleBtn $isActive={gridColumns !== 1} onClick={() => setGridColumns(3)}>
-										<FiFolder size={18} />
-									</ViewToggleBtn>
-									<ViewToggleBtn $isActive={gridColumns === 1} onClick={() => setGridColumns(1)}>
-										<FiFolder size={18} />
-									</ViewToggleBtn>
-								</ViewToggleContainer>
-							</SearchFilterBar>
-						</HeaderContent>
-
-						<HeaderRight>
-							{/* Add Class Button Removed */}
-						</HeaderRight>
-					</CoursesHeader>
-
-					<CoursesGridContainer>
-						{loading ? (
+						{loadingSubjects ? (
+							<LoadingState>Loading subjects...</LoadingState>
+						) : subjects.length > 0 ? (
+							<ContentGrid
+								variants={containerVariants}
+								initial="hidden"
+								animate="visible"
+							>
+								{subjects.map(subject => (
+									<ItemCard
+										key={subject.id}
+										variants={itemVariants}
+										onClick={() => handleSubjectClick(subject.id)}
+										layout
+									>
+										<CardBody>
+											<CardTitle>{subject.subjectname}</CardTitle>
+											<CardSubtitle>{subject.code}</CardSubtitle>
+											<CardDescription>
+												{subject.description || 'No description available.'}
+											</CardDescription>
+											<CardFooter>
+												<CardStat>
+													<FiBookOpen />
+													<span>{lessonCounts[subject.id] ?? '...'} Lessons</span>
+												</CardStat>
+												<ViewDetailsButton>
+													View Details <FiChevronRight />
+												</ViewDetailsButton>
+											</CardFooter>
+										</CardBody>
+									</ItemCard>
+								))}
+							</ContentGrid>
+						) : (
+							<EmptyState>No subjects found for this class.</EmptyState>
+						)}
+					</motion.div>
+				) : (
+					<motion.div
+						key="classes-view"
+						initial={{ opacity: 0, x: selectedClassId === null ? 0 : -50 }}
+						animate={{ opacity: 1, x: 0 }}
+						exit={{ opacity: 0, x: 50 }}
+						transition={{ duration: 0.3, ease: "easeInOut" }}
+					>
+						{loadingClasses || loadingCounts ? (
 							<LoadingState>Loading your classes...</LoadingState>
 						) : filteredClasses.length > 0 ? (
-							<CoursesGrid $columns={gridColumns}>
-								{filteredClasses.map(c => (
-									<CourseCard
-										key={c.id}
-										as={motion.div}
-										initial={{ opacity: 0, y: 20 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ duration: 0.3 }}
-										whileHover={{ y: -5, boxShadow: theme.shadows.md }}
+							<ContentGrid
+								variants={containerVariants}
+								initial="hidden"
+								animate="visible"
+							>
+								{filteredClasses.map(classItem => (
+									<ItemCard
+										key={classItem.id}
+										variants={itemVariants}
+										onClick={() => handleClassClick(classItem.id, classItem.classname)}
+										layout
 									>
-										<CardTopSection>
-											<CourseTitle>{c.classname || 'N/A'}</CourseTitle>
-											<TopRightControls>
-											</TopRightControls>
-										</CardTopSection>
-
-										<CardContent>
-											<StatsContainer>
-												<StatItem>
-													<StatIcon><FiUsers /></StatIcon>
-													<StatContent>
-														<StatValue>{c.studentCount || 0}</StatValue>
-														<StatLabel>Students</StatLabel>
-													</StatContent>
-												</StatItem>
-												<StatItem>
-													<StatIcon><FiBookOpen /></StatIcon>
-													<StatContent>
-														<StatValue>{c.subjectCount || 0}</StatValue>
-														<StatLabel>Subjects</StatLabel>
-													</StatContent>
-												</StatItem>
-											</StatsContainer>
-										</CardContent>
-
-										<CardFooter>
-											<ViewButton
-												onClick={() => viewClass(c.id)}
-												whileHover={{ scale: 1.03 }}
-												whileTap={{ scale: 0.98 }}
-											>
-												View Class <FiChevronRight />
-											</ViewButton>
-										</CardFooter>
-									</CourseCard>
+										<CardBody>
+											<CardTitle>{classItem.classname}</CardTitle>
+											<CardDescription>
+												{classItem.description || 'No description provided.'}
+											</CardDescription>
+											<CardFooter>
+												<CardStat>
+													<FiUsers />
+													<span>
+														{studentCounts[classItem.id] === null
+															? 'Loading...'
+															: `${studentCounts[classItem.id]} Student${studentCounts[classItem.id] !== 1 ? 's' : ''}`
+														}
+													</span>
+												</CardStat>
+												<ViewDetailsButton>
+													View Subjects <FiChevronRight />
+												</ViewDetailsButton>
+											</CardFooter>
+										</CardBody>
+									</ItemCard>
 								))}
-							</CoursesGrid>
+							</ContentGrid>
 						) : (
 							<EmptyState>
-								<EmptyStateIcon>
-									<FiFolder size={48} />
-								</EmptyStateIcon>
-								<EmptyStateTitle>
-									{searchTerm ? `No classes found matching "${searchTerm}"` : "No classes assigned"}
-								</EmptyStateTitle>
-								<EmptyStateDescription>
-									{searchTerm ? "Try broadening your search terms." : "Classes will appear here once they are assigned to your account."}
-								</EmptyStateDescription>
+								<FiFolder size={48} style={{ marginBottom: '1rem', color: theme.colors.text.tertiary }} />
+								<PageTitle style={{ fontSize: '1.2rem' }}>No classes found</PageTitle>
+								<PageSubtitle style={{ maxWidth: '300px', margin: '0 auto' }}>
+									{searchQuery
+										? `No classes match your search "${searchQuery}".`
+										: "You are not currently assigned to any classes."}
+								</PageSubtitle>
 							</EmptyState>
 						)}
-					</CoursesGridContainer>
-				</motion.div>
+					</motion.div>
+				)}
 			</AnimatePresence>
-		</CoursesContainer>
+		</PageContainer>
 	)
 }
 
