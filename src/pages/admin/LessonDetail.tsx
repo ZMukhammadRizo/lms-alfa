@@ -640,6 +640,37 @@ const LessonDetail: React.FC = () => {
       return url.split('/').pop() || 'file';
     }
   };
+
+  // Helper function to parse file URLs from different formats
+  const parseFileUrls = (fileUrls: string[] | string | null): string[] => {
+    if (!fileUrls) return [];
+    
+    let urlsArray: string[] = [];
+    
+    // Handle different potential formats of fileurls coming from the database
+    if (Array.isArray(fileUrls)) {
+      urlsArray = fileUrls;
+    } else if (typeof fileUrls === 'string') {
+      try {
+        // Try to parse if it's a JSON string array
+        const parsed = JSON.parse(fileUrls);
+        if (Array.isArray(parsed)) {
+          urlsArray = parsed;
+        }
+      } catch (e) {
+        // If not valid JSON, check if it's a comma-separated string
+        if (fileUrls.includes(',')) {
+          urlsArray = fileUrls.split(',').map(url => url.trim());
+        } else {
+          // Treat as a single URL
+          urlsArray = [fileUrls];
+        }
+      }
+    }
+    
+    // Filter out any empty strings
+    return urlsArray.filter(url => url && url.trim() !== '');
+  };
   
   // Load lesson data
   useEffect(() => {
@@ -669,9 +700,10 @@ const LessonDetail: React.FC = () => {
             videourl: lessonFromState.videourl || ''
           });
 
-          // Initialize uploaded files from lesson data
-          if (lessonFromState.fileurls && Array.isArray(lessonFromState.fileurls)) {
-            const files = lessonFromState.fileurls.map((url: string) => ({
+          // Initialize uploaded files from lesson data with improved parsing
+          const fileUrlsArray = parseFileUrls(lessonFromState.fileurls);
+          if (fileUrlsArray.length > 0) {
+            const files = fileUrlsArray.map((url: string) => ({
               name: getFileNameFromUrl(url),
               url: url
             }));
@@ -704,9 +736,10 @@ const LessonDetail: React.FC = () => {
             videourl: data.videourl || ''
           });
 
-          // Initialize uploaded files from lesson data
-          if (data.fileurls && Array.isArray(data.fileurls)) {
-            const files = data.fileurls.map((url: string) => ({
+          // Initialize uploaded files from lesson data with improved parsing
+          const fileUrlsArray = parseFileUrls(data.fileurls);
+          if (fileUrlsArray.length > 0) {
+            const files = fileUrlsArray.map((url: string) => ({
               name: getFileNameFromUrl(url),
               url: url
             }));
@@ -857,8 +890,12 @@ const LessonDetail: React.FC = () => {
       setUploadedFiles(newUploadedFiles);
       setUploadProgress(100);
 
-      // Update lesson with new file URLs
+      // Update lesson with new file URLs - ensure it's stored as a proper array
       const fileUrls = newUploadedFiles.map(file => file.url);
+      
+      // Log for debugging
+      console.log("Updating lesson with fileUrls:", fileUrls);
+      
       const { error: updateError } = await supabaseAdmin
         .from('lessons')
         .update({ fileurls: fileUrls })
@@ -918,11 +955,15 @@ const LessonDetail: React.FC = () => {
       updatedFiles.splice(indexToDelete, 1);
       setUploadedFiles(updatedFiles);
       
-      // Update Supabase
+      // Update Supabase - ensure it's stored as a proper array
       const fileUrls = updatedFiles.map(file => file.url);
+      
+      // Log for debugging
+      console.log("Updating lesson after deletion with fileUrls:", fileUrls);
+      
       const { error: updateError } = await supabaseAdmin
         .from('lessons')
-        .update({ fileurls: fileUrls })
+        .update({ fileurls: fileUrls.length > 0 ? fileUrls : null })
         .eq('id', lesson.id);
 
       if (updateError) throw updateError;
@@ -930,7 +971,7 @@ const LessonDetail: React.FC = () => {
       // Update local lesson state
       setLesson(prev => {
         if (!prev) return null;
-        return { ...prev, fileurls: fileUrls };
+        return { ...prev, fileurls: fileUrls.length > 0 ? fileUrls : null };
       });
       
       setSuccessMessage("File deleted successfully");
@@ -1169,6 +1210,11 @@ const LessonDetail: React.FC = () => {
                 <div style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
                   Upload PDF documents, images, or other materials related to this lesson
                 </div>
+                {lesson.fileurls && (
+                  <div style={{ fontSize: '0.75rem', marginTop: '1rem', color: '#999' }}>
+                    Debug: fileurls exists but format may be unexpected: {JSON.stringify(lesson.fileurls)}
+                  </div>
+                )}
               </EmptyFilesMessage>
             )}
           </FilePreviewContainer>

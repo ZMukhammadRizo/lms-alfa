@@ -29,7 +29,7 @@ const GradesModule: React.FC = () => {
 			const parts = path.split('/').filter(part => part)
 
 			const newBreadcrumbs: Breadcrumb[] = [
-				{ name: 'Grades', path: '/teacher/grades', icon: <FiClipboard /> },
+				{ name: 'Grades', path: '/admin/grades', icon: <FiClipboard /> },
 			]
 
 			// Levels route
@@ -42,7 +42,7 @@ const GradesModule: React.FC = () => {
 
 				newBreadcrumbs.push({
 					name: levelName,
-					path: `/teacher/grades/levels/${gradeLevel}/classes`,
+					path: `/admin/grades/levels/${gradeLevel}/classes`,
 					icon: <FiLayers />,
 				})
 			}
@@ -56,7 +56,7 @@ const GradesModule: React.FC = () => {
 
 				newBreadcrumbs.push({
 					name: className,
-					path: `/teacher/grades/classes/${classId}`,
+					path: `/admin/grades/classes/${classId}`,
 					icon: <FiUsers />,
 				})
 			}
@@ -71,7 +71,7 @@ const GradesModule: React.FC = () => {
 
 				newBreadcrumbs.push({
 					name: className,
-					path: `/teacher/grades/levels/${gradeLevel}/classes/${classId}/subjects`,
+					path: `/admin/grades/levels/${gradeLevel}/classes/${classId}/subjects`,
 					icon: <FiUsers />,
 				})
 			}
@@ -86,14 +86,14 @@ const GradesModule: React.FC = () => {
 					const classId = parts[parts.indexOf('classes') + 1]
 					newBreadcrumbs.push({
 						name: subjectName,
-						path: `/teacher/grades/levels/${gradeLevel}/classes/${classId}/subjects/${subjectId}`,
+						path: `/admin/grades/levels/${gradeLevel}/classes/${classId}/subjects/${subjectId}`,
 						icon: <FiBookOpen />,
 					})
 				} else {
 					const classId = parts[parts.indexOf('classes') + 1]
 					newBreadcrumbs.push({
 						name: subjectName,
-						path: `/teacher/grades/classes/${classId}/subjects/${subjectId}`,
+						path: `/admin/grades/classes/${classId}/subjects/${subjectId}`,
 						icon: <FiBookOpen />,
 					})
 				}

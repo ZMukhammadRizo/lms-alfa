@@ -89,71 +89,90 @@ const useGradesStore = create<GradesState>((set, get) => ({
 			const userId = userResponse.data.user?.id
 
 			if (!userId) {
-				throw new Error("User not logged in.");
+				throw new Error("User not logged in.")
 			}
 			
-			console.log(`[GradesStore] Fetching levels for teacher: ${userId}`);
+			// Get user role
+			const { data: userData, error: userRoleError } = await supabase
+				.from('users') // Assuming you have a 'users' table with a 'role' column
+				.select('role')
+				.eq('id', userId)
+				.single()
 
-			// 1. Get classes taught by this teacher
-			const { data: teacherClasses, error: classesError } = await supabase
-				.from('classes')
-				.select('id, level_id') // Select level_id directly
-				.eq('teacherid', userId);
-
-			if (classesError) {
-				console.error('[GradesStore] Error fetching teacher classes:', classesError);
-				throw classesError;
+			if (userRoleError) {
+				console.error('[GradesStore] Error fetching user role:', userRoleError)
+				throw userRoleError
 			}
-			
-			if (!teacherClasses || teacherClasses.length === 0) {
-				console.log('[GradesStore] No classes found for this teacher.');
-				set({ levels: [] });
-				return; // Exit early if no classes
-			}
-			
-			console.log(`[GradesStore] Found ${teacherClasses.length} classes for teacher.`);
+			const isAdmin = userData?.role === 'Admin'
+			console.log(`[GradesStore] User role: ${userData?.role}. IsAdmin: ${isAdmin}`)
 
-			// 2. Get distinct level IDs from these classes
-			const distinctLevelIds = [...new Set(teacherClasses.map(c => c.level_id))].filter(id => id != null);
+			let distinctLevelIds: string[] = []
+
+			if (isAdmin) {
+				console.log('[GradesStore] Admin user: fetching all distinct levels from all classes.')
+				// Admin: Get all distinct level_ids from the classes table
+				const { data: allClasses, error: allClassesError } = await supabase
+					.from('classes')
+					.select('level_id') // Select only level_id
+
+				if (allClassesError) {
+					console.error('[GradesStore] Error fetching all classes for levels (Admin):', allClassesError)
+					throw allClassesError
+				}
+				if (allClasses && allClasses.length > 0) {
+					distinctLevelIds = [...new Set(allClasses.map(c => c.level_id).filter(id => id != null))]
+				}
+				console.log(`[GradesStore] Admin: Found distinct level IDs from all classes: ${distinctLevelIds.join(', ')}`)
+
+			} else { // Teacher logic
+				console.log(`[GradesStore] Teacher user: Fetching levels for teacher: ${userId}`)
+				const { data: teacherClasses, error: classesError } = await supabase
+					.from('classes')
+					.select('level_id')
+					.eq('teacherid', userId)
+
+				if (classesError) { 
+					console.error('[GradesStore] Error fetching teacher-specific classes for levels:', classesError)
+					throw classesError 
+				}
+				if (!teacherClasses || teacherClasses.length === 0) {
+					console.log('[GradesStore] No classes found for this teacher to derive levels.')
+					set({ levels: [], isLoadingLevels: false })
+					return
+				}
+				distinctLevelIds = [...new Set(teacherClasses.map(c => c.level_id).filter(id => id != null))]
+				console.log(`[GradesStore] Teacher: Found distinct level IDs: ${distinctLevelIds.join(', ')}`)
+			}
 
 			if (distinctLevelIds.length === 0) {
-				console.log('[GradesStore] No distinct levels found for teacher classes.');
-				set({ levels: [] });
-				return; // Exit early if no levels
+				console.log('[GradesStore] No distinct levels found to fetch details for.')
+				set({ levels: [], isLoadingLevels: false })
+				return
 			}
-			
-			console.log(`[GradesStore] Found distinct level IDs: ${distinctLevelIds.join(', ')}`);
 
-			// 3. Fetch details for these levels (assuming a 'levels' table)
-			// TODO: Confirm the actual name of the levels table (e.g., 'levels', 'grade_levels')
 			const { data: levelsData, error: levelsError } = await supabase
-				.from('levels') // Confirm this table name
-				.select('id, name') // Assuming 'id' and 'name' columns
-				.in('id', distinctLevelIds);
+				.from('levels')
+				.select('id, name')
+				.in('id', distinctLevelIds)
 
 			if (levelsError) {
-				console.error('[GradesStore] Error fetching level details:', levelsError);
-				throw levelsError;
+				console.error('[GradesStore] Error fetching level details by IDs:', levelsError)
+				throw levelsError
 			}
-			
-			console.log(`[GradesStore] Fetched details for ${levelsData?.length || 0} levels.`);
 
-			// 4. Format the data into GradeLevelOverview (needs counts)
-			// For now, we'll just set the basic level info. Counts are handled in the component or another function
 			const formattedLevels = levelsData?.map((level): GradeLevelOverview => ({
-				levelId: level.id, // Use the actual ID from the levels table
-				levelName: level.name || `Level ${level.id}`, // Use the name from the levels table
-				// Counts will be added later by the component or another function
+				levelId: level.id,
+				levelName: level.name || `Level ${level.id}`,
 				classCount: 0, 
 				studentCount: 0,
 				subjectCount: 0,
-			})) || [];
+			})) || []
 			
-			console.log('[GradesStore] Setting formatted levels:', formattedLevels);
+			console.log('[GradesStore] Setting formatted levels:', formattedLevels)
 			set({ levels: formattedLevels })
 		} catch (error) {
-			console.error('Error fetching teacher levels:', error)
-			set({ levels: [] }); // Clear levels on error
+			console.error('Error in fetchTeacherLevels (Admin/Teacher):', error)
+			set({ levels: [] }) // Clear levels on error
 		} finally {
 			set({ isLoadingLevels: false })
 		}
@@ -208,15 +227,54 @@ const useGradesStore = create<GradesState>((set, get) => ({
 	fetchTeacherClasses: async () => {
 		set({ isLoadingClasses: true, classes: [] })
 		try {
-			const { data, error } = await supabase.rpc('get_teacher_classes', {
-				teacher_uuid: (await supabase.auth.getUser()).data.user?.id,
-			})
+			const userResponse = await supabase.auth.getUser()
+			const userId = userResponse.data.user?.id
 
-			if (error) throw error
+			if (!userId) {
+				throw new Error("User not logged in for fetchTeacherClasses.")
+			}
 
-			set({ classes: data || [] })
+			const { data: userData, error: userRoleError } = await supabase
+				.from('users')
+				.select('role')
+				.eq('id', userId)
+				.single()
+
+			if (userRoleError) {
+				console.error('[GradesStore] Error fetching user role for fetchTeacherClasses:', userRoleError)
+				throw userRoleError
+			}
+			const isAdmin = userData?.role === 'Admin'
+			console.log(`[GradesStore] fetchTeacherClasses - User role: ${userData?.role}. IsAdmin: ${isAdmin}`)
+
+			if (isAdmin) {
+				console.log('[GradesStore] Admin user: fetching all classes using get_level_classes RPC with is_admin=true, lvl_id=null')
+				const { data, error } = await supabase.rpc('get_level_classes', {
+					user_id: userId, 
+					lvl_id: null,    
+					is_admin: true
+				})
+				if (error) {
+					console.error('[GradesStore] RPC error for admin get_level_classes:', error)
+					throw error
+				}
+				console.log('[GradesStore] Admin: Received all classes data via RPC:', data)
+				set({ classes: data || [] })
+			} else { // Teacher Logic
+				console.log(`[GradesStore] Teacher user: fetching classes using get_teacher_classes RPC for teacher_uuid: ${userId}`)
+				const { data, error } = await supabase.rpc('get_teacher_classes', {
+					teacher_uuid: userId,
+				})
+				if (error) {
+					 console.error('[GradesStore] RPC error for teacher get_teacher_classes:', error)
+					throw error
+				}
+				console.log('[GradesStore] Teacher: Received classes data via RPC:', data)
+				set({ classes: data || [] })
+			}
 		} catch (error) {
-			console.error('Error fetching teacher classes:', error)
+			console.error('Error in fetchTeacherClasses (Admin/Teacher):', error)
+			set({ classes: [] }) // Clear classes on error
 		} finally {
 			set({ isLoadingClasses: false })
 		}
