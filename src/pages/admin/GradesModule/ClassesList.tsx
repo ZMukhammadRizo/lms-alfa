@@ -36,25 +36,39 @@ const ClassesList: React.FC = () => {
 	const fetchTeacherLevels = useGradesStore(state => state.fetchTeacherLevels)
 	const levels = useGradesStore(state => state.levels)
 
+	// Effect for fetching initial data (levels and classes)
 	useEffect(() => {
+		console.log("ClassesList: Initial data fetch effect triggered."); // Add log
 		const fetchInitialData = async () => {
-			setLoadingData(true)
-			setError(null)
+			setLoadingData(true);
+			setError(null);
 			try {
-				const promises = []
-				if (levels.length === 0) {
-					promises.push(fetchTeacherLevels())
-				}
-				promises.push(fetchTeacherClasses())
-				await Promise.all(promises)
+				const promises = [];
+				// Fetch levels - let the store decide if it needs to run
+				console.log("ClassesList: Calling fetchTeacherLevels.");
+				promises.push(fetchTeacherLevels());
+				
+				// Fetch classes - let the store decide if it needs to run
+				console.log("ClassesList: Calling fetchTeacherClasses.");
+				promises.push(fetchTeacherClasses());
+				
+				await Promise.all(promises);
+				console.log("ClassesList: Initial data fetch promises resolved.");
 			} catch (err) {
-				console.error('Error fetching initial data:', err)
-				setError('Failed to load initial data. Please try again later.')
-				setLoadingData(false)
+				console.error('ClassesList: Error fetching initial data:', err);
+				setError('Failed to load initial data. Please try again later.');
+				setLoadingData(false); // Set loading false on error here
 			}
-		}
-		fetchInitialData()
-	}, [fetchTeacherLevels, fetchTeacherClasses, levels.length])
+			// setLoadingData(false) is handled by the second effect after processing
+		};
+		fetchInitialData();
+
+		// Add cleanup function
+		return () => {
+			console.log("ClassesList: Initial data fetch effect CLEANUP.");
+		};
+		// Only depend on the stable fetch actions themselves. Runs once on mount (twice in StrictMode).
+	}, [fetchTeacherLevels, fetchTeacherClasses]);
 
 	useEffect(() => {
 		const processClasses = async () => {
