@@ -7,6 +7,7 @@ import { PageTitle } from '../../../components/common'
 import { Card, Container, Input } from '../../../components/ui'
 import { getClassInfo } from '../../../services/gradesService'
 import useGradesStore from '../../../store/gradesStore'
+import { LevelCategoryOverview } from '../../../types/grades'
 
 interface SubjectCardProps {
 	$isHovered?: boolean
@@ -17,7 +18,6 @@ const SubjectSelect: React.FC = () => {
 	const { classId } = useParams<{ classId: string }>()
 	const [searchTerm, setSearchTerm] = useState('')
 	const [hoveredCard, setHoveredCard] = useState<string | null>(null)
-	const [classname, setClassname] = useState('')
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 
@@ -27,52 +27,62 @@ const SubjectSelect: React.FC = () => {
 	const fetchClassSubjects = useGradesStore(state => state.fetchClassSubjects)
 	const setSelectedClass = useGradesStore(state => state.setSelectedClass)
 
-	// To get class name, we might need levels and classes
-	const classes = useGradesStore(state => state.classes)
+	// Select the class name directly and reactively from the store
+	const classname = useGradesStore(state => 
+		state.classes.find((c: LevelCategoryOverview) => c.classId === classId)?.classname
+	)
 
 	useEffect(() => {
-		const initializeData = async () => {
-			if (!classId) {
-				setError("Class ID not found in URL.");
-				setLoading(false);
-				return;
-			}
-
-			try {
-				setLoading(true)
-
-				let classInfo = classes.find(c => c.classId === classId)
-
-				if (!classInfo) {
-					try {
-						const info = await getClassInfo(classId) // This might be teacher specific
-						setClassname(info.name)
-					} catch (err) {
-						console.error('Error fetching class info directly:', err)
-						// Fallback if direct fetch fails or if classId is from a general pool
-						const foundClass = get().classes.find(c => c.classId === classId);
-						if (foundClass) {
-							setClassname(foundClass.classname);
-						} else {
-							setClassname(`Class ${classId}`)
-						}
-					}
-				} else {
-					setClassname(classInfo.classname)
-				}
-
-				await fetchClassSubjects(classId)
-				setSelectedClass(classId)
-			} catch (err) {
-				console.error('Error fetching subjects:', err)
-				setError('Failed to load subjects. Please try again later.')
-			} finally {
-				setLoading(false)
-			}
+		console.log(`SubjectSelect useEffect triggered for classId: ${classId}`);
+		if (!classId) {
+			setError("Class ID not found in URL.");
+			setLoading(false);
+			console.log("SubjectSelect useEffect: No classId, exiting.");
+			return;
 		}
 
-		initializeData()
-	}, [classId, fetchClassSubjects, setSelectedClass, classes]) // Removed gradeLevel, fetchLevelClasses
+		let isMounted = true;
+		console.log(`SubjectSelect useEffect: Initial check, isMounted=${isMounted}, classId=${classId}`);
+
+		const initializeData = async () => {
+			console.log(`SubjectSelect: Calling initializeData for ${classId}`);
+			if (isMounted) {
+				 setLoading(true);
+				 setError(null);
+			}
+			try {
+				// 1. Conditionally set selected class ID in store
+				const currentState = useGradesStore.getState();
+				if (currentState.selectedClassId !== classId) {
+					console.log(`SubjectSelect: Current selectedClassId (${currentState.selectedClassId}) differs from URL classId (${classId}). Calling setSelectedClass.`);
+					setSelectedClass(classId);
+				} else {
+					console.log(`SubjectSelect: Store selectedClassId (${currentState.selectedClassId}) already matches URL classId (${classId}). Skipping setSelectedClass.`);
+				}
+
+				// 2. Fetch subjects
+				 console.log(`SubjectSelect: Calling fetchClassSubjects(${classId})`);
+				await fetchClassSubjects(classId);
+				 console.log(`SubjectSelect: Fetched subjects successfully for ${classId}`);
+
+			} catch (err) {
+				console.error(`SubjectSelect: Error initializing for ${classId}:`, err);
+				 if (isMounted) setError('Failed to load class subjects. Please try again later.');
+			} finally {
+				 console.log(`SubjectSelect: Setting loading false for ${classId}, isMounted=${isMounted}`);
+				 if (isMounted) setLoading(false);
+			}
+		};
+
+		initializeData();
+
+		// Cleanup function
+		return () => {
+			console.log(`SubjectSelect useEffect cleanup for classId: ${classId}`);
+			isMounted = false;
+			 console.log(`SubjectSelect cleanup: isMounted set to ${isMounted}`);
+		};
+	}, [classId, fetchClassSubjects, setSelectedClass]); // Keep dependencies stable
 
 	// Filter subjects based on search term
 	const filteredSubjects = subjects.filter(subject =>
@@ -122,12 +132,15 @@ const SubjectSelect: React.FC = () => {
 		)
 	}
 
+	// Use the classname from the store selector, or fallback to ID if still loading/not found
+	const displayClassName = classname || `Class ${classId}`;
+
 	return (
 		<PageContainer>
 			<PageHeaderWrapper>
 				<PageHeader>
 					<HeaderContent>
-						<PageTitle>Class {classname} Subjects</PageTitle>
+						<PageTitle>Class {displayClassName} Subjects</PageTitle>
 						<SubTitle>Select a subject to view and manage student grades</SubTitle>
 					</HeaderContent>
 					<HeaderRight>

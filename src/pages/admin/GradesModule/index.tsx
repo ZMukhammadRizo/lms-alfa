@@ -208,8 +208,8 @@ const GradesModule: React.FC = () => {
 
 			<ModuleContent>
 				<Routes>
-					{/* Default route redirects to the classes list */}
-					<Route path='/' element={<Navigate to='classes' replace />} />
+					{/* Default route redirects to the levels list */}
+					<Route path='/' element={<Navigate to='levels' replace />} />
 
 					{/* Level-based navigation (grouped by grade levels) */}
 					<Route path='levels' element={<GradeLevelSelect />} />

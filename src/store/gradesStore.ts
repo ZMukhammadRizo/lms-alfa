@@ -83,7 +83,13 @@ const useGradesStore = create<GradesState>((set, get) => ({
 
 	// Actions implementation
 	fetchTeacherLevels: async () => {
-		set({ isLoadingLevels: true })
+		// Only prevent fetch if already loading
+		if (get().isLoadingLevels) {
+			console.log('[GradesStore] fetchTeacherLevels skipped (already loading).');
+			return;
+		}
+
+		set({ isLoadingLevels: true });
 		try {
 			const userResponse = await supabase.auth.getUser()
 			const userId = userResponse.data.user?.id
@@ -145,9 +151,9 @@ const useGradesStore = create<GradesState>((set, get) => ({
 			}
 
 			if (distinctLevelIds.length === 0) {
-				console.log('[GradesStore] No distinct levels found to fetch details for.')
-				set({ levels: [], isLoadingLevels: false })
-				return
+				console.log('[GradesStore] No distinct levels found to fetch details for.');
+				set({ levels: [], isLoadingLevels: false }); // Set loading false here
+				return;
 			}
 
 			const { data: levelsData, error: levelsError } = await supabase
@@ -169,12 +175,12 @@ const useGradesStore = create<GradesState>((set, get) => ({
 			})) || []
 			
 			console.log('[GradesStore] Setting formatted levels:', formattedLevels)
-			set({ levels: formattedLevels })
+			set({ levels: formattedLevels }) // Set data
 		} catch (error) {
 			console.error('Error in fetchTeacherLevels (Admin/Teacher):', error)
 			set({ levels: [] }) // Clear levels on error
 		} finally {
-			set({ isLoadingLevels: false })
+			set({ isLoadingLevels: false }) // Ensure loading is false
 		}
 	},
 
@@ -225,7 +231,13 @@ const useGradesStore = create<GradesState>((set, get) => ({
 	},
 
 	fetchTeacherClasses: async () => {
-		set({ isLoadingClasses: true, classes: [] })
+		// Only prevent fetch if already loading
+		if (get().isLoadingClasses) {
+			console.log('[GradesStore] fetchTeacherClasses skipped (already loading).');
+			return;
+		}
+
+		set({ isLoadingClasses: true }); // Set loading true, but don't clear classes here
 		try {
 			const userResponse = await supabase.auth.getUser()
 			const userId = userResponse.data.user?.id
@@ -247,6 +259,7 @@ const useGradesStore = create<GradesState>((set, get) => ({
 			const isAdmin = userData?.role === 'Admin'
 			console.log(`[GradesStore] fetchTeacherClasses - User role: ${userData?.role}. IsAdmin: ${isAdmin}`)
 
+			let fetchedClassesData = [];
 			if (isAdmin) {
 				console.log('[GradesStore] Admin user: fetching all classes using get_level_classes RPC with is_admin=true, lvl_id=null')
 				const { data, error } = await supabase.rpc('get_level_classes', {
@@ -259,7 +272,7 @@ const useGradesStore = create<GradesState>((set, get) => ({
 					throw error
 				}
 				console.log('[GradesStore] Admin: Received all classes data via RPC:', data)
-				set({ classes: data || [] })
+				fetchedClassesData = data || []
 			} else { // Teacher Logic
 				console.log(`[GradesStore] Teacher user: fetching classes using get_teacher_classes RPC for teacher_uuid: ${userId}`)
 				const { data, error } = await supabase.rpc('get_teacher_classes', {
@@ -270,13 +283,15 @@ const useGradesStore = create<GradesState>((set, get) => ({
 					throw error
 				}
 				console.log('[GradesStore] Teacher: Received classes data via RPC:', data)
-				set({ classes: data || [] })
+				fetchedClassesData = data || []
 			}
+
+			set({ classes: fetchedClassesData }); // Set data
 		} catch (error) {
 			console.error('Error in fetchTeacherClasses (Admin/Teacher):', error)
-			set({ classes: [] }) // Clear classes on error
+			set({ classes: [] }); // Clear classes on error
 		} finally {
-			set({ isLoadingClasses: false })
+			set({ isLoadingClasses: false }); // Ensure loading is false
 		}
 	},
 
