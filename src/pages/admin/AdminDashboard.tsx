@@ -3,10 +3,12 @@ import styled from 'styled-components';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { Card, Button,  Loader } from '../../components/ui';
 import { useThemeContext } from '../../App';
+import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { isDarkMode } = useThemeContext();
+  const navigate = useNavigate();
 
   // Simulate data loading
   useEffect(() => {
@@ -161,41 +163,95 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <AdminLayout>
-      <DashboardContainer>
-        <Header>
-          <h1>Dashboard</h1>
-          <HeaderActions>
-            <Button variant="outline" size="sm">
-              <i className="fas fa-download"></i> Export Report
-            </Button>
-            <Button variant="primary" size="sm">
-              <i className="fas fa-sync-alt"></i> Refresh Data
-            </Button>
-          </HeaderActions>
-        </Header>
-        <StatisticsGrid>
-          {[
-            { title: 'Total Students', value: '24,521', change: '12%', isPositive: true, color: '#4CAF50', icon: 'user-graduate' },
-            { title: 'Active Courses', value: '842', change: '7%', isPositive: true, color: '#2196F3', icon: 'book-open' },
-            { title: 'Revenue', value: '$253,890', change: '5%', isPositive: true, color: '#FF9800', icon: 'dollar-sign' },
-            { title: 'Completion Rate', value: '78%', change: '3%', isPositive: false, color: '#F44336', icon: 'chart-line' }
-          ].map((stat, index) => (
-            <StatCard key={index}>
-              <StatIconContainer $color={stat.color}>
-                <i className={`fas fa-${stat.icon}`}></i>
-              </StatIconContainer>
-              <StatContent>
-                <StatTitle>{stat.title}</StatTitle>
-                <StatValue>{stat.value}</StatValue>
-                <StatChange $isPositive={stat.isPositive}>
-                  <i className={`fas fa-arrow-${stat.isPositive ? 'up' : 'down'}`}></i> {stat.change}
-                </StatChange>
-              </StatContent>
-            </StatCard>
-          ))}
-        </StatisticsGrid>
+    <DashboardContainer>
+      <Header>
+        <h1>Welcome, {user?.fullName || 'Admin'}!</h1>
+        <HeaderActions>
+          <Button variant="primary" onClick={() => navigate('/admin/settings')}>
+            <i className="fas fa-cog"></i> System Settings
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/admin/subjects')}>
+            <i className="fas fa-book-open"></i> Manage Subjects
+          </Button>
+        </HeaderActions>
+      </Header>
 
+      <StatisticsGrid>
+        {[
+          { title: 'Total Students', value: '24,521', change: '12%', isPositive: true, color: '#4CAF50', icon: 'user-graduate' },
+          { title: 'Active Courses', value: '842', change: '7%', isPositive: true, color: '#2196F3', icon: 'book-open' },
+          { title: 'Revenue', value: '$253,890', change: '5%', isPositive: true, color: '#FF9800', icon: 'dollar-sign' },
+          { title: 'Completion Rate', value: '78%', change: '3%', isPositive: false, color: '#F44336', icon: 'chart-line' }
+        ].map((stat, index) => (
+          <StatCard key={index}>
+            <StatIconContainer $color={stat.color}>
+              <i className={stat.icon}></i>
+            </StatIconContainer>
+            <StatContent>
+              <StatTitle>{stat.title}</StatTitle>
+              <StatValue>{stat.value.toLocaleString()}</StatValue>
+              <StatChange $isPositive={stat.change >= 0}>
+                {stat.change >= 0 ? <i className="fas fa-arrow-up"></i> : <i className="fas fa-arrow-down"></i>}
+                {Math.abs(stat.change)}% {stat.changePeriod}
+              </StatChange>
+            </StatContent>
+          </StatCard>
+        ))}
+      </StatisticsGrid>
+
+      <ChartsGrid>
+        <ChartCard title="Revenue Overview" subtitle="Last 12 Months">
+          <ChartContainer>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={revenueData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `$${value / 1000}k`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Line type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </ChartCard>
+
+        <ChartCard title="User Demographics" subtitle="By Role">
+          <ChartContainer $centerContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={userDemographicsData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  fill="#8884d8"
+                  paddingAngle={5}
+                  dataKey="value"
+                  labelLine={false}
+                  label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                    const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
+                    const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+                    return (
+                      <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="12px">
+                        {`${(percent * 100).toFixed(0)}%`}
+                      </text>
+                    );
+                  }}
+                >
+                  {userDemographicsData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Legend content={<CustomLegend />} />
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </ChartCard>
+      </ChartsGrid>
+
+      <BottomGrid>
         <Card>
           <CardHeader>
             <CardTitle>Recent Activities</CardTitle>
@@ -264,8 +320,7 @@ const AdminDashboard: React.FC = () => {
         </Card>
       </BottomGrid>
     </DashboardContainer>
-  </AdminLayout>
-);
+  );
 };
 
 // Helper function for activity icons
