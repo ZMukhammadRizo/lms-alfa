@@ -25,74 +25,87 @@ const ClassesList: React.FC = () => {
 	const [searchTerm, setSearchTerm] = useState('')
 	const [hoveredCard, setHoveredCard] = useState<string | null>(null)
 	const { user } = useAuth()
-	const [loading, setLoading] = useState(true)
+	const [loadingData, setLoadingData] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 	const [classesWithCounts, setClassesWithCounts] = useState<TeacherClassInfo[]>([])
 
 	// Use the gradesStore instead of direct service calls
-	const classes = useGradesStore(state => state.classes) as TeacherClassInfo[]
+	const classesFromStore = useGradesStore(state => state.classes) as TeacherClassInfo[]
 	const isLoadingClasses = useGradesStore(state => state.isLoadingClasses)
 	const fetchTeacherClasses = useGradesStore(state => state.fetchTeacherClasses)
 	const fetchTeacherLevels = useGradesStore(state => state.fetchTeacherLevels)
 	const levels = useGradesStore(state => state.levels)
 
 	useEffect(() => {
-		const fetchDataAndCounts = async () => {
+		const fetchInitialData = async () => {
+			setLoadingData(true)
+			setError(null)
 			try {
-				setLoading(true)
-
-				// First, ensure we have basic teacher data by fetching levels and classes
-				const fetchPromises = []
-
-				// Only fetch teacher levels if not already loaded
+				const promises = []
 				if (levels.length === 0) {
-					fetchPromises.push(fetchTeacherLevels())
+					promises.push(fetchTeacherLevels())
 				}
-
-				// Always fetch classes as this is the primary data for this page
-				fetchPromises.push(fetchTeacherClasses())
-
-				// Wait for all data to load
-				await Promise.all(fetchPromises)
-
-				// Get actual student counts for each class
-				const updatedClasses = await Promise.all(
-					classes.map(async classItem => {
-						try {
-							const actualCount = await getClassStudentCount(classItem.classId)
-							return {
-								...classItem,
-								actualStudentCount: actualCount,
-							}
-						} catch (countError) {
-							console.error(`Error fetching student count for class ${classItem.classId}:`, countError)
-							return classItem
-						}
-					})
-				)
-
-				setClassesWithCounts(updatedClasses)
+				promises.push(fetchTeacherClasses())
+				await Promise.all(promises)
 			} catch (err) {
-				console.error('Error fetching classes:', err)
-				setError('Failed to load classes. Please try again later.')
-			} finally {
-				setLoading(false)
+				console.error('Error fetching initial data:', err)
+				setError('Failed to load initial data. Please try again later.')
+				setLoadingData(false)
+			}
+		}
+		fetchInitialData()
+	}, [fetchTeacherLevels, fetchTeacherClasses, levels.length])
+
+	useEffect(() => {
+		const processClasses = async () => {
+			if (!isLoadingClasses && classesFromStore.length === 0) {
+				setClassesWithCounts([])
+				setLoadingData(false)
+				return
+			}
+
+			if (classesFromStore.length > 0) {
+				if (loadingData !== false || error === null) setLoadingData(true)
+				try {
+					const updatedClasses = await Promise.all(
+						classesFromStore.map(async (classItem) => {
+							try {
+								const actualCount = await getClassStudentCount(classItem.classId)
+								return {
+									...classItem,
+									actualStudentCount: actualCount,
+								}
+							} catch (countError) {
+								console.error(`Error fetching student count for class ${classItem.classId}:`, countError)
+								return { ...classItem, actualStudentCount: classItem.studentCount }
+							}
+						})
+					)
+					setClassesWithCounts(updatedClasses)
+				} catch (err) {
+					console.error('Error processing class counts:', err)
+					setError('Failed to process class student counts.')
+				} finally {
+					setLoadingData(false)
+				}
+			} else if (!isLoadingClasses) {
+				setLoadingData(false)
 			}
 		}
 
-		fetchDataAndCounts()
-	}, [fetchTeacherLevels, fetchTeacherClasses, levels.length, classes])
+		processClasses()
+	}, [classesFromStore, isLoadingClasses])
 
 	// Filter classes based on search term
 	const filteredClasses = classesWithCounts.filter(
 		classItem =>
 			classItem.classname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			classItem.levelName.toLowerCase().includes(searchTerm.toLowerCase())
+			(classItem.levelName && classItem.levelName.toLowerCase().includes(searchTerm.toLowerCase()))
 	)
 
 	// Handle card click - navigate to subject selection
 	const handleClassClick = (classId: string) => {
-		navigate(`/teacher/grades/classes/${classId}/subjects`)
+		navigate(`/admin/grades/classes/${classId}/subjects`)
 	}
 
 	// Animation variants
@@ -111,7 +124,7 @@ const ClassesList: React.FC = () => {
 		show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 	}
 
-	if (loading || isLoadingClasses) {
+	if (loadingData) {
 		return (
 			<PageContainer>
 				<LoadingMessage>Loading your classes...</LoadingMessage>
@@ -128,8 +141,8 @@ const ClassesList: React.FC = () => {
 	}
 
 	// Group classes by grade level for better organization
-	const classGroups = classesWithCounts.reduce((groups, classItem) => {
-		const level = classItem.levelName
+	const classGroups = filteredClasses.reduce((groups, classItem) => {
+		const level = classItem.levelName || 'Unknown Level'
 		if (!groups[level]) {
 			groups[level] = []
 		}
@@ -142,14 +155,14 @@ const ClassesList: React.FC = () => {
 			<PageHeaderWrapper>
 				<PageHeader>
 					<HeaderContent>
-						<PageTitle>My Classes</PageTitle>
-						<SubTitle>View and manage grades for all your assigned classes</SubTitle>
+						<PageTitle>Classes List</PageTitle>
+						<SubTitle>View classes and manage student grades</SubTitle>
 					</HeaderContent>
 					<HeaderRight>
 						<SearchWrapper>
 							<StyledInput
 								prefix={<FiSearch />}
-								placeholder='Search classes...'
+								placeholder='Search classes or levels...'
 								value={searchTerm}
 								onChange={e => setSearchTerm(e.target.value)}
 							/>
@@ -179,7 +192,7 @@ const ClassesList: React.FC = () => {
 											<FiUsers />
 										</ClassIcon>
 										<ClassName>{classItem.classname}</ClassName>
-										<LevelBadge>{classItem.levelName}th Grade</LevelBadge>
+										{classItem.levelName && <LevelBadge>{classItem.levelName}th Grade</LevelBadge>}
 									</CardHeader>
 									<CardContent>
 										<MetricRow>
@@ -204,7 +217,7 @@ const ClassesList: React.FC = () => {
 										</MetricRow>
 										<CardArrow $isHovered={hoveredCard === classItem.classId}>
 											<FiChevronRight />
-											<span>View Subjects</span>
+											<span>View Grades</span>
 										</CardArrow>
 									</CardContent>
 								</ClassCard>
@@ -218,7 +231,7 @@ const ClassesList: React.FC = () => {
 									<LevelIcon>
 										<FiAward />
 									</LevelIcon>
-									<LevelName>{levelName}th Grade</LevelName>
+									<LevelName>{levelName === 'Unknown Level' ? levelName : `${levelName}th Grade`}</LevelName>
 									<LevelClassCount>
 										{levelClasses.length} {levelClasses.length === 1 ? 'class' : 'classes'}
 									</LevelClassCount>
@@ -269,7 +282,7 @@ const ClassesList: React.FC = () => {
 												</MetricRow>
 												<CardArrow $isHovered={hoveredCard === classItem.classId}>
 													<FiChevronRight />
-													<span>View Subjects</span>
+													<span>View Grades</span>
 												</CardArrow>
 											</CardContent>
 										</ClassCard>
@@ -280,9 +293,9 @@ const ClassesList: React.FC = () => {
 					)
 				) : (
 					<NoResults>
-						{classesWithCounts.length === 0
-							? 'No classes assigned to you yet.'
-							: `No classes found matching "${searchTerm}"`}
+						{searchTerm
+							? `No classes found matching "${searchTerm}"`
+							: 'No classes assigned or found.'}
 					</NoResults>
 				)}
 			</ContentContainer>

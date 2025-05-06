@@ -263,29 +263,36 @@ const BackToLessonsButton = styled(Link)`
 `;
 
 // Helper function to parse file URLs into materials
-const parseFileUrls = (fileUrls: string[] | null): Material[] => {
+const parseFileUrls = (fileUrls: string[] | string | null): Material[] => {
   if (!fileUrls) return [];
   
-  if (!Array.isArray(fileUrls)) {
-    // Try to parse if it's a JSON string
+  let urlsArray: string[] = [];
+  
+  // Handle different potential formats of fileurls coming from the database
+  if (Array.isArray(fileUrls)) {
+    urlsArray = fileUrls;
+  } else if (typeof fileUrls === 'string') {
     try {
-      if (typeof fileUrls === 'string') {
-        const parsed = JSON.parse(fileUrls);
-        if (Array.isArray(parsed)) {
-          fileUrls = parsed;
-        } else {
-          return [];
-        }
-      } else {
-        return [];
+      // Try to parse if it's a JSON string array
+      const parsed = JSON.parse(fileUrls);
+      if (Array.isArray(parsed)) {
+        urlsArray = parsed;
       }
     } catch (e) {
-      console.error('Failed to parse fileUrls:', e);
-      return [];
+      // If not valid JSON, check if it's a comma-separated string
+      if (fileUrls.includes(',')) {
+        urlsArray = fileUrls.split(',').map(url => url.trim());
+      } else {
+        // Treat as a single URL
+        urlsArray = [fileUrls];
+      }
     }
   }
   
-  return fileUrls.map((url, index) => {
+  // Filter out any empty strings
+  urlsArray = urlsArray.filter(url => url && url.trim() !== '');
+  
+  return urlsArray.map((url, index) => {
     const fileName = url.split('/').pop() || `File ${index + 1}`;
     const fileType = getFileTypeFromUrl(url);
     
@@ -564,7 +571,7 @@ const LessonDetail: React.FC = () => {
         </div>
       )}
 
-      {!lesson.fileurls && !lesson.videourl && !lesson.description && (
+      {lesson.materials.length === 0 && !lesson.videourl && !lesson.description && (
         <CenteredContainer>
           <IconWrapper><FiBook size={40} /></IconWrapper>
           <h2>No Content Available</h2>

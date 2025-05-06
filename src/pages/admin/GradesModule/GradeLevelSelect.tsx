@@ -134,7 +134,7 @@ const GradeLevelSelect: React.FC = () => {
 
 	// Handle card click - navigate to class selection
 	const handleGradeLevelClick = (levelId: string) => {
-		navigate(`/teacher/grades/levels/${levelId}/classes`)
+		navigate(`/admin/grades/levels/${levelId}/classes`)
 	}
 
 	// Animation variants

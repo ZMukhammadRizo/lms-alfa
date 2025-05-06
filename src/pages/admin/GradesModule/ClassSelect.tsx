@@ -108,7 +108,7 @@ const ClassSelect: React.FC = () => {
 
 	// Handle card click - navigate to subject selection
 	const handleClassClick = (classId: string) => {
-		navigate(`/teacher/grades/levels/${gradeLevel}/classes/${classId}/subjects`)
+		navigate(`/admin/grades/levels/${gradeLevel}/classes/${classId}/subjects`)
 	}
 
 	// Get the current level name

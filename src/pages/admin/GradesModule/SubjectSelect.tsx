@@ -14,7 +14,7 @@ interface SubjectCardProps {
 
 const SubjectSelect: React.FC = () => {
 	const navigate = useNavigate()
-	const { gradeLevel, classId } = useParams<{ gradeLevel?: string; classId: string }>()
+	const { classId } = useParams<{ classId: string }>()
 	const [searchTerm, setSearchTerm] = useState('')
 	const [hoveredCard, setHoveredCard] = useState<string | null>(null)
 	const [classname, setClassname] = useState('')
@@ -28,37 +28,39 @@ const SubjectSelect: React.FC = () => {
 	const setSelectedClass = useGradesStore(state => state.setSelectedClass)
 
 	// To get class name, we might need levels and classes
-	const levels = useGradesStore(state => state.levels)
 	const classes = useGradesStore(state => state.classes)
-	const fetchTeacherLevels = useGradesStore(state => state.fetchTeacherLevels)
-	const fetchLevelClasses = useGradesStore(state => state.fetchLevelClasses)
 
 	useEffect(() => {
 		const initializeData = async () => {
-			if (!classId) return
+			if (!classId) {
+				setError("Class ID not found in URL.");
+				setLoading(false);
+				return;
+			}
 
 			try {
 				setLoading(true)
 
-				// If refreshing directly on this page, we need to ensure we have class info
-				// First try to find it in the store
 				let classInfo = classes.find(c => c.classId === classId)
 
-				// If not found in the store, fetch it directly
 				if (!classInfo) {
-					// Try to load class info from the API
 					try {
-						const info = await getClassInfo(classId)
+						const info = await getClassInfo(classId) // This might be teacher specific
 						setClassname(info.name)
 					} catch (err) {
-						console.error('Error fetching class info:', err)
-						setClassname(gradeLevel ? `${gradeLevel} Class` : `Class`)
+						console.error('Error fetching class info directly:', err)
+						// Fallback if direct fetch fails or if classId is from a general pool
+						const foundClass = get().classes.find(c => c.classId === classId);
+						if (foundClass) {
+							setClassname(foundClass.classname);
+						} else {
+							setClassname(`Class ${classId}`)
+						}
 					}
 				} else {
 					setClassname(classInfo.classname)
 				}
 
-				// Always fetch the subjects for this class
 				await fetchClassSubjects(classId)
 				setSelectedClass(classId)
 			} catch (err) {
@@ -70,7 +72,7 @@ const SubjectSelect: React.FC = () => {
 		}
 
 		initializeData()
-	}, [classId, gradeLevel, fetchClassSubjects, setSelectedClass, classes, fetchLevelClasses])
+	}, [classId, fetchClassSubjects, setSelectedClass, classes]) // Removed gradeLevel, fetchLevelClasses
 
 	// Filter subjects based on search term
 	const filteredSubjects = subjects.filter(subject =>
@@ -79,15 +81,14 @@ const SubjectSelect: React.FC = () => {
 
 	// Handle card click - navigate to journal
 	const handleSubjectClick = (subjectId: string) => {
-		// Determine which route pattern to use based on whether we have a gradeLevel
-		if (gradeLevel) {
-			navigate(
-				`/teacher/grades/levels/${gradeLevel}/classes/${classId}/subjects/${subjectId}/journal`
-			)
-		} else {
-			navigate(`/teacher/grades/classes/${classId}/subjects/${subjectId}/journal`)
+		if (!classId) {
+			console.error("Class ID is undefined, cannot navigate to subject journal.");
+			// Optionally show a toast error to the user
+			return;
 		}
-	}
+		// Navigate to the admin-specific journal page
+		navigate(`/admin/grades/classes/${classId}/subjects/${subjectId}/journal`);
+	};
 
 	// Animation variants
 	const containerVariants = {
