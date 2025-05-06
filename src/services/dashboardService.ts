@@ -204,11 +204,12 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       .from('subjects')
       .select('*', { count: 'exact', head: true });
 
-    // Get upcoming events
-    const { count: upcomingEvents } = await supabase
-      .from('events')
-      .select('*', { count: 'exact', head: true })
-      .gte('event_date', new Date().toISOString());
+    // // Get upcoming events (REMOVED - table doesn't exist)
+    // const { count: upcomingEvents } = await supabase
+    //   .from('events')
+    //   .select('*', { count: 'exact', head: true })
+    //   .gte('event_date', new Date().toISOString());
+    const upcomingEvents = 0; // Default to 0
 
     return {
       totalUsers: totalUsers || 0,
@@ -296,74 +297,127 @@ export async function getPerformanceData(): Promise<PerformanceData[]> {
  * Fetch top performing students
  */
 export async function getTopStudents(limit = 4): Promise<TopStudent[]> {
+  console.warn("getTopStudents: 'student_performance' table/view does not exist or is not implemented. Returning empty array.");
+  return [];
+  /* // Original code commented out
   try {
+    console.log(`Fetching top ${limit} students...`);
     const { data, error } = await supabase
-      .from('student_performance')
-      .select('*, users(first_name, last_name), subjects(name)')
+      .from('student_performance') 
+      .select('student_id, subject_id, score') // Select known/likely columns, adjust as needed
       .order('score', { ascending: false })
       .limit(limit);
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error fetching top students:", error);
+      console.error(`Details: ${JSON.stringify(error)}`);
+      throw error;
+    }
 
-    return (data || []).map(student => ({
-      id: student.id,
-      name: student.users ? `${student.users.first_name} ${student.users.last_name}` : 'Unknown Student',
-      grade: calculateGrade(student.score),
-      performance: student.score,
-      subject: student.subjects ? student.subjects.name : 'Unknown Subject'
+    if (!data) {
+      console.log("No top student data found.");
+      return [];
+    }
+
+    console.log("Raw top student data:", data);
+
+    // Manual fetching of related data (less efficient, but avoids join error)
+    const studentIds = data.map(s => s.student_id);
+    const subjectIds = data.map(s => s.subject_id);
+
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('id, firstName, lastName')
+      .in('id', studentIds);
+
+    const { data: subjectsData, error: subjectsError } = await supabase
+      .from('subjects')
+      .select('id, subjectname') // Assuming subjectname column exists
+      .in('id', subjectIds);
+    
+    if (usersError) console.error("Error fetching user names for top students:", usersError);
+    if (subjectsError) console.error("Error fetching subject names for top students:", subjectsError);
+
+    const usersMap = new Map(usersData?.map(u => [u.id, `${u.firstName} ${u.lastName}`]) || []);
+    const subjectsMap = new Map(subjectsData?.map(s => [s.id, s.subjectname]) || []);
+
+    // Format the response
+    const formattedData: TopStudent[] = data.map(item => ({
+      id: item.student_id,
+      name: usersMap.get(item.student_id) || 'Unknown Student',
+      performance: item.score,
+      subject: subjectsMap.get(item.subject_id) || 'Unknown Subject',
+      grade: 'N/A' // Grade info is not available from student_performance
     }));
+
+    console.log("Formatted top student data:", formattedData);
+    return formattedData;
+
   } catch (error) {
+    // Catch block remains the same
     console.error('Error fetching top students:', error);
     return [];
   }
+  */
 }
 
 /**
  * Fetch recent assessments
  */
 export async function getRecentAssessments(limit = 4): Promise<RecentAssessment[]> {
+  console.warn("getRecentAssessments: 'assessments' table does not exist or is not implemented. Returning empty array.");
+  return [];
+  /* // Original code commented out
   try {
     const { data, error } = await supabase
-      .from('assessments')
+      .from('assessments') // Table does not exist
       .select('*')
-      .order('date', { ascending: false })
+      .order('date', { descending: true })
       .limit(limit);
 
     if (error) throw error;
 
-    return (data || []).map(assessment => ({
-      id: assessment.id,
-      title: assessment.title,
-      date: formatDate(assessment.date),
-      participation: `${assessment.participation_rate}%`,
-      avgScore: `${assessment.average_score}%`
+    // Format the response
+    return data.map(item => ({
+      id: item.id,
+      title: item.title,
+      date: formatDate(item.date),
+      participation: `${item.participation_rate}%`,
+      avgScore: `${item.average_score}%`,
     }));
+
   } catch (error) {
     console.error('Error fetching recent assessments:', error);
     return [];
   }
+  */
 }
 
 /**
  * Fetch attendance data
  */
 export async function getAttendanceData(): Promise<AttendanceData[]> {
+  console.warn("getAttendanceData: 'daily_attendance' view/table does not exist or is not implemented. Returning empty array.");
+  return [];
+  /* // Original code commented out
   try {
     const { data, error } = await supabase
-      .from('daily_attendance')
+      .from('daily_attendance') // View/Table does not exist
       .select('day, attendance_rate')
       .order('day_order', { ascending: true });
 
     if (error) throw error;
 
-    return (data || []).map(item => ({
+    return data.map(item => ({
       day: item.day,
-      attendance: item.attendance_rate
+      attendance: item.attendance_rate,
     }));
+
   } catch (error) {
     console.error('Error fetching attendance data:', error);
     return [];
   }
+  */
 }
 
 /**
