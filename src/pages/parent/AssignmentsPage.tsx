@@ -1,27 +1,23 @@
 import React, { useEffect, useState } from 'react'
 import {
-  FiAlertTriangle,
-  FiCalendar,
-  FiCheck,
-  FiCheckCircle,
-  FiClock,
-  FiClock as FiClockIcon,
-  FiFileText,
-  FiLoader,
-  FiUser,
-  FiX,
-  FiXCircle,
+	FiAlertTriangle,
+	FiCalendar,
+	FiCheck,
+	FiCheckCircle,
+	FiClock,
+	FiClock as FiClockIcon,
+	FiFileText,
+	FiLoader,
+	FiUser,
+	FiX,
+	FiXCircle,
 } from 'react-icons/fi'
 import Modal from 'react-modal'
 import styled from 'styled-components'
 import { PageTitle } from '../../components/common'
 import { Badge, Button, Card, Col, Container, Row } from '../../components/ui'
 import { useAuth } from '../../contexts/AuthContext'
-import {
-  Assignment,
-  Submission,
-  fetchParentAssignmentsWithSubmissions,
-} from '../../services/assignmentService'
+import { Assignment, Submission, fetchParentDashboardData } from '../../services/assignmentService'
 
 // Set app element for modal accessibility
 Modal.setAppElement('#root')
@@ -170,15 +166,15 @@ const AssignmentsPage: React.FC = () => {
 			try {
 				const { fetchParentChildren } = await import('../../services/timetableService')
 
-				// Get children and assignment data in parallel
-				const [fetchedChildren, result] = await Promise.all([
+				// Get children and comprehensive assignment + submission data
+				const [fetchedChildren, dashboardData] = await Promise.all([
 					fetchParentChildren(parentId),
-					fetchParentAssignmentsWithSubmissions(parentId),
+					fetchParentDashboardData(parentId),
 				])
 
 				setChildren(fetchedChildren || [])
-				setAssignments(result.assignments || [])
-				setSubmissions(result.submissions || [])
+				setAssignments(dashboardData.assignments || [])
+				setSubmissions(dashboardData.submissions || [])
 			} catch (err) {
 				console.error('Failed to load data:', err)
 				setError('Could not load data. Please try again.')

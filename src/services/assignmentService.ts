@@ -1,5 +1,5 @@
-import supabase from '../config/supabaseClient';
-import { fetchParentChildren } from './timetableService'; // Adjust path if necessary
+import supabase from '../config/supabaseClient'
+import { fetchParentChildren } from './timetableService' // Adjust path if necessary
 
 /**
  * Interface for assignment data
@@ -382,15 +382,15 @@ export async function fetchParentSubmissions(parentId: string): Promise<Submissi
 }
 
 /**
- * Fetch assignments with their corresponding submissions for a parent's children
- * This is a more efficient way to get both assignments and submissions in one call
+ * Fetch submissions with their assignments for a parent's children
+ * This fetches assignments directly through the submissions table
  */
-export async function fetchParentAssignmentsWithSubmissions(parentId: string): Promise<{
+export async function fetchParentSubmissionsWithAssignments(parentId: string): Promise<{
 	assignments: Assignment[]
 	submissions: Submission[]
 }> {
 	if (!parentId) {
-		console.error('[fetchParentAssignmentsWithSubmissions] Parent ID is required.')
+		console.error('[fetchParentSubmissionsWithAssignments] Parent ID is required.')
 		return { assignments: [], submissions: [] }
 	}
 
@@ -398,126 +398,326 @@ export async function fetchParentAssignmentsWithSubmissions(parentId: string): P
 		// 1. Fetch the parent's children
 		const children = await fetchParentChildren(parentId)
 		if (!children || children.length === 0) {
-			console.log('[fetchParentAssignmentsWithSubmissions] No children found for parent.')
+			console.log('[fetchParentSubmissionsWithAssignments] No children found for parent.')
 			return { assignments: [], submissions: [] }
 		}
 
-		// 2. Fetch assignments for each child
-		const assignmentPromises = children.map(child =>
-			getAssignmentsForSingleStudent(child.id).then(assignments =>
-				// Add student name to each assignment fetched for this child
-				assignments.map(assignment => ({ ...assignment, studentName: child.name }))
-			)
-		)
-
-		// 3. Fetch all submissions for these children
+		// 2. Get all student IDs
 		const studentIds = children.map(child => child.id)
 
-		// Execute both fetches in parallel
-		const [assignmentResults, submissionsResult] = await Promise.all([
-			Promise.all(assignmentPromises),
-			supabase
-				.from('submissions')
-				.select(
-					`
-					*,
-					assignment:assignmentid (
-						id,
-						title,
-						classid,
-						class:classes!assignments_classid_fkey (
-							id,
-							classname
-						)
-					),
-					student:studentid (
-						id,
-						fullName
-					)
+		// 3. Fetch submissions with their linked assignments
+		const { data: submissionsData, error } = await supabase
+			.from('submissions')
+			.select(
 				`
+				id,
+				fileurl,
+				submittedat,
+				grade,
+				feedback,
+				assignmentid,
+				studentid,
+				assignment:assignmentid (
+					id,
+					title,
+					instructions,
+					duedate,
+					classid,
+					createdat,
+					class:classes!assignments_classid_fkey (
+						id,
+						classname
+					)
+				),
+				student:studentid (
+					id,
+					fullName
 				)
-				.in('studentid', studentIds)
-				.order('submittedat', { ascending: false }),
-		])
-
-		// 4. Process assignments
-		const allAssignments = assignmentResults.flat()
-
-		// 5. Deduplicate assignments
-		const uniqueAssignmentsMap = new Map<string, Assignment>()
-		allAssignments.forEach(assignment => {
-			if (!uniqueAssignmentsMap.has(assignment.id)) {
-				uniqueAssignmentsMap.set(assignment.id, assignment)
-			}
-		})
-
-		const uniqueAssignments = Array.from(uniqueAssignmentsMap.values())
-
-		/**
-		 * Assignment Status Types and Meanings:
-		 * - 'pending': Assignment is due soon (within a week) but not submitted yet, OR submitted but not graded
-		 * - 'completed': Assignment was submitted and has received a grade
-		 * - 'overdue': Assignment due date has passed and nothing was submitted
-		 * - 'upcoming': Assignment is due in more than a week
-		 * - 'late': Assignment was submitted after the due date (handled in status calculation)
-		 */
-
-		// 6. Update assignment status based on submissions
-		const submissions = submissionsResult.data || []
-
-		uniqueAssignments.forEach(assignment => {
-			// Find matching submission for this assignment
-			const matchingSubmission = submissions.find(
-				sub => sub.assignmentid === assignment.id && sub.studentid === assignment.studentId
+			`
 			)
+			.in('studentid', studentIds)
+			.order('submittedat', { ascending: false })
 
-			// Get current date for comparisons
-			const today = new Date()
-			const dueDate = new Date(assignment.due_date)
+		if (error) {
+			console.error('[fetchParentSubmissionsWithAssignments] Error fetching submissions:', error)
+			return { assignments: [], submissions: [] }
+		}
 
-			// Calculate the correct status
-			if (matchingSubmission) {
-				// Check submission date compared to due date
-				const submissionDate = new Date(matchingSubmission.submittedat)
-				const wasLateSubmission = submissionDate > dueDate
+		// To avoid TypeScript errors, first cast to any
+		const anySubmissions = (submissionsData || []) as any[]
 
-				// If there's a submission with a grade, mark as completed
-				if (matchingSubmission.grade !== null) {
+		// 4. Convert submissions to our Assignment interface format
+		const assignmentsMap = new Map<string, Assignment>()
+
+		anySubmissions.forEach(submission => {
+			if (submission.assignment) {
+				const studentId = submission.student?.id || ''
+				const childName = children.find(child => child.id === studentId)?.name || 'Unknown'
+
+				// Create an assignment object from the submission data
+				const assignment: Assignment = {
+					id: submission.assignment.id,
+					title: submission.assignment.title,
+					description: submission.assignment.description || '',
+					due_date: submission.assignment.duedate,
+					subject: submission.assignment.subject || 'General',
+					status: 'pending', // Default, will update below
+					created_at: submission.assignment.created_at,
+					updated_at: submission.assignment.updated_at,
+					grade: submission.grade,
+					submission_date: submission.submittedat,
+					classid: submission.assignment.classid,
+					className: submission.assignment.class?.classname || 'Unknown Class',
+					studentId: studentId,
+					studentName: childName,
+					attachments: getAttachmentsFromDescription(submission.assignment.description || ''),
+					file_url: submission.fileurl,
+				}
+
+				// Calculate the status based on submission and due date
+				const dueDate = new Date(assignment.due_date)
+				const submissionDate = new Date(submission.submittedat)
+
+				if (submission.grade !== null) {
 					assignment.status = 'completed'
-					assignment.grade = matchingSubmission.grade
-				} else if (wasLateSubmission) {
-					// Submitted late and waiting for grade
+				} else if (submissionDate > dueDate) {
 					assignment.status = 'late'
 				} else {
-					// Submission exists but no grade yet - pending teacher review
 					assignment.status = 'pending'
 				}
-			} else {
-				// No submission
-				if (dueDate < today) {
-					// Past due date with no submission
-					assignment.status = 'overdue'
-				} else if (getDaysRemaining(assignment.due_date) > 7) {
-					// Due date is more than a week away
-					assignment.status = 'upcoming'
-				} else {
-					// Due soon but not overdue
-					assignment.status = 'pending'
-				}
+
+				// Add to map using a composite key to avoid duplicates
+				const key = `${assignment.id}-${studentId}`
+				assignmentsMap.set(key, assignment)
 			}
 		})
 
-		// 7. Sort assignments by due date
-		uniqueAssignments.sort(
+		// 5. Get assignments as an array
+		const assignmentsFromSubmissions = Array.from(assignmentsMap.values())
+
+		// 6. Sort by due date
+		assignmentsFromSubmissions.sort(
 			(a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
 		)
 
+		// 7. Convert submissions to our Submission interface
+		const typedSubmissions: Submission[] = anySubmissions.map(sub => ({
+			id: sub.id,
+			assignmentid: sub.assignmentid,
+			studentid: sub.studentid,
+			fileurl: sub.fileurl,
+			submittedat: sub.submittedat,
+			grade: sub.grade,
+			feedback: sub.feedback,
+			assignment: sub.assignment
+				? {
+						id: sub.assignment.id,
+						title: sub.assignment.title,
+						classid: sub.assignment.classid,
+						class: sub.assignment.class
+							? {
+									id: sub.assignment.class.id,
+									classname: sub.assignment.class.classname,
+							  }
+							: undefined,
+				  }
+				: undefined,
+			student: sub.student
+				? {
+						id: sub.student.id,
+						fullName: sub.student.fullName,
+				  }
+				: undefined,
+		}))
+
 		return {
-			assignments: uniqueAssignments,
+			assignments: assignmentsFromSubmissions,
+			submissions: typedSubmissions,
+		}
+	} catch (error) {
+		console.error('[fetchParentSubmissionsWithAssignments] Failed:', error)
+		return { assignments: [], submissions: [] }
+	}
+}
+
+/**
+ * Comprehensive fetch for parent dashboard - gets both assignments and submissions
+ * Shows all assignments, with submission data where available
+ */
+export async function fetchParentDashboardData(parentId: string): Promise<{
+	assignments: Assignment[]
+	submissions: Submission[]
+}> {
+	if (!parentId) {
+		console.error('[fetchParentDashboardData] Parent ID is required.')
+		return { assignments: [], submissions: [] }
+	}
+
+	try {
+		// 1. Get all assignments for the children through class enrollment
+		const regularAssignments = await fetchParentAssignments(parentId)
+
+		// 2. Get submissions with their linked assignments
+		const submissionsResult = await fetchParentSubmissionsWithAssignments(parentId)
+		const submissionAssignments = submissionsResult.assignments
+		const submissions = submissionsResult.submissions
+
+		// 3. Merge both sets of assignments, with submission data taking precedence
+		const allAssignments = [...regularAssignments]
+
+		// Create a map for faster lookup
+		const assignmentMap = new Map<string, Assignment>()
+		regularAssignments.forEach(assignment => {
+			if (assignment.studentId) {
+				const key = `${assignment.id}-${assignment.studentId}`
+				assignmentMap.set(key, assignment)
+			}
+		})
+
+		// Update or add assignments from submissions
+		submissionAssignments.forEach(assignment => {
+			if (assignment.studentId) {
+				const key = `${assignment.id}-${assignment.studentId}`
+				if (assignmentMap.has(key)) {
+					// Update existing assignment with submission data
+					const existingAssignment = assignmentMap.get(key)!
+					existingAssignment.status = assignment.status
+					existingAssignment.grade = assignment.grade
+					existingAssignment.submission_date = assignment.submission_date
+					existingAssignment.file_url = assignment.file_url
+				} else {
+					// Add new assignment found through submissions
+					allAssignments.push(assignment)
+					assignmentMap.set(key, assignment)
+				}
+			}
+		})
+
+		// Sort all assignments by due date
+		allAssignments.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+
+		return {
+			assignments: allAssignments,
 			submissions: submissions,
 		}
 	} catch (error) {
-		console.error('[fetchParentAssignmentsWithSubmissions] Failed:', error)
+		console.error('[fetchParentDashboardData] Failed:', error)
 		return { assignments: [], submissions: [] }
+	}
+}
+
+/**
+ * Fetch assignments and submissions for a teacher
+ * First gets all assignment IDs created by the teacher,
+ * then fetches submissions for those assignments
+ */
+export async function fetchTeacherSubmissions(teacherId: string): Promise<Submission[]> {
+	if (!teacherId) {
+		console.error('[fetchTeacherSubmissions] Teacher ID is required.')
+		return []
+	}
+
+	try {
+		// 1. First fetch all assignments created by this teacher
+		const { data: assignments, error: assignmentError } = await supabase
+			.from('assignments')
+			.select('id')
+			.eq('createdby', teacherId)
+
+		if (assignmentError) {
+			console.error('[fetchTeacherSubmissions] Error fetching assignments:', assignmentError)
+			return []
+		}
+
+		// If no assignments found, return empty array
+		if (!assignments || assignments.length === 0) {
+			return []
+		}
+
+		// Extract the assignment IDs
+		const assignmentIds = assignments.map(a => a.id)
+
+		// 2. Fetch submissions for these assignments
+		const { data: submissionsData, error: submissionsError } = await supabase
+			.from('submissions')
+			.select(
+				`
+				id,
+				fileurl,
+				submittedat,
+				grade,
+				feedback,
+				assignmentid,
+				studentid,
+				assignment:assignmentid (
+					id,
+					title,
+					classid,
+					quarter_id,
+					createdby,
+					class:classes!assignments_classid_fkey (
+						id,
+						classname
+					),
+					quarter:quarters!assignments_quarter_id_fkey (
+						id,
+						name
+					)
+				),
+				student:studentid (
+					id,
+					fullName
+				)
+			`
+			)
+			.in('assignmentid', assignmentIds)
+			.order('submittedat', { ascending: false })
+
+		if (submissionsError) {
+			console.error('[fetchTeacherSubmissions] Error fetching submissions:', submissionsError)
+			return []
+		}
+
+		if (!submissionsData || submissionsData.length === 0) {
+			return []
+		}
+
+		// 3. Convert to strongly typed Submission objects
+		// Force cast to any then map to our interface to avoid TypeScript errors
+		const anySubmissions = submissionsData as any[]
+
+		const submissions: Submission[] = anySubmissions.map(sub => ({
+			id: sub.id,
+			assignmentid: sub.assignmentid,
+			studentid: sub.studentid,
+			fileurl: sub.fileurl,
+			submittedat: sub.submittedat,
+			grade: sub.grade,
+			feedback: sub.feedback,
+			assignment: sub.assignment
+				? {
+						id: sub.assignment.id,
+						title: sub.assignment.title,
+						classid: sub.assignment.classid,
+						class: sub.assignment.class
+							? {
+									id: sub.assignment.class.id,
+									classname: sub.assignment.class.classname,
+							  }
+							: undefined,
+				  }
+				: undefined,
+			student: sub.student
+				? {
+						id: sub.student.id,
+						fullName: sub.student.fullName,
+				  }
+				: undefined,
+		}))
+
+		return submissions
+	} catch (error) {
+		console.error('[fetchTeacherSubmissions] Failed:', error)
+		return []
 	}
 }

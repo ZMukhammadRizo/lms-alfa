@@ -184,10 +184,16 @@ const TeacherSubmissions = () => {
 
 		setIsLoading(true)
 		try {
-			const { data, error } = await supabase
-				.from('submissions')
-				.select(
-					`
+			const { data: assignments, error: assignmentError } = await supabase
+				.from('assignments')
+				.select('id')
+				.eq('createdby', user.id)
+
+		const assignmentIds = assignments?.map(a => a.id) || [];
+
+const { data, error } = await supabase
+  .from('submissions')
+  .select(`
     id,
     fileurl,
     submittedat,
@@ -212,16 +218,11 @@ const TeacherSubmissions = () => {
       id,
       fullName
     )
-  `
-				)
-				.eq('assignment.createdby', user.id)
-				.order('submittedat', { ascending: false })
-
+  `)
+  .in('assignmentid', assignmentIds)
+  .order('submittedat', { ascending: false });
 
 			if (error) throw error
-
-
-
 
 			setAllSubmissions(data || [])
 			setSubmissions(data || [])
