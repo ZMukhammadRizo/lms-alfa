@@ -1,14 +1,20 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import styled, { css } from 'styled-components';
+import React, { useState, useRef, useEffect } from 'react';
+import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FiCalendar, FiClock, FiFilter, FiChevronDown, 
   FiChevronLeft, FiChevronRight, FiInfo, FiBook,
-  FiUsers, FiMapPin,  FiUser, FiTarget
+  FiUsers, FiMapPin, FiArrowUp, FiUser
 } from 'react-icons/fi';
-import { fetchParentTimetable, fetchParentChildren, fetchChildrenEnrollments } from '../../services/timetableService';
+import useDraggableScroll from 'use-draggable-scroll';
+import supabase from '../../config/supabaseClient';
+import { useUser } from '../../hooks/useUser';
+import { toast } from 'react-toastify';
+import { useTheme } from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { RingLoader } from 'react-spinners';
+import { startOfWeek } from 'date-fns';
+import StudentSchedule from '../student/StudentSchedule';
 
 // Helper functions
 const getWeekDays = (date: Date): Date[] => {
@@ -41,177 +47,347 @@ const formatTime = (hour: number): string => {
   return `${formattedHour}:00 ${ampm}`;
 };
 
+// Format time with minutes
+const formatTimeWithMinutes = (hour: number, minute: number): string => {
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const formattedHour = hour % 12 || 12;
+  return `${formattedHour}:${minute.toString().padStart(2, '0')} ${ampm}`;
+};
+
 // Type definitions
 interface ClassEvent {
-  id: number | string;
+  id: number;
   title: string;
   course: string;
   startTime: number; // 24-hour format (e.g., 9 for 9:00 AM)
   endTime: number; // 24-hour format (e.g., 10 for 10:00 AM)
+  startMinute: number; // Minutes (0-59)
+  endMinute: number; // Minutes (0-59)
   day: number; // 0-6 for Monday-Sunday
   teacher: string;
   location: string;
   color: string;
-  classId?: string;
-  childName?: string;
 }
+
+// Default empty event for initial state
+const emptyEvent: ClassEvent = {
+  id: 0,
+  title: '',
+  course: '',
+  startTime: 0,
+  endTime: 0,
+  startMinute: 0,
+  endMinute: 0,
+  day: 0,
+  teacher: '',
+  location: '',
+  color: ''
+};
 
 interface FilterOptionProps {
   $isActive: boolean;
 }
 
-interface Child {
-  id: string;
-  name: string;
-}
-
-// Styled component for the placeholder message
-const SelectChildMessage = styled.div`
+const ClassEventCard = styled.div<{ $top: number, $height: number, $color: string }>`
+  position: absolute;
+  top: ${props => props.$top}px;
+  left: 5px;
+  right: 5px;
+  height: ${props => props.$height}px;
+  background-color: ${props => {
+    // Convert the hex color to RGB and create a lighter fully opaque pastel version
+    const colorString = props.$color || '#CCCCCC'; // Default to gray if props.$color is undefined/null
+    const hex = colorString.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    // Mix with white to create pastel
+    const pastelR = Math.floor(r + (255 - r) * 0.8);
+    const pastelG = Math.floor(g + (255 - g) * 0.8);
+    const pastelB = Math.floor(b + (255 - b) * 0.8);
+    return `rgb(${pastelR}, ${pastelG}, ${pastelB})`;
+  }};
+  border-left: 4px solid ${props => props.$color};
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%; // Fill the available grid space
-  font-size: 1.1rem;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  text-align: center;
-  padding: 2rem;
+  flex-direction: column;
+  overflow: hidden;
+  cursor: pointer;
+  z-index: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  }
+  
 `;
 
-// Animation Variants
-const calendarVariants = {
-  hidden: (direction: number) => ({ 
-    opacity: 0, 
-    x: direction > 0 ? 50 : -50 
-  }),
-  visible: { 
-    opacity: 1, 
-    x: 0, 
-    transition: { type: 'tween', duration: 0.3, ease: 'easeInOut' } 
-  },
-  exit: (direction: number) => ({ 
-    opacity: 0, 
-    x: direction < 0 ? 50 : -50, 
-    transition: { type: 'tween', duration: 0.3, ease: 'easeInOut' } 
-  }),
-};
+// Interface for basic child info needed for the dropdown
+interface ChildInfo {
+  id: string; // Child's user/student ID
+  firstName: string;
+  lastName: string;
+}
 
-const eventVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: (i: number) => ({ 
-    opacity: 1, 
-    y: 0, 
-    transition: { delay: i * 0.03, duration: 0.2 } 
-  }),
-};
+// Styled Components for the Parent Calendar Page
+const ParentCalendarContainer = styled.div`
+  padding: 20px;
+  font-family: 'Arial', sans-serif; // Example font
+`;
 
-const dropdownVariants = {
-  hidden: { opacity: 0, scale: 0.95, y: -10 },
-  visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.15, ease: 'easeOut' } },
-  exit: { opacity: 0, scale: 0.95, y: -10, transition: { duration: 0.1, ease: 'easeIn' } },
-};
+const LoadingText = styled.div`
+  text-align: center; padding: 50px; color: #495057; font-size: 1.1em;
+`;
 
-const modalOverlayVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.2 } },
-  exit: { opacity: 0, transition: { duration: 0.2 } },
-};
-
-const modalContentVariants = {
-  hidden: { opacity: 0, scale: 0.9 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.2, ease: 'easeOut' } },
-  exit: { opacity: 0, scale: 0.9, transition: { duration: 0.15, ease: 'easeIn' } },
-};
+const ErrorText = styled.div`
+  text-align: center; padding: 50px; color: red; font-size: 1.1em;
+`;
 
 const ParentCalendar: React.FC = () => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [childrenList, setChildrenList] = useState<ChildInfo[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [isLoadingChildren, setIsLoadingChildren] = useState<boolean>(true);
+  const [childrenError, setChildrenError] = useState<string | null>(null);
+
+  // State variables
+  const [loading, setLoading] = useState<boolean>(true);
+  const [events, setEvents] = useState<ClassEvent[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<ClassEvent[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<ClassEvent>(emptyEvent);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [currentWeek, setCurrentWeek] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [showFilters, setShowFilters] = useState(false);
   const [filterCourse, setFilterCourse] = useState<string | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<ClassEvent | null>(null);
-  const [direction, setDirection] = useState(0); // Use number for animation direction
+  const [direction, setDirection] = useState<'next' | 'prev'>('next');
+  const [initialLoad, setInitialLoad] = useState(true);
   const [currentTimePosition, setCurrentTimePosition] = useState<number>(0);
-  const [selectedChild, setSelectedChild] = useState<string | null>(null);
-  const [showChildFilter, setShowChildFilter] = useState(false);
-
-  const [children, setChildren] = useState<Child[]>([]);
   const [classEvents, setClassEvents] = useState<ClassEvent[]>([]);
-  const [enrollmentMap, setEnrollmentMap] = useState<Map<string, string[]>>(new Map());
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const { user } = useAuth();
-  const parentId = user?.id;
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const weekScheduleRef = useRef<HTMLDivElement>(null);
+  const { onMouseDown } = useDraggableScroll(weekScheduleRef);
   
+  // Generate week days from current date
   const weekDays = getWeekDays(new Date(currentDate));
   
+  // Hours range (8 AM to 5 PM)
   const hours = Array.from({ length: 10 }, (_, i) => i + 8);
   
+  // Function to generate a random color based on string
+  const getRandomColor = (str: string) => {
+    // Simple hash function to generate a color based on a string
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Convert to hexadecimal and ensure it's a valid color
+    const color = '#' + ((hash & 0x00FFFFFF).toString(16).padStart(6, '0'));
+    return color;
+  };
+  
+  // Set initial load to false after component mounts
   useEffect(() => {
-    const loadData = async () => {
-      if (!parentId) {
-        setError("Parent ID not found. Please log in again.");
-        setIsLoading(false);
+    setInitialLoad(false);
+  }, []);
+  
+  // Fetch student's enrolled classes and timetable data
+  useEffect(() => {
+    const fetchStudentSchedule = async () => {
+      if (!user || !user.id) {
+        console.error('No user found');
+        setErrorMessage('User authentication required');
+        setLoading(false);
         return;
       }
-
-      setIsLoading(true);
-      setError(null);
-      setEnrollmentMap(new Map());
-
+      
       try {
-        const [fetchedChildren, fetchedEnrollments, fetchedEvents] = await Promise.all([
-          fetchParentChildren(parentId),
-          fetchChildrenEnrollments(parentId),
-          fetchParentTimetable(parentId)
-        ]);
+        setLoading(true);
+        setErrorMessage(null);
+        
+        // Step 1: Fetch the classes that the student is enrolled in
+        const { data: enrolledClasses, error: enrolledClassesError } = await supabase
+          .from('classstudents')
+          .select('classid')
+          .eq('studentid', user.id);
+          
+        if (enrolledClassesError) {
+          throw new Error('Failed to fetch enrolled classes: ' + enrolledClassesError.message);
+        }
+        
+        if (!enrolledClasses || enrolledClasses.length === 0) {
+          console.log('Student not enrolled in any classes');
+          setClassEvents([]);
+          setLoading(false);
+          return;
+        }
+        
+        // Extract class IDs
+        const classIds = enrolledClasses.map(ec => ec.classid);
+        console.log('Student is enrolled in classes with IDs:', classIds);
+        
+        // Step 2: Fetch timetable entries for these classes
+        // Select the necessary fields including foreign keys for subsequent joins
+        const { data: timetableData, error: timetableError } = await supabase
+          .from('timetable')
+          .select(`
+            id, title, start_time, end_time, start_minute, end_minute, day, location,
+            classId, subjectId,
+            subjects ( id, subjectname )
+          `)
+          .in('classId', classIds);
+          
+        if (timetableError) {
+          throw new Error('Failed to fetch timetable: ' + timetableError.message);
+        }
+        
+        if (!timetableData || timetableData.length === 0) {
+          console.log('No schedule found for enrolled classes');
+          setClassEvents([]);
+          setLoading(false);
+          return;
+        }
 
-        setChildren(fetchedChildren || []);
-        setEnrollmentMap(fetchedEnrollments || new Map());
-        setClassEvents(fetchedEvents || []);
+        // Step 2.5: Fetch assigned teachers for the relevant class/subject pairs
+        const classSubjectPairs = timetableData
+          .map(item => ({ classId: item.classId, subjectId: item.subjectId }))
+          .filter(pair => pair.classId && pair.subjectId)
+          .reduce((acc, pair) => {
+            const key = `${pair.classId}-${pair.subjectId}`;
+            if (!acc.has(key)) {
+              acc.set(key, pair);
+            }
+            return acc;
+          }, new Map());
 
-      } catch (err) {
-        console.error("Failed to load calendar data:", err);
-        setError("Could not load calendar data. Please try again later.");
-        setChildren([]);
-        setEnrollmentMap(new Map());
-        setClassEvents([]);
+        const teacherAssignments = new Map<string, { name: string, id: string | undefined }>();
+
+        if (classSubjectPairs.size > 0) {
+          const fetchPromises = Array.from(classSubjectPairs.values()).map(async pair => {
+            const { data: assignment, error } = await supabase
+              .from('classteachers')
+              .select('teacherid, users ( firstName, lastName )') 
+              .eq('classid', pair.classId)
+              .eq('subjectid', pair.subjectId)
+              .maybeSingle();
+
+            let teacherNameToSet = 'Teacher N/A';
+            let assignedIdFromDb: string | undefined = undefined;
+
+            if (!error && assignment) {
+              assignedIdFromDb = assignment.teacherid;
+              if (assignment.users) {
+                const userData = assignment.users;
+                let fullName = '';
+                // Handle potential array or object for user data
+                if (Array.isArray(userData) && userData.length > 0) {
+                  const userObject = userData[0];
+                  if (userObject && typeof userObject === 'object') {
+                    fullName = `${userObject.firstName || ''} ${userObject.lastName || ''}`.trim();
+                  }
+                } else if (typeof userData === 'object' && userData !== null) {
+                  fullName = `${(userData as any).firstName || ''} ${(userData as any).lastName || ''}`.trim();
+                }
+                if (fullName) {
+                  teacherNameToSet = fullName;
+                }
+              }
+            } // We don't need an else if(error) here, default is already N/A
+            
+            teacherAssignments.set(`${pair.classId}-${pair.subjectId}`, { name: teacherNameToSet, id: assignedIdFromDb });
+          });
+          await Promise.all(fetchPromises);
+        }
+        
+        // Step 3: Format the timetable data for display, using assigned teachers
+        const formattedEvents: ClassEvent[] = timetableData.map((item: any, index) => {
+          let startTime = 9; // Default
+          let endTime = 10; // Default
+          let startMinute = 0; // Default
+          let endMinute = 0; // Default
+          
+          if (item.start_time !== undefined && item.start_time !== null) {
+            const parsedStart = parseInt(String(item.start_time));
+            if (!isNaN(parsedStart) && parsedStart >= 0 && parsedStart <= 23) startTime = parsedStart;
+          }
+          if (item.end_time !== undefined && item.end_time !== null) {
+            const parsedEnd = parseInt(String(item.end_time));
+            if (!isNaN(parsedEnd) && parsedEnd >= 0 && parsedEnd <= 23) endTime = parsedEnd;
+          }
+          if (item.start_minute !== undefined && item.start_minute !== null) {
+            const parsedStartMinute = parseInt(String(item.start_minute));
+            if (!isNaN(parsedStartMinute) && parsedStartMinute >= 0 && parsedStartMinute <= 59) startMinute = parsedStartMinute;
+          }
+          if (item.end_minute !== undefined && item.end_minute !== null) {
+            const parsedEndMinute = parseInt(String(item.end_minute));
+            if (!isNaN(parsedEndMinute) && parsedEndMinute >= 0 && parsedEndMinute <= 59) endMinute = parsedEndMinute;
+          }
+
+          const courseName = item.subjects?.subjectname || 'Unknown Course';
+          const title = item.title || courseName;
+          
+          // Get the CORRECT assigned teacher's name from the map
+          const assignmentKey = `${item.classId}-${item.subjectId}`;
+          const assignmentDetails = teacherAssignments.get(assignmentKey);
+          const teacherName = assignmentDetails ? assignmentDetails.name : 'Teacher N/A';
+          
+          // Generate color based on course name for consistency (using existing logic)
+          const color = getRandomColor(courseName);
+          
+          return {
+            id: index + 1, // Use index as fallback ID (consider if item.id exists and is usable)
+            title,
+            course: courseName,
+            startTime,
+            endTime,
+            startMinute,
+            endMinute,
+            day: item.day !== undefined && item.day !== null ? parseInt(String(item.day)) : 0,
+            teacher: teacherName, // Use the correctly assigned teacher name
+            location: item.location || 'Unknown Location',
+            color
+          };
+        });
+        
+        console.log('Formatted schedule events:', formattedEvents);
+        setClassEvents(formattedEvents);
+      } catch (error) {
+        console.error('Error fetching student schedule:', error);
+        setErrorMessage('Failed to load schedule. Please try again later.');
+        toast.error('Failed to load your schedule');
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
+    
+    fetchStudentSchedule();
+  }, [user]);
   
-    if (parentId) {
-      loadData();
-    } else {
-      setIsLoading(false);
-    }
-  }, [parentId]);
-
+  // Get all unique courses
   const uniqueCourses = [...new Set(classEvents.map(event => event.course))];
   
-  const filteredEvents = useMemo(() => { // Memoize for performance
-    // If no child is selected, always return empty array
-    if (!selectedChild) {
-      return [];
-    }
-
-    // Filter all class events based on the selected child and course
-    return classEvents.filter(event => {
-      const matchesCourse = !filterCourse || event.course === filterCourse;
-      
-      // Check if the event's class is one the selected child is enrolled in
-      const childEnrolledClassIds = enrollmentMap.get(selectedChild) || [];
-      const matchesChildClass = event.classId && childEnrolledClassIds.includes(event.classId);
-      
-      return matchesCourse && matchesChildClass;
-    });
-  // Update dependencies for useMemo
-  }, [selectedChild, classEvents, filterCourse, enrollmentMap]); 
+  // Update filteredEvents when classEvents or filterCourse changes
+  useEffect(() => {
+  // Filter class events by course if filter is applied
+    const events = filterCourse
+    ? classEvents.filter(event => event.course === filterCourse)
+    : classEvents;
+    
+    setFilteredEvents(events);
+  }, [classEvents, filterCourse]);
   
+  // Handle previous week/month
   const handlePrevious = () => {
-    setDirection(-1); // Set direction for animation
+    setDirection('prev');
     const newDate = new Date(currentDate);
     if (viewMode === 'week') {
       newDate.setDate(newDate.getDate() - 7);
@@ -221,8 +397,9 @@ const ParentCalendar: React.FC = () => {
     setCurrentDate(newDate);
   };
   
+  // Handle next week/month
   const handleNext = () => {
-    setDirection(1); // Set direction for animation
+    setDirection('next');
     const newDate = new Date(currentDate);
     if (viewMode === 'week') {
       newDate.setDate(newDate.getDate() + 7);
@@ -232,24 +409,19 @@ const ParentCalendar: React.FC = () => {
     setCurrentDate(newDate);
   };
   
+  // Handle event click
   const handleEventClick = (event: ClassEvent) => {
     setSelectedEvent(event);
+    setIsModalOpen(true);
   };
   
+  // Handle filter change
   const handleFilterChange = (course: string | null) => {
     setFilterCourse(course);
     setShowFilters(false);
   };
   
-  const handleChildChange = (childId: string | null) => {
-    setSelectedChild(childId);
-    setShowChildFilter(false);
-  };
-  
-  const handleToday = () => {
-    setCurrentDate(new Date());
-  };
-  
+  // Scroll to current time
   const scrollToCurrentTime = () => {
     if (weekScheduleRef.current) {
       const now = new Date();
@@ -270,10 +442,11 @@ const ParentCalendar: React.FC = () => {
            date.getFullYear() === today.getFullYear();
   };
   
+  // Animation variants for smooth transitions
   const cardVariants = {
     hidden: (custom: number) => ({
       opacity: 0,
-      y: direction === 1 ? 20 : -20,
+      y: direction === 'next' ? 20 : -20,
       transition: { delay: custom * 0.05 }
     }),
     visible: (custom: number) => ({
@@ -283,862 +456,176 @@ const ParentCalendar: React.FC = () => {
     }),
     exit: (custom: number) => ({
       opacity: 0,
-      y: direction === 1 ? -20 : 20,
+      y: direction === 'next' ? -20 : 20,
       transition: { delay: custom * 0.05 }
     })
   };
 
+  // Add current time indicator
   useEffect(() => {
     const updateCurrentTime = () => {
       const now = new Date();
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
+      const hour = now.getHours();
+      const minute = now.getMinutes();
       
-      if (currentHour >= 8 && currentHour <= 17) {
-        const minutesSince8AM = (currentHour - 8) * 60 + currentMinute;
-        setCurrentTimePosition(minutesSince8AM);
+      if (hour >= 8 && hour < 18) {
+        // Calculate the position based on the time since 8:00 AM
+        // Using the same calculation as for events
+        const hourOffset = 8; // Grid starts at 8 AM
+        const pixelsPerHour = 80; // Each hour is 80px in height
+        
+        // Calculate decimal time (e.g., 9:30 = 9.5)
+        const timeDecimal = hour + (minute / 60);
+        
+        // Calculate the position - add 1px offset to align with grid lines
+        const position = ((timeDecimal - hourOffset) * pixelsPerHour) + 1;
+        setCurrentTimePosition(position);
       }
     };
     
     updateCurrentTime();
-    const interval = setInterval(updateCurrentTime, 60000);
+    const interval = setInterval(updateCurrentTime, 30000); // Update every 30 seconds for smoother updates
     
     return () => clearInterval(interval);
   }, []);
   
-  return (
-    <CalendarContainer
-      as={motion.div}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
-      <ControlBar>
-        <CalendarTitle>Schedule</CalendarTitle>
-
-        <DateNavigator>
-          <NavButton onClick={handlePrevious}>
-            <FiChevronLeft />
-          </NavButton>
-          <CurrentPeriod>
-            <span>
-              {viewMode === 'week' 
-                ? `${formatDate(weekDays[0])} - ${formatDate(weekDays[6])}` 
-                : currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            </span>
-          </CurrentPeriod>
-          <NavButton onClick={handleNext}>
-            <FiChevronRight />
-          </NavButton>
-        </DateNavigator>
+  useEffect(() => {
+    scrollToCurrentTime();
+  }, [filteredEvents]);
+  
+  // Close modal
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    // Reset selected event after animation completes
+    setTimeout(() => {
+      setSelectedEvent(emptyEvent);
+    }, 300);
+  };
+  
+  // Add event positioning effect
+  useEffect(() => {
+    // Function to position events correctly
+    const positionEvents = () => {
+      const eventElements = document.querySelectorAll('.schedule-event');
+      const gridElement = weekScheduleRef.current;
+      
+      if (!gridElement || !eventElements.length) return;
+      
+      const timeColumnWidth = 80; // Width of the time column
+      const availableWidth = gridElement.clientWidth - timeColumnWidth;
+      const columnWidth = availableWidth / 7; // 7 days
+      
+      eventElements.forEach((element, index) => {
+        const htmlElement = element as HTMLElement;
+        const event = filteredEvents[index];
+        if (!event) return;
         
-        <Spacer />
+        const dayIndex = event.day;
+        const hourOffset = 8; // Grid starts at 8 AM
+        const pixelsPerHour = 80; // Height per hour in pixels
+        const headerHeight = 60; // Height of the header row
+        
+        // Calculate exact decimal hours for start and end time
+        const startTimeDecimal = event.startTime + (event.startMinute / 60);
+        const endTimeDecimal = event.endTime + (event.endMinute / 60);
+        
+        // Calculate duration
+        const durationHours = endTimeDecimal - startTimeDecimal;
+        
+        // Calculate top position
+        const topPosition = headerHeight + ((startTimeDecimal - hourOffset) * pixelsPerHour);
+        
+        // Calculate height with minimum value
+        const height = Math.max(durationHours * pixelsPerHour, 30);
+        
+        // Calculate left position
+        const leftPosition = timeColumnWidth + (dayIndex * columnWidth);
+        
+        // Apply styles
+        htmlElement.style.top = `${topPosition}px`;
+        htmlElement.style.height = `${height}px`;
+        htmlElement.style.left = `${leftPosition}px`;
+        htmlElement.style.width = `${columnWidth - 10}px`; // Subtract padding
+      });
+    };
+    
+    // Position events when component mounts or filtered events change
+    setTimeout(positionEvents, 100); // Slight delay to ensure the DOM is ready
+    
+    // Also reposition when window resizes
+    window.addEventListener('resize', positionEvents);
+    
+    return () => {
+      window.removeEventListener('resize', positionEvents);
+    };
+  }, [filteredEvents]);
+  
+  useEffect(() => {
+    const fetchChildren = async () => {
+      // Reset states on user change or initial load
+      setChildrenList([]);
+      setSelectedChildId('');
+      setChildrenError(null);
+      setIsLoadingChildren(true);
 
-        <ActionControls>
-          <FilterContainer>
-            <FilterButton onClick={() => setShowChildFilter(!showChildFilter)}>
-              <FiUsers />
-              <span>{selectedChild ? children.find(c => c.id === selectedChild)?.name : 'All Children'}</span>
-              <AnimatedChevron $isOpen={showChildFilter} />
-            </FilterButton>
-            
-            {showChildFilter && (
-              <FilterDropdown 
-                variants={dropdownVariants}
-                initial="hidden" 
-                animate="visible" 
-                exit="exit"
-              >
-                <FilterOption 
-                  onClick={() => handleChildChange(null)}
-                  $isActive={selectedChild === null}
-                >
-                  All Children
-                </FilterOption>
-                {children.map((child) => (
-                  <FilterOption 
-                    key={child.id}
-                    onClick={() => handleChildChange(child.id)}
-                    $isActive={selectedChild === child.id}
-                  >
-                    {child.name}
-                  </FilterOption>
-                ))}
-              </FilterDropdown>
-            )}
-          </FilterContainer>
-          
-          <FilterContainer>
-            <FilterButton onClick={() => setShowFilters(!showFilters)}>
-              <FiFilter />
-              <span>{filterCourse || 'All Courses'}</span>
-              <AnimatedChevron $isOpen={showFilters} />
-            </FilterButton>
-            
-            {showFilters && (
-              <FilterDropdown 
-                variants={dropdownVariants}
-                initial="hidden" 
-                animate="visible" 
-                exit="exit"
-              >
-                <FilterOption 
-                  onClick={() => handleFilterChange(null)}
-                  $isActive={filterCourse === null}
-                >
-                  All Courses
-                </FilterOption>
-                {uniqueCourses.map((course, index) => (
-                  <FilterOption 
-                    key={index}
-                    onClick={() => handleFilterChange(course)}
-                    $isActive={filterCourse === course}
-                  >
-                    {course}
-                  </FilterOption>
-                ))}
-              </FilterDropdown>
-            )}
-          </FilterContainer>
+      if (!user?.id) {
+        setChildrenError("Please log in to view children's schedules.");
+        setIsLoadingChildren(false);
+        return;
+      }
 
-          <TodayButton onClick={handleToday}>
-            <FiTarget size={16} />
-            <span>Today</span>
-          </TodayButton>
-        </ActionControls>
-      </ControlBar>
-      
-      {isLoading && (
-        <LoadingOverlay>
-          <RingLoader color="#4F46E5" size={60} />
-        </LoadingOverlay>
+      try {
+        // --- Corrected Logic --- 
+        // Fetch children directly from the 'users' table where 'parent_id' matches the logged-in user's ID
+        // Adjust column names ('id', 'firstName', 'lastName', 'parent_id') if needed for your 'users' table schema
+        const { data: childrenData, error: childrenError } = await supabase
+          .from('users') // Query the users table directly
+          .select('id, firstName, lastName') // Select the child info needed
+          .eq('parent_id', user.id); // Filter by the parent_id column
+
+        if (childrenError) throw childrenError;
+
+        if (!childrenData || childrenData.length === 0) {
+          // No error, but no children found linked to this parent
+          setChildrenList([]); 
+        } else {
+          setChildrenList(childrenData);
+        }
+
+      } catch (error: any) {
+        console.error("Error fetching children:", error);
+        setChildrenError("Failed to load children list. Please try again later.");
+        setChildrenList([]); // Clear list on error
+      } finally {
+        setIsLoadingChildren(false);
+      }
+    };
+
+    fetchChildren();
+  }, [user]); // Re-fetch if parent user changes
+
+  const handleChildSelectChange = (selectedOption: any) => {
+    setSelectedChildId(selectedOption ? selectedOption.value : '');
+  };
+
+  // Update the grid cells JSX:
+                  return (
+    <ParentCalendarContainer>
+      {/* Display loading/error states for children fetching */}
+      {isLoadingChildren && <LoadingText>Loading children...</LoadingText>}
+      {childrenError && <ErrorText>{childrenError}</ErrorText>}
+
+      {/* Render StudentSchedule only when children loading is done and no error */}
+      {!isLoadingChildren && !childrenError && (
+        <StudentSchedule
+          isParentView={true}
+          childrenList={childrenList}
+          selectedChildId={selectedChildId}
+          onChildChange={handleChildSelectChange}
+        />
       )}
-
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-
-      {!isLoading && !error && (
-        // Check if a child is selected BEFORE rendering the grid structure
-        selectedChild ? (
-          <AnimatePresence initial={false} custom={direction} mode="wait">
-            <motion.div
-              key={viewMode + currentDate.toISOString() + selectedChild} 
-              variants={calendarVariants}
-              custom={direction} 
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              style={{ height: '100%', width: '100%' }}
-            >
-              {viewMode === 'week' ? (
-                <WeekScheduleContainer>
-                  <TimeAxis>
-                    {hours.map((hour) => (
-                      <TimeSlot key={hour}>
-                        {formatTime(hour)}
-                      </TimeSlot>
-                    ))}
-                  </TimeAxis>
-                  
-                  <WeekSchedule ref={weekScheduleRef}>
-                    <DaysContainer>
-                      {weekDays.map((day, dayIndex) => (
-                        <DayColumn key={dayIndex} $isToday={isToday(day)}>
-                          <DayHeader $isToday={isToday(day)}>
-                            <DayName>{formatDay(day)}</DayName>
-                            <DayDate>{formatDate(day)}</DayDate>
-                          </DayHeader>
-                          
-                          <DaySchedule>
-                            <AnimatePresence>
-                              {filteredEvents 
-                                .filter(event => event.day === dayIndex)
-                                .map((event, index) => (
-                                  <ClassEvent 
-                                    key={`event-${event.id}`} 
-                                    $color={event.color}
-                                    style={{ top: `${(event.startTime - 8) * 60}px`, height: `${(event.endTime - event.startTime) * 60}px`, minHeight: '40px' }}
-                                    onClick={() => handleEventClick(event)}
-                                    variants={eventVariants} 
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="hidden" 
-                                    custom={index} 
-                                    layout
-                                  >
-                                    <ClassEventContent>
-                                      <ClassEventTitle>{event.title}</ClassEventTitle>
-                                      <ClassEventDetail><FiClock size={12} /><span>{formatTime(event.startTime)} - {formatTime(event.endTime)}</span></ClassEventDetail>
-                                      <ClassEventDetail><FiUser size={12} /><span>{event.teacher}</span></ClassEventDetail>
-                                      <ClassEventDetail><FiMapPin size={12} /><span>{event.location}</span></ClassEventDetail>
-                                    </ClassEventContent>
-                                  </ClassEvent>
-                                ))}
-                            </AnimatePresence>
-                          </DaySchedule>
-                        </DayColumn>
-                      ))}
-                    </DaysContainer>
-                  </WeekSchedule>
-                </WeekScheduleContainer>
-              ) : (
-                <MonthViewMessage>
-                  <FiInfo size={24} />
-                  <p>Month view is currently under development. Please use the Week view for scheduling.</p>
-                </MonthViewMessage>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        ) : (
-          // Render the message if no child is selected
-          <SelectChildMessage>
-            Select a child to see their schedule.
-          </SelectChildMessage>
-        )
-      )}
-      
-      {/* Modal */} 
-      <AnimatePresence>
-        {selectedEvent && (
-          <ModalBackdrop 
-             key="backdrop" 
-             variants={modalOverlayVariants} 
-             initial="hidden" 
-             animate="visible" 
-             exit="exit" 
-             onClick={() => setSelectedEvent(null)} 
-          />
-        )}
-        {selectedEvent && (
-          <ModalWrapper key="modal"> 
-            <ModalContent 
-               variants={modalContentVariants} 
-               initial="hidden" 
-               animate="visible" 
-               exit="exit" 
-               onClick={(e) => e.stopPropagation()} 
-            >
-              <ModalHeader $color={selectedEvent.color}><h3>{selectedEvent.title}</h3><CloseButton onClick={() => setSelectedEvent(null)}>×</CloseButton></ModalHeader>
-              <ModalBody>
-                <EventDetailGrid>
-                  {selectedEvent.childName && (
-                    <EventDetail>
-                      <EventDetailIcon $color={selectedEvent.color}>
-                        <FiUsers size={16} />
-                      </EventDetailIcon>
-                      <EventDetailContent>
-                        <EventDetailLabel>Child</EventDetailLabel>
-                        <EventDetailValue>{selectedEvent.childName}</EventDetailValue>
-                      </EventDetailContent>
-                    </EventDetail>
-                  )}
-                  
-                  <EventDetail>
-                    <EventDetailIcon $color={selectedEvent.color}>
-                      <FiBook size={16} />
-                    </EventDetailIcon>
-                    <EventDetailContent>
-                      <EventDetailLabel>Course</EventDetailLabel>
-                      <EventDetailValue>{selectedEvent.course}</EventDetailValue>
-                    </EventDetailContent>
-                  </EventDetail>
-                  
-                  <EventDetail>
-                    <EventDetailIcon $color={selectedEvent.color}>
-                      <FiClock size={16} />
-                    </EventDetailIcon>
-                    <EventDetailContent>
-                      <EventDetailLabel>Time</EventDetailLabel>
-                      <EventDetailValue>{formatTime(selectedEvent.startTime)} - {formatTime(selectedEvent.endTime)}</EventDetailValue>
-                    </EventDetailContent>
-                  </EventDetail>
-                  
-                  <EventDetail>
-                    <EventDetailIcon $color={selectedEvent.color}>
-                      <FiCalendar size={16} />
-                    </EventDetailIcon>
-                    <EventDetailContent>
-                      <EventDetailLabel>Day</EventDetailLabel>
-                      <EventDetailValue>{formatDay(weekDays[selectedEvent.day])}</EventDetailValue>
-                    </EventDetailContent>
-                  </EventDetail>
-                  
-                  <EventDetail>
-                    <EventDetailIcon $color={selectedEvent.color}>
-                      <FiUser size={16} />
-                    </EventDetailIcon>
-                    <EventDetailContent>
-                      <EventDetailLabel>Teacher</EventDetailLabel>
-                      <EventDetailValue>{selectedEvent.teacher}</EventDetailValue>
-                    </EventDetailContent>
-                  </EventDetail>
-                  
-                  <EventDetail>
-                    <EventDetailIcon $color={selectedEvent.color}>
-                      <FiMapPin size={16} />
-                    </EventDetailIcon>
-                    <EventDetailContent>
-                      <EventDetailLabel>Location</EventDetailLabel>
-                      <EventDetailValue>{selectedEvent.location}</EventDetailValue>
-                    </EventDetailContent>
-                  </EventDetail>
-                </EventDetailGrid>
-              </ModalBody>
-              <ModalFooter><ActionButton variant="outline" onClick={() => setSelectedEvent(null)}>Close</ActionButton></ModalFooter>
-            </ModalContent>
-           </ModalWrapper>
-        )}
-      </AnimatePresence>
-    </CalendarContainer>
+    </ParentCalendarContainer>
   );
-};
-
-// Styled Components
-const CalendarContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 60px);
-  background-color: ${({ theme }) => theme.colors.background.primary};
-  color: ${({ theme }) => theme.colors.text.primary};
-  padding: 1rem; // Add overall padding
-`;
-
-const ControlBar = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 0.5rem 0; // Adjust padding
-  margin-bottom: 1rem; // Add space below control bar
-  flex-wrap: wrap;
-  gap: 0.75rem; // Adjust gap
-`;
-
-const CalendarTitle = styled.h1`
-  font-size: 1.6rem; // Slightly larger title
-  font-weight: 600;
-  margin: 0;
-  color: ${props => props.theme.colors.text.primary};
-  margin-right: 2rem;
-`;
-
-const DateNavigator = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.25rem; // Tighter gap for nav buttons
-  background-color: transparent; // Remove background
-`;
-
-const NavButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem; // Slightly larger
-  height: 2.25rem;
-  border-radius: 6px; // Slightly more rounded
-  border: 1px solid transparent; // Transparent border initially
-  background-color: ${({ theme }) => theme.colors.background.secondary};
-  color: ${props => props.theme.colors.text.secondary};
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background-color: ${props => props.theme.colors.background.hover};
-    color: ${props => props.theme.colors.text.primary};
-    border-color: ${({ theme }) => theme.colors.border.light};
-  }
-`;
-
-const CurrentPeriod = styled.div`
-  font-weight: 500;
-  color: ${props => props.theme.colors.text.primary};
-  padding: 0 0.75rem;
-  font-size: 1rem; // Slightly larger date display
-`;
-  
-const Spacer = styled.div`
-  flex-grow: 1;
-`;
-
-const ActionControls = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem; // Tighter gap for action buttons
-`;
-
-const FilterContainer = styled.div`
-  position: relative;
-`;
-
-const FilterButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 0.9rem; // Adjust padding
-  background-color: ${({ theme }) => theme.colors.background.secondary};
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-  border-radius: 8px; // More rounded
-  color: ${props => props.theme.colors.text.secondary};
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.border.light};
-    background-color: ${({ theme }) => theme.colors.background.hover};
-  }
-  
-  svg {
-    transition: transform 0.2s ease-in-out;
-  }
-`;
-
-const FilterDropdown = styled(motion.div)`
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  background-color: ${props => props.theme.colors.background.primary};
-  border-radius: 6px;
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  z-index: 50;
-  min-width: 160px;
-  overflow: hidden;
-`;
-
-const FilterOption = styled.div<FilterOptionProps>`
-  padding: 0.6rem 1rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: background-color 0.2s ease;
-  background-color: ${props => props.$isActive ? props.theme.colors.background.hover : 'transparent'};
-  color: ${props => props.$isActive ? props.theme.colors.primary[500] : props.theme.colors.text.primary};
-  
-  &:hover {
-    background-color: ${props => props.theme.colors.background.hover};
-  }
-`;
-
-const TodayButton = styled(FilterButton)`
-  // Optional: Add specific styles if needed
-`;
-
-const WeekScheduleContainer = styled.div`
-  display: flex;
-  height: 100%; // Fill CalendarGridContainer
-  overflow: hidden;
-  background-color: ${({ theme }) => theme.colors.background.primary}; // Match container
-  border: 1px solid ${({ theme }) => theme.colors.border.light};
-  border-radius: 8px; // Add border radius
-`;
-
-const TimeAxis = styled.div`
-  display: flex;
-  flex-direction: column;
-  width: 60px;
-  min-width: 60px;
-  padding-top: 40px;
-  border-right: 1px solid ${props => props.theme.colors.border.light};
-  background-color: transparent; // Remove distinct background
-  align-self: stretch;
-`;
-
-const TimeSlot = styled.div`
-  height: 60px;
-  padding-right: 8px;
-  font-size: 12px;
-  color: ${props => props.theme.colors.text.secondary};
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  position: relative;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
-`;
-
-const WeekSchedule = styled.div`
-  flex: 1;
-  overflow: auto;
-  position: relative;
-`;
-
-const DaysContainer = styled.div`
-  display: flex;
-  min-width: min-content;
-`;
-
-const DayColumn = styled.div<{ $isToday: boolean }>`
-  flex: 1;
-  min-width: 140px;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid ${props => props.theme.colors.border.light};
-  &:last-child { border-right: none; }
-`;
-
-const DayHeader = styled.div<{ $isToday: boolean }>`
-  height: 45px; // Slightly taller header
-  padding: 0 10px;
-  text-align: center;
-  border-bottom: 1px solid ${props => props.theme.colors.border.light};
-  background-color: transparent; // Remove background
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-
-  ${({ $isToday, theme }) => $isToday && css`
-    ${DayName}, ${DayDate} {
-      color: ${theme.colors.primary[600]};
-      font-weight: 600;
-    }
-    border-bottom-color: ${theme.colors.primary[300]}; // Highlight border too
-  `}
-`;
-
-const DayName = styled.div`
-  font-weight: 500;
-  font-size: 0.75rem;
-  color: ${props => props.theme.colors.text.primary};
-  text-transform: uppercase;
-  line-height: 1.2;
-`;
-
-const DayDate = styled.div`
-  font-size: 0.7rem;
-  color: ${props => props.theme.colors.text.secondary};
-  line-height: 1.2;
-`;
-
-const DaySchedule = styled.div`
-  position: relative;
-  flex-grow: 1; 
-  background-image: linear-gradient(to bottom, ${({ theme }) => theme.colors.border.light ?? '#d1d5db'} 1px, transparent 1px);
-  background-size: 100% 60px; // Lines repeat every hour (60px)
-`;
-
-const ClassEvent = styled(motion.div)<{ $color: string }>`
-  position: absolute; 
-  left: 5px;
-  right: 5px;
-  background-color: ${({ $color }) => $color};
-  border-radius: 6px; // Slightly more rounded
-  padding: 6px 9px;
-  overflow: hidden;
-  cursor: pointer;
-  border: none; // Remove border for flatter look
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05); // Subtle shadow
-  background-image: linear-gradient(rgba(255,255,255,0.05), rgba(0,0,0,0.05));
-  color: white;
-  z-index: 10;
-  transition: filter 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-  display: flex;
-  flex-direction: column;
-
-  &:hover {
-    filter: brightness(1.05); // Slightly brighten on hover
-    transform: translateY(-2px) scale(1.01); // Add scale effect
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1); // Larger shadow on hover
-  }
-`;
-
-const ClassEventContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-`;
-
-const ClassEventTitle = styled.div`
-  font-size: 0.8rem; 
-  font-weight: 600; 
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: inherit;
-  min-height: 1.2em;
-`;
-
-const ClassEventDetail = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.75rem;
-  margin-bottom: 3px;
-  opacity: 0.9;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: inherit;
-  flex-shrink: 0;
-  
-  svg {
-    width: 12px;
-    height: 12px;
-    opacity: 0.8;
-    flex-shrink: 0;
-  }
-`;
-
-const ChildIndicator = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: ${props => props.theme.colors.primary[500]};
-  margin-bottom: 0.5rem;
-  background: ${props => props.theme.isDark ? 'rgba(79, 70, 229, 0.15)' : 'rgba(79, 70, 229, 0.08)'};
-  padding: 2px 6px;
-  border-radius: 4px;
-  width: fit-content;
-  
-  svg {
-    color: ${props => props.theme.colors.primary[500]};
-  }
-`;
-
-const MonthViewMessage = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: ${props => props.theme.colors.background.primary};
-  border-radius: 0.5rem;
-  padding: 3rem;
-  text-align: center;
-  color: ${props => props.theme.colors.text.secondary};
-  gap: 1rem;
-  
-  svg {
-    color: ${props => props.theme.colors.primary[400]};
-  }
-  
-  p {
-    margin: 0;
-    max-width: 30rem;
-  }
-`;
-
-const EventDetailsModal = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`;
-
-const ModalWrapper = styled(motion.div)`
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1001; // Above backdrop
-  pointer-events: none; // Allow clicks on backdrop initially
-`;
-
-const ModalBackdrop = styled(motion.div)`
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5); 
-  z-index: 1000;
-`;
-
-const ModalContent = styled(motion.div)`
-  background-color: ${props => props.theme.colors.background.primary};
-  border-radius: 12px; // More rounded
-  width: 90%;
-  max-width: 480px; // Adjust size
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-  pointer-events: auto; // Enable clicks on modal content
-`;
-
-interface ModalHeaderProps {
-  $color: string;
-}
-
-const ModalHeader = styled.div<ModalHeaderProps>`
-  background: linear-gradient(to right, ${({ $color }) => $color}, ${({ $color }) => lighten(0.1, $color)}); // Subtle gradient
-  color: white;
-  padding: 1rem 1.5rem; 
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  
-  h3 { margin: 0; font-size: 1.1rem; font-weight: 600; }
-`;
-
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  color: white;
-  font-size: 1.6rem;
-  width: 2.25rem; height: 2.25rem; // Match NavButton size
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const ModalBody = styled.div`
-  padding: 1.5rem;
-  max-height: 60vh;
-  overflow-y: auto;
-`;
-
-const EventDetailGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr; // Single column layout for simplicity
-  gap: 1rem;
-`;
-
-const EventDetail = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-`;
-
-const EventDetailIcon = styled.div<{ $color: string }>`
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background: ${props => `${props.$color}15`};
-  color: ${props => props.$color};
-`;
-
-const EventDetailContent = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const EventDetailLabel = styled.div`
-  font-size: 0.75rem;
-  color: ${props => props.theme.colors.text.secondary};
-`;
-
-const EventDetailValue = styled.div`
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: ${props => props.theme.colors.text.primary};
-`;
-
-const ModalFooter = styled.div`
-  padding: 1rem 1.5rem;
-  background-color: ${props => props.theme.colors.background.secondary};
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  border-top: 1px solid ${({ theme }) => theme.colors.border.light};
-`;
-
-const ActionButton = styled.button<{ variant?: 'primary' | 'outline' }>`
-  background-color: ${props => props.variant === 'outline' 
-    ? 'transparent' 
-    : props.theme.colors.primary[500]};
-  color: ${props => props.variant === 'outline' 
-    ? props.theme.colors.primary[500] 
-    : 'white'};
-  border: ${props => props.variant === 'outline' 
-    ? `1px solid ${props.theme.colors.primary[500]}` 
-    : 'none'};
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: ${props => props.variant === 'outline' 
-      ? props.theme.isDark
-        ? `rgba(79, 70, 229, 0.2)`
-        : props.theme.colors.primary[50] 
-      : props.theme.colors.primary[600]};
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px ${props => props.theme.isDark ? 'rgba(79, 70, 229, 0.25)' : 'rgba(79, 70, 229, 0.15)'};
-  }
-`;
-
-const CurrentTimeLine = styled.div`
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background-color: ${props => props.theme.colors.primary[500]};
-  z-index: 5;
-  display: flex;
-  align-items: center;
-`;
-
-const CurrentTimeIndicator = styled.div`
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background-color: ${props => props.theme.colors.primary[500]};
-  position: absolute;
-  left: -5px;
-  top: -4px;
-  box-shadow: 0 0 0 2px ${props => props.theme.isDark ? props.theme.colors.background.secondary : 'white'};
-`;
-
-const CurrentTimeLabel = styled.div`
-  font-size: 10px;
-  background-color: ${props => props.theme.colors.primary[500]};
-  color: white;
-  padding: 2px 4px;
-  border-radius: 4px;
-  position: absolute;
-  left: 10px;
-  top: -14px;
-  font-weight: 500;
-`;
-
-const LoadingOverlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-`;
-
-const ErrorMessage = styled.div`
-  color: ${({ theme }) => theme.colors.danger || '#dc2626'};
-  background-color: ${({ theme }) => (theme.colors.danger || '#dc2626') + '1A'};
-  padding: 1rem;
-  border-radius: 8px;
-  text-align: center;
-  margin: 1rem;
-`;
-
-const AnimatedChevron = styled(FiChevronDown)<{ $isOpen: boolean }>`
-  transition: transform 0.2s ease-in-out;
-  transform: ${({ $isOpen }) => $isOpen ? 'rotate(180deg)' : 'rotate(0deg)'};
-`;
-
-const lighten = (amount: number, color: string): string => {
-  try {
-    let [r, g, b] = color.match(/\w\w/g)?.map((hex) => parseInt(hex, 16)) || [0,0,0];
-    r = Math.min(255, Math.round(r * (1 + amount)));
-    g = Math.min(255, Math.round(g * (1 + amount)));
-    b = Math.min(255, Math.round(b * (1 + amount)));
-    return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
-  } catch (e) {
-    return color; // Return original color on error
-  }
 };
 
 export default ParentCalendar; 
