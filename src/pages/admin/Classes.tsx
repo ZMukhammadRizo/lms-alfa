@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { 
   FiArrowLeft, FiBook, FiChevronDown, FiChevronRight, FiDownload, FiEdit, 
   FiFilter, FiGrid, FiList, FiMapPin, FiMoreHorizontal, FiPlus, FiSearch, 
-  FiTrash, FiTrash2, FiUserCheck, FiUsers, FiUserPlus, FiLayers 
+  FiTrash, FiTrash2, FiUserCheck, FiUsers, FiUserPlus, FiLayers, FiBookOpen 
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import styled from 'styled-components';
@@ -27,6 +27,7 @@ interface Student {
   guardian?: string;
   course?: string;
   role?: string;
+  attendance?: number; // Added attendance
 }
 
 interface Section {
@@ -51,6 +52,13 @@ interface Class {
   status: string;
   color: string;
   sectionCount: number; // Add this new property
+}
+
+// Interface for subject teacher assignments - DEFINED HERE
+interface SubjectTeacherAssignment {
+  subjectId: string;
+  subjectName: string;
+  teacherId: string | null; 
 }
 
 // Helpers
@@ -1699,6 +1707,9 @@ const Classes: React.FC = () => {
   const [isCreateClassModalOpen, setIsCreateClassModalOpen] = useState(false);
   const [createClassModalOpen, setCreateClassModalOpen] = useState(false);
   
+  const [isManageSubjectTeachersModalOpen, setIsManageSubjectTeachersModalOpen] = useState(false);
+  const [currentSectionForSubjectTeachersModal, setCurrentSectionForSubjectTeachersModal] = useState<Section | null>(null);
+  
   // Add click outside listener for filter dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -2154,49 +2165,42 @@ const Classes: React.FC = () => {
   }, [selectedGradeForSections]);
 
   // Handler function to fetch students for a specific section
-  const handleViewStudents = async (grade: string, section: string | null) => {
-    console.log(`View students for grade: ${grade}, section: ${section}`);
+  const handleViewStudents = async (grade: string, sectionName: string | null) => {
+    console.log(`View students for grade: ${grade}, section: ${sectionName}`);
     setSelectedGrade(grade);
-    setSelectedSection(section);
+    setSelectedSection(sectionName); // This is the section NAME
     setShowStudents(true);
     setStatusFilter('all');
     setCourseFilter('all');
     setIsStudentsLoading(true);
 
     try {
-      if (!section) throw new Error('Section is required to view students');
+      if (!sectionName) throw new Error('Section name is required to view students');
       
-      // Extract the class ID - match exactly by name or try to match if it includes the section identifier
-      let sectionObj = sections.find(s => s.name === section);
-      
-      // If exact match not found, try to match with contains (for when we have sections like "Grade 10A" vs "10A")
-      if (!sectionObj) {
-        console.log(`Exact section match not found, trying partial match for: ${section}`);
-        sectionObj = sections.find(s => 
-          s.name.includes(section) || 
-          section.includes(s.name) ||
-          s.name.includes(grade) // Also try matching if the section contains the grade
-        );
-      }
+      const sectionObj = sections.find(s => s.name === sectionName || s.id === sectionName); // Try matching by name or ID
       
       if (!sectionObj) {
-        console.error(`Section not found: ${section} in grade ${grade}. Available sections:`, 
-          sections.map(s => s.name));
-        throw new Error(`Section "${section}" not found in grade ${grade}`);
+        console.error(`Section not found by name or ID: ${sectionName} in grade ${grade}. Available sections:`, 
+          sections.map(s => ({id: s.id, name: s.name})));
+        toast.error(`Section "${sectionName}" not found.`);
+        setIsStudentsLoading(false);
+        setShowStudents(false); // Go back if section not found
+        return;
       }
       
-      const classId = sectionObj.id;
-      console.log(`Fetching students for class ID: ${classId} (${sectionObj.name})`);
+      const currentClassId = sectionObj.id;
+      setSelectedClassId(currentClassId); // <-- SET THE ID HERE
+      console.log(`Fetching students for class ID: ${currentClassId} (Section Name: ${sectionObj.name})`);
       
       // Fetch all students in the selected class from classstudents table
       let { data: classstudents, error } = await supabase
         .from('classstudents')
         .select('*')
-        .eq('classid', classId);
+        .eq('classid', currentClassId);
 
       if (error) throw error;
 
-      console.log(`Found ${classstudents?.length || 0} students enrolled in class ID ${classId}`);
+      console.log(`Found ${classstudents?.length || 0} students enrolled in class ID ${currentClassId}`);
       
       if (!classstudents || classstudents.length === 0) {
         setStudents([]);
@@ -2295,7 +2299,7 @@ const Classes: React.FC = () => {
             status: userData.status || 'active',
             course: '',  // Course not available in current structure
             grade,
-            section,
+            section: sectionName,
             performance,  // Now using real data when available
             subjects: subjectList  // Real subjects from database
           } as Student;
@@ -3106,6 +3110,12 @@ const Classes: React.FC = () => {
     setCreateClassModalOpen(false);
   };
 
+  // Renamed and repurposed from handleAssignTeacher
+  const handleOpenManageSubjectTeachersModal = (section: Section) => {
+    setCurrentSectionForSubjectTeachersModal(section);
+    setIsManageSubjectTeachersModalOpen(true);
+  };
+
   if (isLoading) {
     return (
       <ClassesContainer>
@@ -3160,10 +3170,29 @@ const Classes: React.FC = () => {
                 <FiPlus />
                 <span>Add Students</span>
               </AddButton>
-            <ExportDataButton>
-              <FiDownload />
-              <span>Export Data</span>
-            </ExportDataButton>
+              {/* New Assign Teachers Button */}
+              <ManageSubjectTeachersButton onClick={() => {
+                // We need to ensure currentSectionDetails is the correct Section object
+                // for the currently viewed selectedSection (e.g., "10A")
+                // This might require finding it from the `sections` array using `selectedSection` name or ID.
+                // For now, assuming `currentSectionDetails` is accessible and correct.
+                // Find the current section object from the sections list
+                const currentSectionObject = sections.find(s => s.id === selectedClassId); 
+                // selectedClassId should hold the ID of the section whose students are being viewed
+                if (currentSectionObject) {
+                  handleOpenManageSubjectTeachersModal(currentSectionObject);
+                } else {
+                  toast.error('Could not find section details to manage subject teachers.');
+                  console.error("Error: currentSectionObject not found for SMT modal, selectedClassId:", selectedClassId);
+                }
+              }}>
+                <FiBookOpen /> {/* Changed Icon */}
+                <span>Manage Subject Teachers</span>
+              </ManageSubjectTeachersButton>
+              <ExportDataButton>
+                <FiDownload />
+                <span>Export Data</span>
+              </ExportDataButton>
             </div>
           </StudentsHeaderSection>
 
@@ -3608,6 +3637,13 @@ const Classes: React.FC = () => {
         onClose={() => setCreateClassModalOpen(false)}
         onSave={handleSaveNewClass}
       />
+
+      {/* Add the ManageClassSubjectTeachersModal */}
+      <ManageClassSubjectTeachersModal 
+        isOpen={isManageSubjectTeachersModalOpen} 
+        onClose={() => setIsManageSubjectTeachersModalOpen(false)} 
+        section={currentSectionForSubjectTeachersModal}
+      />
     </ClassesContainer>
   );
 };
@@ -3617,7 +3653,9 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
   isOpen,
   onClose,
   onAddStudents,
-  classId}: AddStudentModalProps) => {
+  classId,
+  excludedStudentIds
+}) => {
   console.log('AddStudentModal render - isOpen:', isOpen, 'classId:', classId);
   const [availableStudents, setAvailableStudents] = useState<AvailableStudent[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<AvailableStudent[]>([]);
@@ -4890,5 +4928,358 @@ const generateRandomColor = () => {
   const colors = ['#4F46E5', '#16A34A', '#F59E0B', '#8B5CF6', '#EC4899', '#10B981'];
   return colors[Math.floor(Math.random() * colors.length)];
 };
+
+// Add styled component for the new button, similar to AddButton or ExportDataButton
+const ManageSubjectTeachersButton = styled(AddButton)`
+  // Styles can be customized if needed
+`;
+
+// Placeholder for the new Modal - to be defined properly later
+interface ManageClassSubjectTeachersModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  section: Section | null; // The class/section we are managing teachers for
+  // onSave: (classId: string, subjectTeacherAssignments: any[]) => void; // Define structure later
+}
+
+const ManageClassSubjectTeachersModal: React.FC<ManageClassSubjectTeachersModalProps> = ({ isOpen, onClose, section }) => {
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('');
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
+  
+  const [availableTeachers, setAvailableTeachers] = useState<{id: string, name: string}[]>([]);
+  const [classSubjects, setClassSubjects] = useState<{id: string, name: string}[]>([]);
+  const [currentAssignments, setCurrentAssignments] = useState<Array<{subjectId: string, subjectName: string, teacherId: string, teacherName: string}>>([]);
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && section) {
+      fetchInitialModalData(section.id);
+    }
+  }, [isOpen, section]);
+
+  const fetchInitialModalData = async (classId: string) => {
+    setIsLoading(true);
+    try {
+      // 1. Fetch all available teachers
+      const { data: teachersData, error: teachersError } = await supabase
+        .from('users')
+        .select('id, firstName, lastName')
+        .eq('role', 'Teacher');
+      if (teachersError) throw teachersError;
+      const formattedTeachers = teachersData?.map(t => ({id: t.id, name: `${t.firstName || ''} ${t.lastName || ''}`.trim()})) || [];
+      setAvailableTeachers(formattedTeachers);
+
+      // 2. Fetch subjects associated with this class
+      const { data: classSubjectLinks, error: classSubjectsError } = await supabase
+        .from('classsubjects')
+        .select('subjectid')
+        .eq('classid', classId);
+      if (classSubjectsError) throw classSubjectsError;
+      const subjectIds = classSubjectLinks?.map(link => link.subjectid) || [];
+
+      let fetchedClassSubjects: {id: string, name: string}[] = [];
+      if (subjectIds.length > 0) {
+        const { data: subjectsData, error: subjectsError } = await supabase
+          .from('subjects')
+          .select('id, subjectname')
+          .in('id', subjectIds);
+        if (subjectsError) throw subjectsError;
+        fetchedClassSubjects = subjectsData?.map(s => ({id: s.id, name: s.subjectname})) || [];
+      }
+      setClassSubjects(fetchedClassSubjects);
+
+      // 3. Fetch current assignments from classteachers for this class, joining with subjects and users
+      await fetchCurrentAssignments(classId);
+
+    } catch (error) {
+      console.error("Error fetching initial data for modal:", error);
+      toast.error("Failed to load initial data.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const fetchCurrentAssignments = async (classId: string) => {
+    // Helper to prevent race conditions if called multiple times
+    // setIsLoading(true); // Usually set by the caller
+    try {
+        const { data: assignmentsData, error: assignmentsError } = await supabase
+            .from('classteachers')
+            .select(`
+                subjectid,
+                teacherid,
+                subjects (subjectname),
+                users (firstName, lastName)
+            `)
+            .eq('classid', classId);
+
+        if (assignmentsError) throw assignmentsError;
+
+        const formattedAssignments = assignmentsData?.map(a => ({
+            subjectId: a.subjectid,
+            subjectName: (a.subjects as any)?.subjectname || 'Unknown Subject',
+            teacherId: a.teacherid,
+            teacherName: `${(a.users as any)?.firstName || ''} ${(a.users as any)?.lastName || ''}`.trim() || 'Unknown Teacher',
+        })) || [];
+        setCurrentAssignments(formattedAssignments);
+    } catch (error) {
+        console.error("Error fetching current assignments:", error);
+        toast.error("Failed to load current assignments.");
+    } finally {
+        // setIsLoading(false);
+    }
+  };
+
+  const handleAssignTeacherToSubject = async () => {
+    if (!section || !selectedTeacherId || !selectedSubjectId) {
+      toast.warn("Please select a teacher and a subject.");
+      return;
+    }
+
+    // Check if this assignment already exists
+    const alreadyExists = currentAssignments.some(
+      a => a.subjectId === selectedSubjectId && a.teacherId === selectedTeacherId
+    );
+    if (alreadyExists) {
+      toast.info("This teacher is already assigned to this subject for this class.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from('classteachers').insert({
+        classid: section.id,
+        subjectid: selectedSubjectId,
+        teacherid: selectedTeacherId
+      });
+      if (error) throw error;
+      toast.success("Teacher assigned to subject successfully!");
+      await fetchCurrentAssignments(section.id); // Refresh the list
+      setSelectedSubjectId(''); // Reset subject selection
+      // Optionally reset teacher selection or keep it for assigning to another subject
+    } catch (error) {
+      console.error("Error assigning teacher to subject:", error);
+      toast.error("Failed to assign teacher. They might already be assigned to another subject in this class if your table has constraints, or an unexpected error occurred.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRemoveAssignment = async (subjectId: string, teacherId: string) => {
+    if (!section) return;
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from('classteachers').delete()
+        .match({ classid: section.id, subjectid: subjectId, teacherid: teacherId });
+      if (error) throw error;
+      toast.success("Teacher assignment removed successfully!");
+      await fetchCurrentAssignments(section.id); // Refresh the list
+    } catch (error) {
+      console.error("Error removing assignment:", error);
+      toast.error("Failed to remove assignment.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen || !section) return null;
+
+  return (
+    <ModalOverlay onClick={onClose}>
+      <ModalContent onClick={e => e.stopPropagation()} style={{width: '800px', maxHeight: '90vh'}}>
+        <ModalHeader>
+          <h2 style={{ fontSize: '18px' }}>Manage Subject Teachers for {section.name}</h2> 
+          <CloseButton onClick={onClose}>&times;</CloseButton>
+        </ModalHeader>
+        <ModalBody>
+          {isLoading ? (
+            <LoadingMessage>Loading data...</LoadingMessage>
+          ) : (
+            <>
+              <NewAssignmentSection>
+                <h3>Assign New Teacher to Subject</h3>
+                <div style={{display: 'flex', gap: '16px', alignItems: 'flex-end'}}>
+                  <ModalFormGroup>
+                    <label>Teacher</label>
+                    <StyledSelect value={selectedTeacherId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedTeacherId(e.target.value)}>
+                      <option value="">-- Select Teacher --</option>
+                      {availableTeachers.map(teacher => (
+                        <option key={teacher.id} value={teacher.id}>{teacher.name}</option>
+                      ))}
+                    </StyledSelect>
+                  </ModalFormGroup>
+                  <ModalFormGroup>
+                    <label>Subject for this Class</label>
+                    <StyledSelect value={selectedSubjectId} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedSubjectId(e.target.value)} disabled={classSubjects.length === 0}>
+                      <option value="">-- Select Subject --</option>
+                      {classSubjects.map(subject => (
+                        <option key={subject.id} value={subject.id}>{subject.name}</option>
+                      ))}
+                      {classSubjects.length === 0 && <option disabled>No subjects linked</option>}
+                    </StyledSelect>
+                  </ModalFormGroup>
+                  <AddButton 
+                    onClick={handleAssignTeacherToSubject} 
+                    disabled={isSubmitting || !selectedTeacherId || !selectedSubjectId}
+                    style={{height: '44px', padding: '10px 16px', flexShrink: 0}}
+                  >
+                    {isSubmitting ? 'Assigning...' : 'Assign'}
+                  </AddButton>
+                </div>
+              </NewAssignmentSection>
+
+              <CurrentAssignmentsSection>
+                <h3>Current Assignments</h3>
+                {currentAssignments.length === 0 ? (
+                  <p style={{fontSize: '14px', color: '#6b7280', textAlign: 'center', padding: '20px 0'}}>
+                    No teachers are assigned to subjects yet.
+                  </p>
+                ) : (
+                  <AssignmentsTable>
+                    <thead>
+                      <tr>
+                        <th>Subject</th>
+                        <th>Teacher</th>
+                        <th style={{textAlign: 'center'}}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentAssignments.map((assignment, index) => (
+                        <tr key={`${assignment.subjectId}-${assignment.teacherId}-${index}`}> 
+                          <td>{assignment.subjectName}</td>
+                          <td>{assignment.teacherName}</td>
+                          <td>
+                            <button 
+                              onClick={() => handleRemoveAssignment(assignment.subjectId, assignment.teacherId)} 
+                              disabled={isSubmitting}
+                              title="Remove assignment"
+                            >
+                              <FiTrash2 /> 
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </AssignmentsTable>
+                )}
+              </CurrentAssignmentsSection>
+            </>
+          )}
+        </ModalBody>
+        <ModalActions>
+          <ClassModalCancelButton onClick={onClose}>Close</ClassModalCancelButton>
+        </ModalActions>
+      </ModalContent>
+    </ModalOverlay>
+  );
+};
+
+// Styled components for the new modal sections
+const NewAssignmentSection = styled.div`
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 20px;
+  h3 { margin-top: 0; }
+`;
+
+const CurrentAssignmentsSection = styled.div`
+  h3 { margin-top: 0; }
+`;
+
+const AssignmentsTable = styled.table`
+  width: 100%;
+  border-collapse: separate; // Use separate for borders inside radius
+  border-spacing: 0;
+  margin-top: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden; // Needed for border-radius on table
+
+  th, td {
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 14px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  th {
+    background-color: #f9fafb;
+    font-weight: 600;
+    color: #4b5563;
+  }
+  
+  tbody tr:last-child td {
+     border-bottom: none;
+  }
+
+  tbody tr:hover {
+    background-color: #f3f4f6; 
+  }
+
+  td:last-child {
+     text-align: center;
+  }
+
+  button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #ef4444; // Red color for remove
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    
+    &:hover {
+       background-color: #fee2e2;
+    }
+    &:disabled {
+       color: #ccc;
+       cursor: not-allowed;
+       background-color: transparent;
+    }
+    svg {
+        width: 16px;
+        height: 16px;
+    }
+  }
+`;
+
+const ModalFormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1; // Allow flex-grow
+
+  label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+  }
+`;
+
+const StyledSelect = styled.select`
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  background-color: white;
+  height: 44px; // Match button height
+  width: 100%;
+
+  &:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+  }
+
+  &:disabled {
+    background-color: #f3f4f6;
+    cursor: not-allowed;
+  }
+`;
 
 export default Classes;

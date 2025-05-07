@@ -132,16 +132,16 @@ const useGradesStore = create<GradesState>((set, get) => ({
 
 			} else { // Teacher logic
 				console.log(`[GradesStore] Teacher user: Fetching levels for teacher: ${userId}`)
-				const { data: teacherClasses, error: classesError } = await supabase
-					.from('classes')
+			const { data: teacherClasses, error: classesError } = await supabase
+				.from('classes')
 					.select('level_id')
 					.eq('teacherid', userId)
 
-				if (classesError) { 
+			if (classesError) {
 					console.error('[GradesStore] Error fetching teacher-specific classes for levels:', classesError)
 					throw classesError 
-				}
-				if (!teacherClasses || teacherClasses.length === 0) {
+			}
+			if (!teacherClasses || teacherClasses.length === 0) {
 					console.log('[GradesStore] No classes found for this teacher to derive levels.')
 					set({ levels: [], isLoadingLevels: false })
 					return
@@ -165,7 +165,7 @@ const useGradesStore = create<GradesState>((set, get) => ({
 				console.error('[GradesStore] Error fetching level details by IDs:', levelsError)
 				throw levelsError
 			}
-
+			
 			const formattedLevels = levelsData?.map((level): GradeLevelOverview => ({
 				levelId: level.id,
 				levelName: level.name || `Level ${level.id}`,
@@ -275,9 +275,9 @@ const useGradesStore = create<GradesState>((set, get) => ({
 				fetchedClassesData = data || []
 			} else { // Teacher Logic
 				console.log(`[GradesStore] Teacher user: fetching classes using get_teacher_classes RPC for teacher_uuid: ${userId}`)
-				const { data, error } = await supabase.rpc('get_teacher_classes', {
+			const { data, error } = await supabase.rpc('get_teacher_classes', {
 					teacher_uuid: userId,
-				})
+			})
 				if (error) {
 					 console.error('[GradesStore] RPC error for teacher get_teacher_classes:', error)
 					throw error

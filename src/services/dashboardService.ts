@@ -303,7 +303,7 @@ export async function getTopStudents(limit = 4): Promise<TopStudent[]> {
   try {
     console.log(`Fetching top ${limit} students...`);
     const { data, error } = await supabase
-      .from('student_performance') 
+      .from('student_performance')
       .select('student_id, subject_id, score') // Select known/likely columns, adjust as needed
       .order('score', { ascending: false })
       .limit(limit);

@@ -23,21 +23,36 @@ interface Lesson {
 // Utility function to fetch a lesson
 const fetchLesson = async (id: string) => {
   try {
-    console.log("Fetching lesson with ID:", id);
+    console.log("Fetching lesson with ID (explicit select):", id);
     const { data, error } = await supabaseAdmin
       .from('lessons')
-      .select('*')
+      .select('id, lessonname, description, uploadedat, videourl, subjectid, fileurls') // Explicitly select columns
       .eq('id', id)
       .single();
     
     if (error) {
-      console.error("Error fetching lesson:", error);
+      console.error("Error fetching lesson (explicit select):", error);
+      if (error.details || error.hint || error.code) {
+        console.error("Supabase error details:", JSON.stringify(error, null, 2));
+      }
       throw error;
+    }
+    
+    // Detailed logging for fileurls property
+    if (data) {
+      console.log("Data object received from Supabase:", JSON.parse(JSON.stringify(data))); // Log a clean copy
+      if (Object.prototype.hasOwnProperty.call(data, 'fileurls')) {
+        console.log("Property 'fileurls' EXISTS on fetched data. Value:", data.fileurls);
+      } else {
+        console.log("Property 'fileurls' DOES NOT EXIST on fetched data.");
+      }
+    } else {
+      console.log("No data object received from Supabase (data is null or undefined).");
     }
     
     return { data, error: null };
   } catch (err) {
-    console.error("Exception in fetchLesson:", err);
+    console.error("Exception in fetchLesson (explicit select):", err);
     return { data: null, error: err };
   }
 };
@@ -640,7 +655,7 @@ const LessonDetail: React.FC = () => {
       return url.split('/').pop() || 'file';
     }
   };
-
+  
   // Helper function to parse file URLs from different formats
   const parseFileUrls = (fileUrls: string[] | string | null): string[] => {
     if (!fileUrls) return [];
@@ -686,71 +701,61 @@ const LessonDetail: React.FC = () => {
       
       try {
         setLoading(true);
+        setError(null); // Clear previous errors
         
-        // First try to use lesson from state if available
+        // Determine if lesson data is coming from location state or needs fetching
+        let lessonDataToProcess: Lesson | null = null;
+        let source: string = "";
+
         if (location.state && location.state.lesson) {
           console.log("Using lesson from location state:", location.state.lesson);
-          const lessonFromState = location.state.lesson;
-          console.log("Video URL from state:", lessonFromState.videourl);
-          
-          setLesson(lessonFromState);
-          setFormData({
-            lessonname: lessonFromState.lessonname || '',
-            description: lessonFromState.description || '',
-            videourl: lessonFromState.videourl || ''
-          });
-
-          // Initialize uploaded files from lesson data with improved parsing
-          const fileUrlsArray = parseFileUrls(lessonFromState.fileurls);
-          if (fileUrlsArray.length > 0) {
-            const files = fileUrlsArray.map((url: string) => ({
-              name: getFileNameFromUrl(url),
-              url: url
-            }));
-            setUploadedFiles(files);
+          lessonDataToProcess = location.state.lesson;
+          source = "location.state";
+        } else {
+          console.log("Fetching lesson data from database for id:", id);
+          const { data: fetchedData, error: fetchError } = await fetchLesson(id);
+          if (fetchError) {
+            console.error("Failed to load lesson data from database:", fetchError);
+            setError("Failed to load lesson data");
+            setLoading(false);
+            return;
           }
-
-          setLoading(false);
-          return;
+          lessonDataToProcess = fetchedData;
+          source = "database_fetch";
         }
         
-        // Otherwise fetch from the database
-        console.log("Fetching lesson data from database");
-        const { data, error } = await fetchLesson(id);
-        
-        if (error) {
-          console.error("Failed to load lesson data:", error);
-          setError("Failed to load lesson data");
-          setLoading(false);
-          return;
-        }
-        
-        if (data) {
-          console.log("Lesson loaded from database:", data);
-          console.log("Video URL from database:", data.videourl);
+        if (lessonDataToProcess) {
+          console.log(`Lesson data (from ${source}) to process:`, lessonDataToProcess);
           
-          setLesson(data);
+          setLesson(lessonDataToProcess);
           setFormData({
-            lessonname: data.lessonname || '',
-            description: data.description || '',
-            videourl: data.videourl || ''
+            lessonname: lessonDataToProcess.lessonname || '',
+            description: lessonDataToProcess.description || '',
+            videourl: lessonDataToProcess.videourl || ''
           });
 
-          // Initialize uploaded files from lesson data with improved parsing
-          const fileUrlsArray = parseFileUrls(data.fileurls);
-          if (fileUrlsArray.length > 0) {
+          console.log("Raw fileurls from lesson data:", lessonDataToProcess.fileurls);
+          const fileUrlsArray = parseFileUrls(lessonDataToProcess.fileurls ?? null);
+          console.log("Parsed fileUrlsArray from lesson data:", fileUrlsArray);
+
+          if (fileUrlsArray && fileUrlsArray.length > 0) {
             const files = fileUrlsArray.map((url: string) => ({
               name: getFileNameFromUrl(url),
               url: url
+              // size: formatFileSize(file.size) // Size is not available here, would need to be fetched or stored differently
             }));
+            console.log("Setting uploadedFiles state to:", files);
             setUploadedFiles(files);
+          } else {
+            console.log("No processable file URLs found in lesson data, clearing uploadedFiles state.");
+            setUploadedFiles([]);
           }
         } else {
-          console.error("No lesson data found");
+          console.error("No lesson data available to process (either from state or fetch).");
           setError("Lesson not found");
         }
       } catch (err: any) {
-        console.error("Error loading lesson:", err);
+        console.error("Error in loadLesson function:", err);
         setError(err.message || "An error occurred while loading the lesson");
       } finally {
         setLoading(false);
@@ -758,7 +763,7 @@ const LessonDetail: React.FC = () => {
     };
     
     loadLesson();
-  }, [id, location.state]);
+  }, [id, location.state]); // location.state is included as it can provide initial data
   
   // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -955,23 +960,22 @@ const LessonDetail: React.FC = () => {
       updatedFiles.splice(indexToDelete, 1);
       setUploadedFiles(updatedFiles);
       
-      // Update Supabase - ensure it's stored as a proper array
+      // Update Supabase - ensure it's stored as a proper array, use null for empty
       const fileUrls = updatedFiles.map(file => file.url);
       
       // Log for debugging
-      console.log("Updating lesson after deletion with fileUrls:", fileUrls);
-      
+      console.log("Updating lesson after deletion with fileUrls for Supabase:", fileUrls.length > 0 ? fileUrls : null);
       const { error: updateError } = await supabaseAdmin
         .from('lessons')
-        .update({ fileurls: fileUrls.length > 0 ? fileUrls : null })
+        .update({ fileurls: fileUrls.length > 0 ? fileUrls : null }) // Use null for DB
         .eq('id', lesson.id);
 
       if (updateError) throw updateError;
       
-      // Update local lesson state
+      // Update local lesson state - use undefined for empty to match interface
       setLesson(prev => {
         if (!prev) return null;
-        return { ...prev, fileurls: fileUrls.length > 0 ? fileUrls : null };
+        return { ...prev, fileurls: fileUrls.length > 0 ? fileUrls : undefined }; // Use undefined for local state
       });
       
       setSuccessMessage("File deleted successfully");
