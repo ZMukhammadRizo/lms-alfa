@@ -383,7 +383,8 @@ const ClassCard = styled.div<{ $top: number, $height: number, $color: string }>`
   height: ${props => props.$height}px;
   background-color: ${props => {
     // Convert the hex color to RGB and create a lighter fully opaque pastel version
-    const hex = props.$color.replace('#', '');
+    const colorString = props.$color || '#CCCCCC'; // Default to gray if props.$color is undefined/null
+    const hex = colorString.replace('#', '');
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
@@ -393,7 +394,7 @@ const ClassCard = styled.div<{ $top: number, $height: number, $color: string }>`
     const pastelB = Math.floor(b + (255 - b) * 0.8);
     return `rgb(${pastelR}, ${pastelG}, ${pastelB})`;
   }};
-  border-left: 4px solid ${props => props.$color};
+  border-left: 4px solid ${props => props.$color || '#CCCCCC'}; // Also default border color
   border-radius: 8px;
   padding: 12px;
   font-size: 13px;

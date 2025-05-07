@@ -14,6 +14,7 @@ import { useTheme } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { startOfWeek } from 'date-fns';
+import Select, { StylesConfig } from 'react-select';
 
 // Helper functions
 const getWeekDays = (date: Date): Date[] => {
@@ -87,10 +88,71 @@ interface FilterOptionProps {
   $isActive: boolean;
 }
 
-const StudentSchedule: React.FC = () => {
+const ClassEventCard = styled.div<{ $top: number, $height: number, $color: string }>`
+  position: absolute;
+  top: ${props => props.$top}px;
+  left: 5px;
+  right: 5px;
+  height: ${props => props.$height}px;
+  background-color: ${props => {
+    // Convert the hex color to RGB and create a lighter fully opaque pastel version
+    const colorString = props.$color || '#CCCCCC'; // Default to gray if props.$color is undefined/null
+    const hex = colorString.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    // Mix with white to create pastel
+    const pastelR = Math.floor(r + (255 - r) * 0.8);
+    const pastelG = Math.floor(g + (255 - g) * 0.8);
+    const pastelB = Math.floor(b + (255 - b) * 0.8);
+    return `rgb(${pastelR}, ${pastelG}, ${pastelB})`;
+  }};
+  border-left: 4px solid ${props => props.$color};
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  cursor: pointer;
+  z-index: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  }
+  
+`;
+
+// Interface for child info (can be reused or imported if defined elsewhere)
+interface ChildInfoForSelect {
+  id: string; 
+  firstName: string;
+  lastName: string;
+}
+
+// Props for StudentSchedule component
+interface StudentScheduleProps {
+  // studentId?: string; // REMOVED - Replaced by selectedChildId for parent view
+  
+  // Props for Parent View
+  isParentView?: boolean; // Flag to indicate parent context
+  childrenList?: ChildInfoForSelect[]; // List of parent's children
+  selectedChildId?: string; // The ID selected by the parent
+  onChildChange?: (selectedOption: any) => void; // Handler for selection change (react-select format)
+}
+
+const StudentSchedule: React.FC<StudentScheduleProps> = ({ 
+  isParentView = false, 
+  childrenList = [], 
+  selectedChildId, 
+  onChildChange 
+}) => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useAuth(); 
   const [courseFeedback, setCourseFeedback] = useState<string>("");
 
   // State variables
@@ -140,22 +202,36 @@ const StudentSchedule: React.FC = () => {
   // Fetch student's enrolled classes and timetable data
   useEffect(() => {
     const fetchStudentSchedule = async () => {
-      if (!user || !user.id) {
-        console.error('No user found');
-        setErrorMessage('User authentication required');
+      // Determine target ID: selectedChildId if parent view, otherwise logged-in user
+      const targetStudentId = isParentView ? selectedChildId : user?.id;
+
+      // If parent view and no child is selected yet, don't fetch, clear events
+      if (isParentView && !targetStudentId) {
+        setClassEvents([]);
+        setLoading(false); 
+        setErrorMessage(null); // Clear any previous error
+        return; 
+      }
+
+      if (!targetStudentId) {
+        console.error('No target student ID found');
+        setErrorMessage('Cannot load schedule: Student ID missing.');
+        setClassEvents([]); // Clear events if no ID
         setLoading(false);
         return;
       }
-      
+
+      console.log(`Fetching schedule for student ID: ${targetStudentId}`);
+
       try {
         setLoading(true);
         setErrorMessage(null);
         
-        // Step 1: Fetch the classes that the student is enrolled in
+        // Step 1: Fetch enrolled classes (using targetStudentId)
         const { data: enrolledClasses, error: enrolledClassesError } = await supabase
           .from('classstudents')
           .select('classid')
-          .eq('studentid', user.id);
+          .eq('studentid', targetStudentId);
           
         if (enrolledClassesError) {
           throw new Error('Failed to fetch enrolled classes: ' + enrolledClassesError.message);
@@ -163,19 +239,22 @@ const StudentSchedule: React.FC = () => {
         
         if (!enrolledClasses || enrolledClasses.length === 0) {
           console.log('Student not enrolled in any classes');
-          setClassEvents([]);
+          setClassEvents([]); // Clear events
           setLoading(false);
           return;
         }
         
-        // Extract class IDs
         const classIds = enrolledClasses.map(ec => ec.classid);
-        console.log('Student is enrolled in classes with IDs:', classIds);
         
         // Step 2: Fetch timetable entries for these classes
+        // Select the necessary fields including foreign keys for subsequent joins
         const { data: timetableData, error: timetableError } = await supabase
           .from('timetable')
-          .select('*, subjects(id, subjectname), classes(id, classname), users(firstName, lastName)')
+          .select(`
+            id, title, start_time, end_time, start_minute, end_minute, day, location,
+            classId, subjectId,
+            subjects ( id, subjectname )
+          `)
           .in('classId', classIds);
           
         if (timetableError) {
@@ -188,69 +267,95 @@ const StudentSchedule: React.FC = () => {
           setLoading(false);
           return;
         }
+
+        // Step 2.5: Fetch assigned teachers for the relevant class/subject pairs
+        const classSubjectPairs = timetableData
+          .map(item => ({ classId: item.classId, subjectId: item.subjectId }))
+          .filter(pair => pair.classId && pair.subjectId)
+          .reduce((acc, pair) => {
+            const key = `${pair.classId}-${pair.subjectId}`;
+            if (!acc.has(key)) {
+              acc.set(key, pair);
+            }
+            return acc;
+          }, new Map());
+
+        const teacherAssignments = new Map<string, { name: string, id: string | undefined }>();
+
+        if (classSubjectPairs.size > 0) {
+          const fetchPromises = Array.from(classSubjectPairs.values()).map(async pair => {
+            const { data: assignment, error } = await supabase
+              .from('classteachers')
+              .select('teacherid, users ( firstName, lastName )') 
+              .eq('classid', pair.classId)
+              .eq('subjectid', pair.subjectId)
+              .maybeSingle();
+
+            let teacherNameToSet = 'Teacher N/A';
+            let assignedIdFromDb: string | undefined = undefined;
+
+            if (!error && assignment) {
+              assignedIdFromDb = assignment.teacherid;
+              if (assignment.users) {
+                const userData = assignment.users;
+                let fullName = '';
+                // Handle potential array or object for user data
+                if (Array.isArray(userData) && userData.length > 0) {
+                  const userObject = userData[0];
+                  if (userObject && typeof userObject === 'object') {
+                    fullName = `${userObject.firstName || ''} ${userObject.lastName || ''}`.trim();
+                  }
+                } else if (typeof userData === 'object' && userData !== null) {
+                  fullName = `${(userData as any).firstName || ''} ${(userData as any).lastName || ''}`.trim();
+                }
+                if (fullName) {
+                  teacherNameToSet = fullName;
+                }
+              }
+            } // We don't need an else if(error) here, default is already N/A
+            
+            teacherAssignments.set(`${pair.classId}-${pair.subjectId}`, { name: teacherNameToSet, id: assignedIdFromDb });
+          });
+          await Promise.all(fetchPromises);
+        }
         
-        // Log the raw data structure to check field names
-        console.log('First timetable entry sample:', JSON.stringify(timetableData[0], null, 2));
-        console.log('Available fields:', Object.keys(timetableData[0]).join(', '));
-        console.log('Raw timetable data for student classes:', timetableData);
-        
-        // Step 3: Format the timetable data for display
+        // Step 3: Format the timetable data for display, using assigned teachers
         const formattedEvents: ClassEvent[] = timetableData.map((item: any, index) => {
-          // Convert database record to ClassEvent
           let startTime = 9; // Default
           let endTime = 10; // Default
           let startMinute = 0; // Default
           let endMinute = 0; // Default
           
-          // Parse time values if they exist
           if (item.start_time !== undefined && item.start_time !== null) {
             const parsedStart = parseInt(String(item.start_time));
-            if (!isNaN(parsedStart) && parsedStart >= 0 && parsedStart <= 23) {
-              startTime = parsedStart;
-            }
+            if (!isNaN(parsedStart) && parsedStart >= 0 && parsedStart <= 23) startTime = parsedStart;
           }
-          
           if (item.end_time !== undefined && item.end_time !== null) {
             const parsedEnd = parseInt(String(item.end_time));
-            if (!isNaN(parsedEnd) && parsedEnd >= 0 && parsedEnd <= 23) {
-              endTime = parsedEnd;
-            }
+            if (!isNaN(parsedEnd) && parsedEnd >= 0 && parsedEnd <= 23) endTime = parsedEnd;
           }
-          
-          // Parse minute values if they exist
           if (item.start_minute !== undefined && item.start_minute !== null) {
             const parsedStartMinute = parseInt(String(item.start_minute));
-            if (!isNaN(parsedStartMinute) && parsedStartMinute >= 0 && parsedStartMinute <= 59) {
-              startMinute = parsedStartMinute;
-            }
+            if (!isNaN(parsedStartMinute) && parsedStartMinute >= 0 && parsedStartMinute <= 59) startMinute = parsedStartMinute;
           }
-          
           if (item.end_minute !== undefined && item.end_minute !== null) {
             const parsedEndMinute = parseInt(String(item.end_minute));
-            if (!isNaN(parsedEndMinute) && parsedEndMinute >= 0 && parsedEndMinute <= 59) {
-              endMinute = parsedEndMinute;
-            }
+            if (!isNaN(parsedEndMinute) && parsedEndMinute >= 0 && parsedEndMinute <= 59) endMinute = parsedEndMinute;
           }
-          
-          console.log(`Event time data: start_time=${startTime}, start_minute=${startMinute}, end_time=${endTime}, end_minute=${endMinute}`);
-          
-          // Get title and course name
-          const title = item.title || 
-                       (item.subjects?.subjectname ? `${item.subjects.subjectname} Class` : 'Untitled Lesson');
-          
+
           const courseName = item.subjects?.subjectname || 'Unknown Course';
+          const title = item.title || courseName;
           
-          // Get teacher name
-          let teacherName = 'Unknown Teacher';
-          if (item.users?.firstName && item.users?.lastName) {
-            teacherName = `${item.users.firstName} ${item.users.lastName}`;
-          }
+          // Get the CORRECT assigned teacher's name from the map
+          const assignmentKey = `${item.classId}-${item.subjectId}`;
+          const assignmentDetails = teacherAssignments.get(assignmentKey);
+          const teacherName = assignmentDetails ? assignmentDetails.name : 'Teacher N/A';
           
-          // Generate color based on course name for consistency
+          // Generate color based on course name for consistency (using existing logic)
           const color = getRandomColor(courseName);
           
           return {
-            id: index + 1, // Use index as fallback ID
+            id: index + 1, // Use index as fallback ID (consider if item.id exists and is usable)
             title,
             course: courseName,
             startTime,
@@ -258,7 +363,7 @@ const StudentSchedule: React.FC = () => {
             startMinute,
             endMinute,
             day: item.day !== undefined && item.day !== null ? parseInt(String(item.day)) : 0,
-            teacher: teacherName,
+            teacher: teacherName, // Use the correctly assigned teacher name
             location: item.location || 'Unknown Location',
             color
           };
@@ -269,14 +374,15 @@ const StudentSchedule: React.FC = () => {
       } catch (error) {
         console.error('Error fetching student schedule:', error);
         setErrorMessage('Failed to load schedule. Please try again later.');
-        toast.error('Failed to load your schedule');
+        setClassEvents([]); // Clear events on error
+        toast.error('Failed to load schedule');
       } finally {
         setLoading(false);
       }
     };
     
     fetchStudentSchedule();
-  }, [user]);
+  }, [user, selectedChildId, isParentView]);
   
   // Get all unique courses
   const uniqueCourses = [...new Set(classEvents.map(event => event.course))];
@@ -466,57 +572,138 @@ const StudentSchedule: React.FC = () => {
     };
   }, [filteredEvents]);
   
-  // Update the grid cells JSX:
+  // Prepare options for react-select
+  const childOptions = childrenList.map(child => ({
+    value: child.id,
+    label: `${child.firstName} ${child.lastName}`
+  }));
+
+  const selectedChildOption = childOptions.find(option => option.value === selectedChildId);
+
+  // Custom styles for react-select
+  const customSelectStyles: StylesConfig<any, false> = {
+    control: (provided, state) => ({
+      ...provided,
+      backgroundColor: theme.colors.background.secondary,
+      borderColor: state.isFocused ? theme.colors.primary[500] : theme.colors.border.light,
+      borderRadius: '0.375rem', // 6px
+      padding: '0.25rem 0.5rem', // Adjusted padding for better spacing
+      boxShadow: state.isFocused ? `0 0 0 1px ${theme.colors.primary[500]}` : 'none',
+      '&:hover': {
+        borderColor: theme.colors.primary[300],
+      },
+      minHeight: '38px', // Ensure consistent height
+      height: '38px',
+    }),
+    valueContainer: (provided) => ({
+      ...provided,
+      height: '38px',
+      padding: '0 6px'
+    }),
+    input: (provided) => ({
+      ...provided,
+      margin: '0px',
+      color: theme.colors.text.primary,
+    }),
+    singleValue: (provided) => ({
+      ...provided,
+      color: theme.colors.text.primary,
+    }),
+    placeholder: (provided) => ({
+      ...provided,
+      color: theme.colors.text.secondary,
+    }),
+    menu: (provided) => ({
+      ...provided,
+      backgroundColor: theme.colors.background.primary,
+      borderRadius: '0.375rem',
+      boxShadow: theme.isDark ? '0 4px 12px rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.1)',
+      marginTop: '4px',
+    }),
+    option: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isSelected
+        ? theme.colors.primary[500]
+        : state.isFocused
+        ? theme.colors.background.hover
+        : 'transparent',
+      color: state.isSelected ? 'white' : theme.colors.text.primary,
+      padding: '0.75rem 1rem',
+      cursor: 'pointer',
+      '&:active': {
+        backgroundColor: theme.colors.primary[600],
+      },
+    }),
+    indicatorSeparator: () => ({
+      display: 'none', // Hide the vertical line separator
+    }),
+    dropdownIndicator: (provided) => ({
+      ...provided,
+      padding: '8px',
+      color: theme.colors.text.secondary,
+      '&:hover': {
+        color: theme.colors.primary[500],
+      },
+    }),
+  };
+
   return (
     <Container>
       <Header>
+        {/* Always show Title */} 
         <HeaderLeft>
-          <Title>Schedule</Title>
+             <Title>Schedule</Title>
         </HeaderLeft>
         
         <HeaderCenter>
-          <DateNavButton onClick={handlePrevious}>
-            <FiChevronLeft />
-          </DateNavButton>
+          <DateNavButton onClick={handlePrevious}><FiChevronLeft /></DateNavButton>
           <CurrentDate>{formatDateRange(viewMode, currentDate)}</CurrentDate>
-          <DateNavButton onClick={handleNext}>
-            <FiChevronRight />
-          </DateNavButton>
+          <DateNavButton onClick={handleNext}><FiChevronRight /></DateNavButton>
         </HeaderCenter>
         
         <HeaderRight>
-        <FilterContainer>
-          <FilterButton onClick={() => setShowFilters(!showFilters)}>
-            <FiFilter />
-              <span>Filter</span>
-              <FiChevronDown />
-          </FilterButton>
+          {/* Conditionally render Child Selector OR Course Filter */} 
+          {isParentView ? (
+             <div style={{ minWidth: '250px' }}> {/* Wrapper for select */} 
+               <Select
+                 options={childOptions}
+                 value={selectedChildOption}
+                 onChange={onChildChange}
+                 placeholder="-- Select Child --"
+                 isClearable={false} 
+                 styles={customSelectStyles} // Apply custom styles here
+               />
+             </div>
+           ) : (
+             <FilterContainer> {/* Existing Course Filter */} 
+               <FilterButton onClick={() => setShowFilters(!showFilters)}>
+                 <FiFilter />
+                 <span>Filter by Subject</span> {/* Maybe rename button text */} 
+                 <FiChevronDown />
+               </FilterButton>
+               {showFilters && (
+                 <FilterDropdown>
+                   <FilterOption 
+                     onClick={() => handleFilterChange(null)}
+                     $isActive={filterCourse === null}
+                   >
+                     All Subjects
+                   </FilterOption>
+                   {uniqueCourses.map(course => (
+                     <FilterOption 
+                       key={course} 
+                       onClick={() => handleFilterChange(course)}
+                       $isActive={filterCourse === course}
+                     >
+                       {course}
+                     </FilterOption>
+                   ))}
+                 </FilterDropdown>
+               )}
+             </FilterContainer>
+           )}
           
-          {showFilters && (
-            <FilterDropdown>
-              <FilterOption 
-                onClick={() => handleFilterChange(null)}
-                $isActive={filterCourse === null}
-              >
-                  All Subjects
-              </FilterOption>
-                {uniqueCourses.map(course => (
-                <FilterOption 
-                    key={course} 
-                  onClick={() => handleFilterChange(course)}
-                  $isActive={filterCourse === course}
-                >
-                  {course}
-                </FilterOption>
-              ))}
-            </FilterDropdown>
-          )}
-        </FilterContainer>
-          
-          <TodayButton onClick={() => {
-            setCurrentDate(new Date());
-            scrollToCurrentTime();
-          }}>
+          <TodayButton onClick={() => { setCurrentDate(new Date()); scrollToCurrentTime(); }}>
             <FiCalendar />
             <span>Today</span>
           </TodayButton>
@@ -536,104 +723,121 @@ const StudentSchedule: React.FC = () => {
             Try Again
           </ErrorAction>
         </ErrorContainer>
-      ) : filteredEvents.length === 0 ? (
-        <EmptyStateContainer>
-          <EmptyStateIcon>
-            <FiCalendar size={40} />
-          </EmptyStateIcon>
-          <EmptyStateTitle>No Schedule Found</EmptyStateTitle>
-          <EmptyStateMessage>
-            {filterCourse 
-              ? `No scheduled lessons found for ${filterCourse}.` 
-              : 'You don\'t have any scheduled lessons yet.'}
-          </EmptyStateMessage>
-        </EmptyStateContainer>
-      ) : viewMode === 'week' ? (
-        <WeekSchedule ref={weekScheduleRef}>
-          {/* Corner header cell */}
-          <CornerHeaderCell></CornerHeaderCell>
-          
-          {/* Day header cells */}
-          {weekDays.map((date, i) => (
-            <HeaderCell key={i}>
-              <DayName>{formatDay(date)}</DayName>
-              <DayDate>{formatDate(date)}</DayDate>
-            </HeaderCell>
-          ))}
-          
-          {/* Time rows with cells */}
-          {hours.map(hour => (
-            <React.Fragment key={hour}>
-              {/* Time cell */}
-              <TimeCell>
-                {formatTime(hour)}
-              </TimeCell>
+      ) : (isParentView && !selectedChildId) ? ( // Parent view, no child selected
+            <PlaceholderMessage>Please select a child to see their schedule.</PlaceholderMessage>
+         ) 
+       : filteredEvents.length === 0 ? ( // No events for selected child or student
+            <EmptyStateContainer>
+              <EmptyStateIcon>
+                <FiCalendar size={40} />
+              </EmptyStateIcon>
+              <EmptyStateTitle>No Schedule Found</EmptyStateTitle>
+              <EmptyStateMessage>
+                {filterCourse 
+                  ? `No scheduled lessons found for ${filterCourse}.` 
+                  : 'You don\'t have any scheduled lessons yet.'}
+              </EmptyStateMessage>
+            </EmptyStateContainer>
+         ) 
+       : viewMode === 'week' ? (
+            <WeekSchedule ref={weekScheduleRef}>
+              {/* Corner header cell */}
+              <CornerHeaderCell></CornerHeaderCell>
               
-              {/* Day cells for this hour */}
-              {weekDays.map((date, dayIndex) => {
-                const isCurrentDay = isToday(date);
-                // Check if current time falls within this hour
-                const now = new Date();
-                const currentHour = now.getHours();
-                const showTimeIndicator = isCurrentDay && currentHour === hour;
+              {/* Day header cells */}
+              {weekDays.map((date, i) => (
+                <HeaderCell key={i}>
+                  <DayName>{formatDay(date)}</DayName>
+                  <DayDate>{formatDate(date)}</DayDate>
+                </HeaderCell>
+              ))}
+              
+              {/* Time rows with cells */}
+              {hours.map(hour => (
+                <React.Fragment key={hour}>
+                  {/* Time cell */}
+                  <TimeCell>
+                    {formatTime(hour)}
+                  </TimeCell>
+                  
+                  {/* Day cells for this hour */}
+                  {weekDays.map((date, dayIndex) => {
+                    const isCurrentDay = isToday(date);
+                    // Check if current time falls within this hour
+                    const now = new Date();
+                    const currentHour = now.getHours();
+                    const showTimeIndicator = isCurrentDay && currentHour === hour;
+                    
+                      return (
+                      <DayCell 
+                          key={dayIndex}
+                          $isToday={isCurrentDay}
+                        >
+                        {/* Current time indicator */}
+                        {showTimeIndicator && (
+                          <CurrentTimeIndicator 
+                                      style={{
+                                top: `${(now.getMinutes() / 60) * 100}%` 
+                              }}
+                            >
+                              <CurrentTimeDot />
+                            </CurrentTimeIndicator>
+                        )}
+                      </DayCell>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
+              
+              {/* Overlay the events - absolute positioning on top of the grid */}
+              {filteredEvents.map((event, index) => {
+                // Calculate top and height
+                const pixelsPerHour = 80; // Height of one hour slot in pixels
+                const gridStartHour = 8;  // The hour at which your schedule grid starts (e.g., 8 AM)
+
+                const topPosition = ((event.startTime - gridStartHour) + ((event.startMinute || 0) / 60)) * pixelsPerHour;
                 
-                  return (
-                  <DayCell 
-                      key={dayIndex}
-                      $isToday={isCurrentDay}
-                    >
-                    {/* Current time indicator */}
-                    {showTimeIndicator && (
-                      <CurrentTimeIndicator 
-                                  style={{
-                          top: `${(now.getMinutes() / 60) * 100}%` 
-                        }}
-                      >
-                        <CurrentTimeDot />
-                      </CurrentTimeIndicator>
+                const durationInMinutes = ((event.endTime * 60 + (event.endMinute || 0)) - (event.startTime * 60 + (event.startMinute || 0)));
+                const heightValue = Math.max((durationInMinutes / 60) * pixelsPerHour, 30); // Ensure a minimum height (e.g., 30px)
+
+                return (
+                  <ClassEventCard 
+                    key={event.id}
+                    className="schedule-event"
+                    $top={topPosition}
+                    $height={heightValue}
+                    $color={event.color}
+                    onClick={() => handleEventClick(event)}
+                  >
+                    <EventTitle>{event.title}</EventTitle>
+                    <EventDetail>
+                      <FiClock />
+                      <span>
+                        {formatTimeWithMinutes(event.startTime, event.startMinute || 0)} - {formatTimeWithMinutes(event.endTime, event.endMinute || 0)}
+                      </span>
+                    </EventDetail>
+                    {event.teacher && (
+                      <EventDetail>
+                        <FiUser />
+                        <span>{event.teacher}</span>
+                      </EventDetail>
                     )}
-                  </DayCell>
+                    {event.location && (
+                      <EventDetail>
+                        <FiMapPin />
+                        <span>{event.location}</span>
+                      </EventDetail>
+                    )}
+                  </ClassEventCard>
                 );
               })}
-            </React.Fragment>
-          ))}
-          
-          {/* Overlay the events - absolute positioning on top of the grid */}
-          {filteredEvents.map((event, index) => (
-            <ClassEventCard 
-              key={event.id}
-              className="schedule-event"
-              style={{ backgroundColor: event.color }}
-                                    onClick={() => handleEventClick(event)}
-                                  >
-              <EventTitle>{event.title}</EventTitle>
-              <EventDetail>
-                <FiClock />
-                <span>
-                  {formatTimeWithMinutes(event.startTime, event.startMinute)} - {formatTimeWithMinutes(event.endTime, event.endMinute)}
-                </span>
-              </EventDetail>
-              {event.teacher && (
-                <EventDetail>
-                  <FiUser />
-                                        <span>{event.teacher}</span>
-                </EventDetail>
-              )}
-              {event.location && (
-                <EventDetail>
-                  <FiMapPin />
-                                        <span>{event.location}</span>
-                </EventDetail>
-              )}
-            </ClassEventCard>
-          ))}
             </WeekSchedule>
-      ) : (
-        <MonthCalendar>
-          {/* Month view implementation */}
-          <div className="month-placeholder">Month view coming soon</div>
-        </MonthCalendar>
-      )}
+         ) : (
+            <MonthCalendar>
+              {/* Month view implementation */}
+              <div className="month-placeholder">Month view coming soon</div>
+            </MonthCalendar>
+         )}
       
       <ScrollTopButton onClick={() => {
         if (weekScheduleRef.current) {
@@ -916,47 +1120,54 @@ const FilterButton = styled.button`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1.1rem; // Increased padding
   background-color: ${props => props.theme.colors.background.secondary};
-  border: none;
-  border-radius: 0.375rem;
+  border: 1px solid ${props => props.theme.colors.border.light}; // Changed from .medium to .light
+  border-radius: 0.5rem; // Slightly more rounded
   color: ${props => props.theme.colors.text.primary};
   font-size: 0.875rem;
+  font-weight: 500; // Slightly bolder text
   cursor: pointer;
   transition: all 0.2s ease;
   
   &:hover {
     background-color: ${props => props.theme.colors.background.hover};
+    border-color: ${props => props.theme.colors.primary[300]}; // Highlight border on hover
   }
   
   svg {
     color: ${props => props.theme.colors.text.secondary};
+    transition: transform 0.2s ease; // For potential icon rotation
   }
 `;
 
 const FilterDropdown = styled.div`
   position: absolute;
-  top: 100%;
+  top: calc(100% + 8px); // Increased spacing from button
   right: 0;
   margin-top: 0.5rem;
   background-color: ${props => props.theme.colors.background.primary};
-  border-radius: 0.375rem;
-  box-shadow: ${props => props.theme.isDark ? '0 4px 12px rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.1)'};
+  border-radius: 0.5rem; // Consistent with button
+  box-shadow: ${props => props.theme.isDark ? '0 6px 15px rgba(0, 0, 0, 0.35)' : '0 6px 15px rgba(0, 0, 0, 0.12)'}; // Enhanced shadow
   z-index: 10;
-  min-width: 12rem;
+  min-width: 14rem; // Increased min-width
+  padding: 0.5rem 0; // Padding for items
   overflow: hidden;
 `;
 
 const FilterOption = styled.div<FilterOptionProps>`
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1.25rem; // Increased padding
   cursor: pointer;
-  transition: all 0.2s ease;
-  background-color: ${props => props.$isActive ? props.theme.colors.background.hover : 'transparent'};
-  color: ${props => props.$isActive ? props.theme.colors.primary[500] : props.theme.colors.text.primary};
+  transition: all 0.2s ease, color 0.2s ease; // Added color transition
+  background-color: ${props => props.$isActive ? props.theme.colors.primary[500] : 'transparent'};
+  color: ${props => props.$isActive ? 'white' : props.theme.colors.text.primary};
   font-weight: ${props => props.$isActive ? 500 : 400};
+  display: flex; // For potential icon alignment
+  align-items: center; // For potential icon alignment
   
   &:hover {
-    background-color: ${props => props.theme.colors.background.hover};
+    background-color: ${props => props.$isActive ? props.theme.colors.primary[600] : props.theme.colors.background.hover};
+    color: ${props => props.$isActive ? 'white' : props.theme.colors.text.primary};
   }
 `;
 
@@ -1076,45 +1287,32 @@ const DayCell = styled.div<{ $isToday: boolean }>`
   }
 `;
 
-const ClassEventCard = styled.div`
-  border-radius: 6px;
-  padding: 8px 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  z-index: 5;
-  color: white;
-  position: absolute;
-  font-size: 0.9rem;
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  }
-`;
-
 const EventTitle = styled.div`
-  font-size: 0.9rem;
   font-weight: 600;
-  margin-bottom: 8px;
-  color: white;
+  font-size: 14px;
+  color: #1e293b;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 `;
 
 const EventDetail = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 4px;
-  
-  svg {
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 12px;
-  }
+  gap: 8px;
+  font-size: 12px;
+  color: black;
+  margin-bottom: 8px;
+  padding: 2px 0;
+`;
+
+const ClassIcon = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  width: 16px;
+  min-width: 16px;
 `;
 
 const MonthCalendar = styled.div`
@@ -1309,6 +1507,12 @@ const DayName = styled.div`
 const DayDate = styled.div`
   font-size: 0.75rem;
   color: ${props => props.theme.colors.text.secondary};
+`;
+
+const PlaceholderMessage = styled.div`
+  font-size: 16px;
+  color: ${props => props.theme.colors.text.secondary};
+  max-width: 400px;
 `;
 
 export default StudentSchedule; 
