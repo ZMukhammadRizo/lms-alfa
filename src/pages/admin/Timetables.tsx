@@ -48,10 +48,11 @@ interface ClassEvent {
   endTime: number; // 24-hour format (e.g., 10 for 10:00 AM)
   endMinute?: number; // Optional minute (e.g., 30 for 10:30)
   day: number; // 0-6 for Monday-Sunday
-  teacherid?: string;
+  teacherid?: string; // General teacher ID from timetable/class, if any
   students?: number;
   location?: string;
   color: string;
+  assignedTeacherId?: string; // ID of the teacher specifically assigned via classteachers
   // Add these for backward compatibility with existing code
   course?: string; // For display purposes
   teacher?: string; // For display purposes
@@ -779,7 +780,58 @@ const PlaceholderMessage = styled.div`
   border-top: 1px solid #e2e8f0;
 `;
 
-const Timetables: React.FC = () => {
+// Define these helper types if they are not already global or component-specific
+type UpdateEventsCallback = (eventId: number, teacherName: string) => void;
+
+// Helper function to fetch and set teacher name for a single event
+const fetchAndSetTeacherNameForEvent = async (
+  eventId: number,
+  classId: string | null,
+  subjectId: string | null,
+  updateEventsCallback: UpdateEventsCallback
+) => {
+  if (!classId || !subjectId) {
+    updateEventsCallback(eventId, 'Teacher N/A'); // Cannot fetch without classId or subjectId
+    return;
+  }
+
+  try {
+    const { data: assignment, error } = await supabase
+      .from('classteachers')
+      .select('users(firstName, lastName)')
+      .eq('classid', classId)
+      .eq('subjectid', subjectId)
+      .maybeSingle();
+
+    let teacherNameToSet = 'Teacher N/A';
+    if (!error && assignment && assignment.users) {
+      const userData = assignment.users;
+      let fullName = '';
+      if (Array.isArray(userData) && userData.length > 0) {
+        const userObject = userData[0];
+        if (userObject && typeof userObject === 'object') {
+          fullName = `${userObject.firstName || ''} ${userObject.lastName || ''}`.trim();
+        }
+      } else if (typeof userData === 'object' && userData !== null) {
+        fullName = `${(userData as any).firstName || ''} ${(userData as any).lastName || ''}`.trim();
+      }
+      if (fullName) {
+        teacherNameToSet = fullName;
+      }
+    }
+    updateEventsCallback(eventId, teacherNameToSet);
+  } catch (err) {
+    console.error(`Error fetching teacher name for event ${eventId}:`, err);
+    updateEventsCallback(eventId, 'Teacher N/A'); // Fallback on error
+  }
+};
+
+// Props for Timetables component
+interface TimetablesProps {
+  loggedInTeacherId?: string; // ID of the currently logged-in teacher, if applicable
+}
+
+const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filterCourse, setFilterCourse] = useState<string | null>(null);
   const [filterClass, setFilterClass] = useState<string | null>(null);
@@ -812,6 +864,7 @@ const Timetables: React.FC = () => {
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [teacherSpecificCourses, setTeacherSpecificCourses] = useState<CourseData[]>([]); // New state
   
   const [formData, setFormData] = useState<ScheduleFormData>({
     title: '',
@@ -1090,176 +1143,195 @@ const Timetables: React.FC = () => {
     }
   }, [formData.assignedClass, classSubjects, allCourses, classes]);
 
+  // Fetch subjects assigned to the logged-in teacher if loggedInTeacherId is provided
+  useEffect(() => {
+    if (loggedInTeacherId) {
+      const fetchTeacherAssignedSubjects = async () => {
+        try {
+          setIsLoading(true); // Optional: indicate loading for this specific fetch
+          // 1. Get subject IDs assigned to this teacher from classteachers
+          const { data: assignments, error: assignmentsError } = await supabase
+            .from('classteachers')
+            .select('subjectid')
+            .eq('teacherid', loggedInTeacherId);
+
+          if (assignmentsError) throw assignmentsError;
+
+          if (assignments && assignments.length > 0) {
+            const subjectIds = [...new Set(assignments.map(a => a.subjectid).filter(id => id !== null))] as string[];
+            
+            if (subjectIds.length > 0) {
+              // 2. Get details for these subject IDs from the subjects table
+              const { data: subjectsData, error: subjectsError } = await supabase
+                .from('subjects')
+                .select('id, name, color') // Assuming 'name' is the column for subject name
+                .in('id', subjectIds);
+
+              if (subjectsError) throw subjectsError;
+
+              if (subjectsData) {
+                setTeacherSpecificCourses(subjectsData.map(s => ({ id: s.id, name: s.name || `Subject ${s.id}`, color: s.color || getRandomColor(s.name || `Subject ${s.id}`) })));
+              } else {
+                setTeacherSpecificCourses([]);
+              }
+            } else {
+              setTeacherSpecificCourses([]); // No subjects assigned to this teacher
+            }
+          } else {
+            setTeacherSpecificCourses([]); // Teacher has no assignments in classteachers
+          }
+        } catch (err) {
+          console.error('Error fetching teacher-specific courses:', err);
+          setError('Failed to load courses for this teacher.'); // Set an appropriate error
+          setTeacherSpecificCourses([]);
+        } finally {
+          setIsLoading(false); // Optional: stop loading indicator
+        }
+      };
+      fetchTeacherAssignedSubjects();
+    } else {
+      // If not a teacher-specific view, clear teacherSpecificCourses
+      setTeacherSpecificCourses([]);
+    }
+  }, [loggedInTeacherId]); // Re-run if loggedInTeacherId changes
+
   // Fetch timetable data from Supabase
   const fetchTimetableData = async () => {
     try {
       setIsLoading(true);
       setError(null); // Clear previous errors
       
+      // 1. Fetch base timetable data, ensure classid and subjectid are included
       const { data: timetableData, error: timetableError } = await supabase
         .from('timetable')
-        .select('*, subjects:subjects!timetable_subjectId_fkey(id, subjectname), classes(id, classname), users(firstName, lastName)'); // Specify relationship
-      
-      if (timetableError) {
-        console.error('Error fetching timetable:', timetableError);
-        setError('Failed to load schedule. Please try again later.');
-        setIsLoading(false);
-        return;
-      }
-      
-      if (!timetableData || timetableData.length === 0) {
-        console.log('No timetable data found, using empty schedule');
+        // Select specific fields including the FKs needed for teacher lookup
+        .select(`
+          id, title, start_time, end_time, start_minute, end_minute, day, location,
+          subjectId, classId,
+          subjects ( subjectname ),
+          classes ( classname ),
+          users ( firstName, lastName )
+        `); // Still fetch creator user if needed elsewhere
+        
+      if (timetableError) throw timetableError;
+      if (!timetableData) {
         setClassEvents([]);
         setIsLoading(false);
         return;
       }
       
-      console.log('Raw timetable data:', timetableData);
-      
-      // Inspect the first record to see the actual database column names
-      if (timetableData.length > 0) {
-        console.log('Database schema column names:');
-        const firstRecord = timetableData[0];
-        Object.keys(firstRecord).forEach(key => {
-          console.log(`- ${key}: ${typeof firstRecord[key]} = ${JSON.stringify(firstRecord[key])}`);
+      // 2. Fetch assigned teachers for all relevant (class, subject) pairs
+      // Create unique pairs to avoid redundant queries
+      const classSubjectPairs = timetableData
+        .map(item => ({ classId: item.classId, subjectId: item.subjectId }))
+        .filter(pair => pair.classId && pair.subjectId)
+        .reduce((acc, pair) => {
+          const key = `${pair.classId}-${pair.subjectId}`;
+          if (!acc.has(key)) {
+            acc.set(key, pair);
+          }
+          return acc;
+        }, new Map());
+
+      const teacherAssignments = new Map<string, { name: string, id: string | undefined }>(); // Store name and ID
+
+      if (classSubjectPairs.size > 0) {
+        const fetchPromises = Array.from(classSubjectPairs.values()).map(async pair => {
+          const { data: assignment, error } = await supabase
+            .from('classteachers')
+            .select('teacherid, users ( firstName, lastName )') // Ensure teacherid from classteachers is selected
+            .eq('classid', pair.classId)
+            .eq('subjectid', pair.subjectId)
+            .maybeSingle();
+
+          let teacherNameToSet = 'Teacher N/A';
+          let assignedIdFromDb: string | undefined = undefined;
+
+          if (!error && assignment) {
+            assignedIdFromDb = assignment.teacherid; // Capture the teacherid from classteachers
+            if (assignment.users) {
+              const userData = assignment.users;
+              let fullName = '';
+              if (Array.isArray(userData) && userData.length > 0) {
+                const userObject = userData[0];
+                if (userObject && typeof userObject === 'object') {
+                  fullName = `${userObject.firstName || ''} ${userObject.lastName || ''}`.trim();
+                }
+              } else if (typeof userData === 'object' && userData !== null) {
+                fullName = `${(userData as any).firstName || ''} ${(userData as any).lastName || ''}`.trim();
+              }
+              if (fullName) {
+                teacherNameToSet = fullName;
+              }
+            }
+          }
+          // Store both name and the ID from classteachers
+          teacherAssignments.set(`${pair.classId}-${pair.subjectId}`, { name: teacherNameToSet, id: assignedIdFromDb });
         });
+        await Promise.all(fetchPromises);
       }
-      
-      // Convert timetable data to ClassEvent format, ensuring all IDs are valid numbers
+
+      // 3. Format events, adding the assigned teacher name and ID
       const formattedEvents: ClassEvent[] = timetableData.map((item: any, index) => {
-        // Extract or default the values we need
-        // Always use the index+1 as a fallback ID to ensure we have a valid number
-        let id = index + 1; // Default fallback ID 
+        const assignmentKey = `${item.classId}-${item.subjectId}`;
+        const assignmentDetails = teacherAssignments.get(assignmentKey);
         
-        // Try to use the database ID if it's valid
-        if (item.id !== undefined && item.id !== null) {
-          const parsedId = parseInt(String(item.id));
-          if (!isNaN(parsedId)) {
-            id = parsedId;
-          }
-        }
+        const displayTeacher = assignmentDetails ? assignmentDetails.name : 'Teacher N/A';
+        const assignedTeacherActualId = assignmentDetails ? assignmentDetails.id : undefined;
         
-        // Get title from direct field or use subject name as fallback
-        const title = item.title || 
-                     (item.subjects?.subjectname ? `${item.subjects.subjectname} Class` : 'Untitled Lesson');
-        
-        // Get course name from either related subject or find it from our allCourses list using subject ID
-        let courseName = 'Unknown Course';
-        
-        if (item.subjects?.subjectname) {
-          courseName = item.subjects.subjectname;
-        } else if (item.subjectId) {
-          // Try to find the subject name from our list of all courses
-          const subjectMatch = allCourses.find(c => c.id === item.subjectId);
-          if (subjectMatch) {
-            courseName = subjectMatch.name;
-          }
-        }
-        
-        // Parse time values from various possible field formats
-        let startTime = 9; // Default to 9 AM
-        
-        if (item.start_time !== undefined && item.start_time !== null) {
-          startTime = typeof item.start_time === 'string' ? parseInt(item.start_time) : item.start_time;
-        } else if (item.startTime !== undefined && item.startTime !== null) {
-          // Handle time object format (HH:MM:SS)
-          if (typeof item.startTime === 'string' && item.startTime.includes(':')) {
-            startTime = parseInt(item.startTime.split(':')[0]);
-          } else if (typeof item.startTime === 'object' && item.startTime.hours !== undefined) {
-            startTime = item.startTime.hours;
-          }
-        }
-        
-        let endTime = startTime + 1; // Default to 1 hour length
-        
-        if (item.end_time !== undefined && item.end_time !== null) {
-          endTime = typeof item.end_time === 'string' ? parseInt(item.end_time) : item.end_time;
-        } else if (item.endTime !== undefined && item.endTime !== null) {
-          // Handle time object format (HH:MM:SS)
-          if (typeof item.endTime === 'string' && item.endTime.includes(':')) {
-            endTime = parseInt(item.endTime.split(':')[0]);
-          } else if (typeof item.endTime === 'object' && item.endTime.hours !== undefined) {
-            endTime = item.endTime.hours;
-          }
-        }
-        
-        // Parse minutes if available
-        const startMinute = item.start_minute || item.startMinute || 0;
-        const endMinute = item.end_minute || item.endMinute || 0;
-        
-        // Parse day value (0-6 for Monday-Sunday)
-        let day = 0; // Default to Monday
-        if (item.day !== undefined && item.day !== null) {
-          if (typeof item.day === 'string') {
-            day = parseInt(item.day);
-          } else if (typeof item.day === 'object' && (item.day instanceof Date || 'getDate' in item.day)) {
-            // Get day of week from Date (0 = Sunday, 1 = Monday)
-            try {
-              const dateObj = item.day instanceof Date ? item.day : new Date(item.day);
-              day = dateObj.getDay();
-              if (day === 0) day = 6; // Convert Sunday from 0 to 6
-              else day -= 1; // Shift other days down by 1
-            } catch (e) {
-              console.error('Error parsing date object:', e);
-              day = 0; // Default to Monday on error
+        // Get class name
+        const className = item.classes?.classname || '';
+
+        // Robust ID handling
+        let finalId: number;
+        const dbId = item.id; // ID from the database
+
+        if (dbId !== null && dbId !== undefined) {
+            const parsedDbId = parseInt(String(dbId), 10);
+            if (!isNaN(parsedDbId)) {
+                finalId = parsedDbId; // Use if DB ID is a number or numeric string
+            } else {
+                // DB ID is a non-numeric string (e.g., UUID) or parseInt failed
+                console.warn(`Database ID "${dbId}" is not a parseable integer. Using index ${index + 1} as a fallback frontend ID.`);
+                finalId = index + 1; // Fallback to index-based ID for frontend use
             }
           } else {
-            day = typeof item.day === 'number' ? item.day : 0;
-          }
-          
-          // Ensure day is between 0-6
-          day = day % 7;
+            // DB ID is null or undefined
+            finalId = index + 1; // Fallback to index-based ID for frontend use
         }
         
-        // Other fields
-        const location = item.location || item.room || '';
-        
-        // Get teacher info from either direct field or relationship
-        const teacher = item.teacher || 
-                       (item.users ? `${item.users.firstName} ${item.users.lastName}` : '') ||
-                       '';
-        
-        // Store class info separately - keep className for UI purposes
-        const classId = item.classId || item.class_id || '';
-        // Get className from the classes relation if available
-        const className = item.classes?.classname || '';
-        
-        const students = item.students || item.student_count || 0;
-        
-        // Find course color or generate one
-        const courseObj = allCourses.find(c => c.name === courseName);
-        const color = item.color || 
-                     courseObj?.color || 
-                     courseColors[courseName as keyof typeof courseColors] || 
-                     getRandomColor(courseName);
+        // Determine event color: Prefer color from allCourses (which sourced from subjects table)
+        const subjectNameFromTimetable = item.subjects?.subjectname;
+        const courseInfo = subjectNameFromTimetable ? allCourses.find(c => c.name === subjectNameFromTimetable) : undefined;
+        const eventColor = courseInfo?.color || getRandomColor(subjectNameFromTimetable || item.title || '');
         
         return {
-          id,  // Use our validated ID
-          title,
+          id: finalId,
+          title: item.title || subjectNameFromTimetable || 'Untitled',
           subjectid: item.subjectId || '',
-          startTime,
-          startMinute,
-          endTime,
-          endMinute,
-          day,
-          location,
-          teacherid: item.teacherId || '',
-          students,
-          color,
-          // Add these for display purposes
-          course: courseName,
-          teacher,
-          classId,
-          className // Only for UI display
+          startTime: parseInt(String(item.start_time || '9')),
+          startMinute: parseInt(String(item.start_minute || '0')),
+          endTime: parseInt(String(item.end_time || '10')),
+          endMinute: parseInt(String(item.end_minute || '0')),
+          day: parseInt(String(item.day || '0')),
+          location: item.location || '',
+          teacherid: item.teacherid || '',
+          classId: item.classId || '',
+          color: eventColor, // Use the determined eventColor
+          course: subjectNameFromTimetable || 'Unknown',
+          teacher: displayTeacher,
+          assignedTeacherId: assignedTeacherActualId,
+          className: item.classes?.classname || '',
+          students: item.students || 0,
         };
       });
       
-      console.log('Formatted timetable events:', formattedEvents);
+      console.log('Formatted schedule events with assigned teachers:', formattedEvents);
       setClassEvents(formattedEvents);
       
     } catch (error) {
-      console.error('Error processing timetable data:', error);
-      setError('Failed to process schedule data. Please try again later.');
+      console.error('Error fetching timetable data:', error);
+      setError('Failed to load schedule. Please try again later.');
     } finally {
       setIsLoading(false);
     }
@@ -1267,11 +1339,11 @@ const Timetables: React.FC = () => {
 
   // Initialize with data from Supabase timetable
   useEffect(() => {
-    // Only fetch timetable data if we have course data loaded
-    if (allCourses.length > 0) {
+    // Only fetch timetable data if we have course, class, and class-subject relationship data loaded
+    if (allCourses.length > 0 && classes.length > 0 && classSubjects.length > 0) {
       fetchTimetableData();
     }
-  }, [allCourses]); // Depend on allCourses to ensure we have course data for colors
+  }, [allCourses, classes, classSubjects]); // Depend on all foundational data
   
   // Ensure we include predefined classes if they're not already in the database
   useEffect(() => {
@@ -1311,17 +1383,24 @@ const Timetables: React.FC = () => {
   const uniqueClasses = getUniqueClasses();
   const uniqueTeachers = [...new Set(classEvents.map((event: ClassEvent) => event.teacher || event.teacherid || '').filter(Boolean))];
   
-  // Filter events - update to correctly check for matching classes
-  const filteredEvents = classEvents.filter(event => 
+  // Filter events
+  const filteredEvents = classEvents
+    .filter(event => { // First, filter by loggedInTeacherId if provided
+      if (loggedInTeacherId) {
+        return event.assignedTeacherId === loggedInTeacherId;
+      }
+      return true; // If no loggedInTeacherId, do not filter by teacher at this stage
+    })
+    .filter(event =>  // Then, apply existing UI filters
     (filterCourse ? (event.course || '') === filterCourse : true) && 
     (filterClass ? (
-      // For class filtering, we check two things:
-      // 1. The class name stored in our local state (for UI purposes)
-      // 2. Find the class name using the classId (what's stored in the database)
       event.className === filterClass || 
       classes.find(c => c.id === event.classId)?.name === filterClass
     ) : true) &&
-    (filterTeacher ? (event.teacher || event.teacherid || '') === filterTeacher : true)
+      // The generic teacher dropdown filter. 
+      // If loggedInTeacherId is set, this dropdown might be less relevant or could be disabled/hidden.
+      // For now, it will further filter the already teacher-specific list if loggedInTeacherId was used.
+      (filterTeacher ? (event.teacher === filterTeacher) : true)
   );
   
   // Handle form input changes
@@ -1375,6 +1454,14 @@ const Timetables: React.FC = () => {
       assignedClass: ''
     });
     console.log('Form reset, currentEventId is now:', null);
+  };
+  
+  const updateSingleEventTeacher = (eventId: number, teacherName: string) => {
+    setClassEvents(prevEvents =>
+      prevEvents.map(event =>
+        event.id === eventId ? { ...event, teacher: teacherName } : event
+      )
+    );
   };
   
   // Handle form submission
@@ -1661,11 +1748,10 @@ const Timetables: React.FC = () => {
         try {
           console.log('Creating new lesson record:', newLessonRecord);
           
-          // Create new record
           const createResult = await supabase
             .from('timetable')
             .insert(newLessonRecord)
-            .select();
+            .select(); // Select all columns of the newly inserted row
             
           if (createResult.error) {
             console.error('Error creating new lesson:', createResult.error);
@@ -1674,12 +1760,9 @@ const Timetables: React.FC = () => {
           
           console.log('Successfully created new record:', createResult.data);
           
-          // Explicitly type check the data
           if (createResult.data && Array.isArray(createResult.data) && createResult.data.length > 0) {
-            // Now update local state with the new record data
-            const newRecordData: any = createResult.data[0];
+            const newRecordFromDB: any = createResult.data[0];
             
-            // Base event with common properties
             const baseEventData = {
               title: formData.title,
               startTime: startHour,
@@ -1690,49 +1773,62 @@ const Timetables: React.FC = () => {
               location: formData.location,
               color: courseColor,
               course: formData.course,
-              className: selectedClass.name, // Store in our local state but not in DB
-              teacher: selectedClass.teacherid ? 'Teacher ID: ' + selectedClass.teacherid : ''
+              className: selectedClass.name,
+              teacher: 'Loading teacher...' // Initial placeholder
             };
             
-            // Create new event with the new database ID
             let newId: number; 
-            if (typeof newRecordData.id === 'string') {
-              try {
-                newId = parseInt(newRecordData.id, 10);
-              } catch (e) {
-                console.error('Could not parse ID as number, using random ID');
-                newId = Math.floor(Math.random() * 10000); // Fallback
+            if (typeof newRecordFromDB.id === 'string') {
+              newId = parseInt(newRecordFromDB.id, 10);
+              if (isNaN(newId)) {
+                // If DB ID is a UUID or non-numeric, use a temp local ID strategy (e.g., random)
+                // For consistency with fetchTimetableData, this part needs careful alignment
+                // However, for the targeted fetch, we'll use the frontend-generated newId
+                // and DB's classId/subjectId.
+                // Let's assume newId generation from earlier logic is okay for temp display.
+                // The key is newRecordFromDB.classId and newRecordFromDB.subjectId for the fetch.
+                // For simplicity, if newId logic was complex, ensure it provides a unique temp ID.
+                // The code used Math.random() as a fallback for parsing string IDs before.
+                 const parsedId = parseInt(newRecordFromDB.id, 10);
+                 if (isNaN(parsedId)) {
+                    console.warn(`New DB ID "${newRecordFromDB.id}" is not a parseable integer. Using random local ID.`);
+                    newId = Math.floor(Math.random() * 1000000); 
+                 } else {
+                    newId = parsedId;
+                 }
+
               }
-            } else if (typeof newRecordData.id === 'number') {
-              newId = newRecordData.id;
+            } else if (typeof newRecordFromDB.id === 'number') {
+              newId = newRecordFromDB.id;
             } else {
-              newId = Math.floor(Math.random() * 10000); // Fallback
+              newId = Math.floor(Math.random() * 1000000); // Fallback if no ID or unexpected type
             }
             
             const newEvent: ClassEvent = {
               ...baseEventData,
               id: newId,
-              // Use any available ID format
-              subjectid: (newRecordData.subjectId || newRecordData.subject_id || selectedCourse?.id || '').toString(),
-              teacherid: (newRecordData.teacherId || newRecordData.teacher_id || selectedClass?.teacherid || '').toString(),
-              classId: (newRecordData.classId || newRecordData.class_id || selectedClass?.id || '').toString()
+              subjectid: (newRecordFromDB.subjectId || newRecordFromDB.subject_id || selectedCourse?.id || '').toString(),
+              teacherid: (newRecordFromDB.teacherId || newRecordFromDB.teacher_id || selectedClass?.teacherid || '').toString(),
+              classId: (newRecordFromDB.classId || newRecordFromDB.class_id || selectedClass?.id || '').toString()
             };
             
-            // Add the new event to the array
             setClassEvents(prev => [...prev, newEvent]);
             
+            // Immediately try to fetch the teacher name for this new event
+            fetchAndSetTeacherNameForEvent(
+              newEvent.id, // The frontend ID for this new event
+              newRecordFromDB.classId || null,
+              newRecordFromDB.subjectId || null,
+              updateSingleEventTeacher
+            );
+            
             setSuccessMessage('Lesson scheduled successfully!');
-            
-            // Clear success message after 5 seconds
-            setTimeout(() => {
-              setSuccessMessage(null);
-            }, 5000);
-            
+            setTimeout(() => setSuccessMessage(null), 5000);
             resetForm();
+
           } else {
-            // Fallback: refresh the data from the server
             console.log('No data returned from insert, refreshing data from server');
-            await fetchTimetableData();
+            await fetchTimetableData(); // Fallback full refresh
             setSuccessMessage('Lesson scheduled successfully!');
             resetForm();
           }
@@ -2248,6 +2344,12 @@ const Timetables: React.FC = () => {
     }
   };
 
+  // Determine which courses to display in the dropdown
+  const coursesForDropdown = loggedInTeacherId ? teacherSpecificCourses : allCourses.map(c => ({ id: c.id, name: c.name, color: c.color }));
+
+  // Get unique courses for the filter dropdown (uses names)
+  const uniqueCourseNamesForDropdown = [...new Set(coursesForDropdown.map(course => course.name || ''))].filter(Boolean);
+
   return (
     <Container>
       <Header>
@@ -2301,21 +2403,57 @@ const Timetables: React.FC = () => {
                 >
                   All Courses
                 </DropdownItem>
-                {uniqueCourses.map((course, index) => (
+                {uniqueCourseNamesForDropdown.map((courseName, index) => (
                   <DropdownItem 
-                    key={index}
-                    $isActive={filterCourse === course}
+                    key={index} // Consider using course.id if available and unique for keys
+                    $isActive={filterCourse === courseName}
                     onClick={() => {
-                      setFilterCourse(course);
+                      setFilterCourse(courseName);
                       setShowCourseFilter(false);
                     }}
                   >
-                    {course}
+                    {courseName}
                   </DropdownItem>
                 ))}
               </DropdownContent>
             )}
           </FilterDropdown>
+
+          {/* Conditionally render Teacher filter dropdown */} 
+          {!loggedInTeacherId && (
+            <FilterDropdown>
+              <FilterButton onClick={() => setShowTeacherFilter(!showTeacherFilter)}>
+                <FiUser size={14} />
+                {filterTeacher || "All Teachers"}
+                <FiChevronDown size={14} />
+              </FilterButton>
+              {showTeacherFilter && (
+                <DropdownContent>
+                  <DropdownItem 
+                    $isActive={filterTeacher === null}
+                    onClick={() => {
+                      setFilterTeacher(null);
+                      setShowTeacherFilter(false);
+                    }}
+                  >
+                    All Teachers
+                  </DropdownItem>
+                  {uniqueTeachers.map((teacher, index) => (
+                    <DropdownItem 
+                      key={index}
+                      $isActive={filterTeacher === teacher}
+                      onClick={() => {
+                        setFilterTeacher(teacher);
+                        setShowTeacherFilter(false);
+                      }}
+                    >
+                      {teacher}
+                    </DropdownItem>
+                  ))}
+                </DropdownContent>
+              )}
+            </FilterDropdown>
+          )}
 
           <FilterDropdown>
             <FilterButton onClick={() => setShowClassFilter(!showClassFilter)}>

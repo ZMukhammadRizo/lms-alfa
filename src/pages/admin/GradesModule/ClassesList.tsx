@@ -81,25 +81,25 @@ const ClassesList: React.FC = () => {
 			if (classesFromStore.length > 0) {
 				if (loadingData !== false || error === null) setLoadingData(true)
 				try {
-					const updatedClasses = await Promise.all(
+				const updatedClasses = await Promise.all(
 						classesFromStore.map(async (classItem) => {
-							try {
-								const actualCount = await getClassStudentCount(classItem.classId)
-								return {
-									...classItem,
-									actualStudentCount: actualCount,
-								}
-							} catch (countError) {
-								console.error(`Error fetching student count for class ${classItem.classId}:`, countError)
-								return { ...classItem, actualStudentCount: classItem.studentCount }
+						try {
+							const actualCount = await getClassStudentCount(classItem.classId)
+							return {
+								...classItem,
+								actualStudentCount: actualCount,
 							}
-						})
-					)
-					setClassesWithCounts(updatedClasses)
-				} catch (err) {
+						} catch (countError) {
+							console.error(`Error fetching student count for class ${classItem.classId}:`, countError)
+								return { ...classItem, actualStudentCount: classItem.studentCount }
+						}
+					})
+				)
+				setClassesWithCounts(updatedClasses)
+			} catch (err) {
 					console.error('Error processing class counts:', err)
 					setError('Failed to process class student counts.')
-				} finally {
+			} finally {
 					setLoadingData(false)
 				}
 			} else if (!isLoadingClasses) {
