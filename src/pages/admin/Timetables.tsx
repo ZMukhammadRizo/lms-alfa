@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { 
-  FiClock, FiFilter, FiChevronDown, 
+  FiCalendar, FiClock, FiFilter, FiChevronDown, 
   FiChevronLeft, FiChevronRight, FiArrowUp, FiUser,
-  FiMapPin, FiEdit, FiPlus, FiX, FiUsers
+  FiMapPin, FiEdit, FiPlus, FiX, FiUsers, FiBook, FiTrash
 } from 'react-icons/fi';
 import supabase from '../../config/supabaseClient';
 
@@ -42,7 +42,7 @@ const formatTime = (hour: number, minute: number = 0): string => {
 interface ClassEvent {
   id: number;
   title: string;
-  subjectid: string;
+  subjectId: string;
   startTime: number; // 24-hour format (e.g., 9 for 9:00 AM)
   startMinute?: number; // Optional minute (e.g., 30 for 9:30)
   endTime: number; // 24-hour format (e.g., 10 for 10:00 AM)
@@ -55,7 +55,7 @@ interface ClassEvent {
   assignedTeacherId?: string; // ID of the teacher specifically assigned via classteachers
   // Add these for backward compatibility with existing code
   course?: string; // For display purposes
-  teacher?: string; // For display purposes
+  teacher: string; // For display purposes - required field, defaults to 'No teacher assigned'
   classId?: string; // Store the class ID from the database
   className?: string; // Store the class name for display
 }
@@ -791,48 +791,163 @@ const fetchAndSetTeacherNameForEvent = async (
   subjectId: string | null,
   updateEventsCallback: UpdateEventsCallback
 ) => {
-  if (!classId || !subjectId) {
-    updateEventsCallback(eventId, 'Teacher N/A'); // Cannot fetch without classId or subjectId
+  if (!eventId) {
+    console.log(`Invalid eventId provided, cannot fetch teacher`);
+    updateEventsCallback(eventId, 'No teacher assigned');
+    return;
+  }
+
+  if (!classId) {
+    console.log(`No classId provided for event ${eventId}, cannot fetch teacher`);
+    updateEventsCallback(eventId, 'No teacher assigned');
     return;
   }
 
   try {
-    const { data: assignment, error } = await supabase
+    console.log(`Fetching teacher info for event ${eventId}, class ${classId}, subject ${subjectId || 'N/A'}`);
+    
+    let teacherFound = false;
+    
+    // First, try to get teacher from classteachers table if we have subjectId
+    if (subjectId) {
+      console.log(`Trying classteachers lookup with classid=${classId}, subjectid=${subjectId}`);
+      const { data: classTeacherData, error: classTeacherError } = await supabase
       .from('classteachers')
-      .select('users(firstName, lastName)')
+        .select('*')
       .eq('classid', classId)
       .eq('subjectid', subjectId)
       .maybeSingle();
 
-    let teacherNameToSet = 'Teacher N/A';
-    if (!error && assignment && assignment.users) {
-      const userData = assignment.users;
-      let fullName = '';
-      if (Array.isArray(userData) && userData.length > 0) {
-        const userObject = userData[0];
-        if (userObject && typeof userObject === 'object') {
-          fullName = `${userObject.firstName || ''} ${userObject.lastName || ''}`.trim();
+      console.log('ClassTeacher data:', classTeacherData);
+      
+      // Check if we found a teacher assignment in classteachers
+      if (!classTeacherError && classTeacherData) {
+        // Use lowercase field name as seen in the database
+        const teacherId = classTeacherData.teacherid;
+        
+        if (teacherId) {
+          console.log(`Found teacherId ${teacherId} in classteachers table`);
+          // Get teacher name from users table
+          const { data: teacherData, error: teacherErr } = await supabase
+            .from('users')
+            .select('firstName, lastName')
+            .eq('id', teacherId)
+            .maybeSingle();
+          
+          console.log('Teacher data from classteachers lookup:', teacherData, 'Error:', teacherErr);
+          
+          if (!teacherErr && teacherData && teacherData.firstName && teacherData.lastName) {
+            const fullName = `${teacherData.firstName} ${teacherData.lastName}`.trim();
+            console.log(`Found teacher name in classteachers: ${fullName}`);
+            updateEventsCallback(eventId, fullName);
+            teacherFound = true;
+          }
         }
-      } else if (typeof userData === 'object' && userData !== null) {
-        fullName = `${(userData as any).firstName || ''} ${(userData as any).lastName || ''}`.trim();
-      }
-      if (fullName) {
-        teacherNameToSet = fullName;
       }
     }
-    updateEventsCallback(eventId, teacherNameToSet);
+    
+    // If teacher not found in classteachers, try class teacher from classes table
+    if (!teacherFound && classId) {
+      console.log(`Trying class teacher lookup for class ${classId}`);
+      const { data: classData, error: classError } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('id', classId)
+        .maybeSingle();
+      
+      console.log('Class data:', classData, 'Error:', classError);
+      
+      if (!classError && classData) {
+        // Use lowercase field name as seen in the database
+        const teacherId = classData.teacherid;
+        
+        if (teacherId) {
+          console.log(`Found teacherId ${teacherId} in classes table`);
+          const { data: teacherData, error: teacherErr } = await supabase
+            .from('users')
+            .select('firstName, lastName')
+            .eq('id', teacherId)
+            .maybeSingle();
+          
+          console.log('Teacher data from classes lookup:', teacherData, 'Error:', teacherErr);
+          
+          if (!teacherErr && teacherData && teacherData.firstName && teacherData.lastName) {
+            const fullName = `${teacherData.firstName} ${teacherData.lastName}`.trim();
+            console.log(`Found teacher name in classes: ${fullName}`);
+            updateEventsCallback(eventId, fullName);
+            teacherFound = true;
+          }
+        } else {
+          console.log('No teacherId found in class data');
+        }
+      }
+    }
+    
+    // Default fallback if no teacher found
+    if (!teacherFound) {
+      console.log(`No teacher found for event ${eventId}`);
+      updateEventsCallback(eventId, 'No teacher assigned');
+    }
   } catch (err) {
     console.error(`Error fetching teacher name for event ${eventId}:`, err);
-    updateEventsCallback(eventId, 'Teacher N/A'); // Fallback on error
+    updateEventsCallback(eventId, 'Error loading teacher info');
   }
 };
 
 // Props for Timetables component
 interface TimetablesProps {
   loggedInTeacherId?: string; // ID of the currently logged-in teacher, if applicable
+  readOnly?: boolean; // When true, hides all editing capabilities (add, edit, delete)
 }
 
-const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
+// Add these styled component definitions after the other styled components, before the component function
+const ModalBody = styled.div`
+  margin-bottom: 20px;
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1.5;
+`;
+
+const ModalFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+`;
+
+const DeleteConfirmButton = styled.button`
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background: #ef4444;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  
+  &:hover {
+    background: #dc2626;
+  }
+`;
+
+// Update the ClassDetails component for teacher to make it more prominent
+const TeacherDetail = styled(ClassDetails)`
+  font-weight: 500;
+  color: #1e293b;
+  font-size: 13px;
+  margin-top: 4px;
+  padding: 4px 0;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+  
+  strong {
+    font-weight: 600;
+    color: #4b5563;
+  }
+`;
+
+const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = false }): React.ReactNode => {
+  // State variables and hooks
+  const theme = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filterCourse, setFilterCourse] = useState<string | null>(null);
   const [filterClass, setFilterClass] = useState<string | null>(null);
@@ -840,33 +955,16 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
   const [showCourseFilter, setShowCourseFilter] = useState(false);
   const [showClassFilter, setShowClassFilter] = useState(false);
   const [showTeacherFilter, setShowTeacherFilter] = useState(false);
-  const [currentTimePos, setCurrentTimePos] = useState<number>(0);
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [classes, setClasses] = useState<ClassData[]>([]);
   const [classEvents, setClassEvents] = useState<ClassEvent[]>([]);
-  const [nextId, setNextId] = useState(9); // Starting ID after our existing mock data
-  
-  // Add state for animation
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
-  
-  // Add state for editing
+  const [allCourses, setAllCourses] = useState<CourseData[]>([]);
+  const [classSubjects, setClassSubjects] = useState<ClassSubject[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentEventId, setCurrentEventId] = useState<number | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [eventToDelete, setEventToDelete] = useState<number | null>(null);
-  
-  // Success message state
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
-  // Supabase data states
-  const [allCourses, setAllCourses] = useState<CourseData[]>([]); // All courses/subjects
-  const [classSubjects, setClassSubjects] = useState<ClassSubject[]>([]); // Relationships between classes and subjects
-  const [availableCourses, setAvailableCourses] = useState<CourseData[]>([]); // Courses available for selected class
-  const [classes, setClasses] = useState<ClassData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [teacherSpecificCourses, setTeacherSpecificCourses] = useState<CourseData[]>([]); // New state
-  
   const [formData, setFormData] = useState<ScheduleFormData>({
     title: '',
     course: '',
@@ -876,11 +974,26 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
     location: '',
     assignedClass: ''
   });
-  
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<number | null>(null);
+  const [availableCourses, setAvailableCourses] = useState<CourseData[]>([]);
+  const [teacherSpecificCourses, setTeacherSpecificCourses] = useState<CourseData[]>([]); // Courses specific to a teacher
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
+  const [currentTimePos, setCurrentTimePos] = useState<number>(0);
   const timetableRef = useRef<HTMLDivElement>(null);
   
-  // Generate week days based on current date
-  const weekDays = getWeekDays(currentDate);
+  // Add state for the details modal
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<ClassEvent | null>(null);
+  
+  // Create a service to manage browser detection
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  
+  // Get week days starting from monday
+  const monday = new Date();
+  monday.setDate(monday.getDate() - monday.getDay() + (monday.getDay() === 0 ? -6 : 1)); // Adjust to previous Monday
+  const weekDays = getWeekDays(monday);
   
   // Hours range (8 AM to 5 PM)
   const hours = Array.from({ length: 10 }, (_, i) => i + 8);
@@ -1150,19 +1263,46 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
       const fetchTeacherAssignedSubjects = async () => {
         try {
           setIsLoading(true); // Optional: indicate loading for this specific fetch
-          // 1. Get subject IDs assigned to this teacher from classteachers
-          const { data: assignments, error: assignmentsError } = await supabase
-            .from('classteachers')
-            .select('subjectid')
+          
+          // Get classes assigned to this teacher
+          const { data: assignedClasses, error: classesError } = await supabase
+            .from('classes')
+            .select('id')
             .eq('teacherid', loggedInTeacherId);
 
-          if (assignmentsError) throw assignmentsError;
-
-          if (assignments && assignments.length > 0) {
-            const subjectIds = [...new Set(assignments.map(a => a.subjectid).filter(id => id !== null))] as string[];
+          if (classesError) throw classesError;
+          
+          if (!assignedClasses || assignedClasses.length === 0) {
+            setTeacherSpecificCourses([]);
+            setIsLoading(false);
+            return;
+          }
+          
+          // Get subjects assigned to these classes
+          const classIds = assignedClasses.map(c => c.id);
+          
+          const { data: classSubjectsData, error: classSubjectsError } = await supabase
+            .from('classsubjects')
+            .select('subjectid')
+            .in('classid', classIds);
             
-            if (subjectIds.length > 0) {
-              // 2. Get details for these subject IDs from the subjects table
+          if (classSubjectsError) throw classSubjectsError;
+          
+          if (!classSubjectsData || classSubjectsData.length === 0) {
+            setTeacherSpecificCourses([]);
+            setIsLoading(false);
+            return;
+          }
+          
+          const subjectIds = [...new Set(classSubjectsData.map(cs => cs.subjectid).filter(id => id !== null))] as string[];
+          
+          if (subjectIds.length === 0) {
+            setTeacherSpecificCourses([]);
+            setIsLoading(false);
+            return;
+          }
+          
+          // Get details for these subject IDs from the subjects table
               const { data: subjectsData, error: subjectsError } = await supabase
                 .from('subjects')
                 .select('id, name, color') // Assuming 'name' is the column for subject name
@@ -1171,15 +1311,13 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
               if (subjectsError) throw subjectsError;
 
               if (subjectsData) {
-                setTeacherSpecificCourses(subjectsData.map(s => ({ id: s.id, name: s.name || `Subject ${s.id}`, color: s.color || getRandomColor(s.name || `Subject ${s.id}`) })));
+            setTeacherSpecificCourses(subjectsData.map(s => ({ 
+              id: s.id, 
+              name: s.name || `Subject ${s.id}`, 
+              color: s.color || getRandomColor(s.name || `Subject ${s.id}`)
+            })));
               } else {
                 setTeacherSpecificCourses([]);
-              }
-            } else {
-              setTeacherSpecificCourses([]); // No subjects assigned to this teacher
-            }
-          } else {
-            setTeacherSpecificCourses([]); // Teacher has no assignments in classteachers
           }
         } catch (err) {
           console.error('Error fetching teacher-specific courses:', err);
@@ -1202,6 +1340,16 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
       setIsLoading(true);
       setError(null); // Clear previous errors
       
+      // First, check the structure of classteachers table
+      console.log('Checking classteachers table structure...');
+      const { data: classteachersStructure, error: structureError } = await supabase
+        .from('classteachers')
+        .select('*')
+        .limit(1);
+
+      console.log('Classteachers sample:', classteachersStructure);
+      console.log('Classteachers structure error:', structureError);
+      
       // 1. Fetch base timetable data, ensure classid and subjectid are included
       const { data: timetableData, error: timetableError } = await supabase
         .from('timetable')
@@ -1209,10 +1357,9 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
         .select(`
           id, title, start_time, end_time, start_minute, end_minute, day, location,
           subjectId, classId,
-          subjects ( subjectname ),
-          classes ( classname ),
-          users ( firstName, lastName )
-        `); // Still fetch creator user if needed elsewhere
+          subjects ( id, subjectname ),
+          classes ( id, classname )
+        `);
         
       if (timetableError) throw timetableError;
       if (!timetableData) {
@@ -1221,113 +1368,196 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
         return;
       }
       
-      // 2. Fetch assigned teachers for all relevant (class, subject) pairs
-      // Create unique pairs to avoid redundant queries
-      const classSubjectPairs = timetableData
-        .map(item => ({ classId: item.classId, subjectId: item.subjectId }))
-        .filter(pair => pair.classId && pair.subjectId)
-        .reduce((acc, pair) => {
-          const key = `${pair.classId}-${pair.subjectId}`;
-          if (!acc.has(key)) {
-            acc.set(key, pair);
-          }
-          return acc;
-        }, new Map());
+      console.log('Timetable data:', timetableData);
+      
+      // 2. Create unique class-subject pairs to use with classteachers table
+      const classSubjectPairs = timetableData.map(item => ({
+        classId: item.classId,
+        subjectId: item.subjectId
+      })).filter(pair => pair.classId && pair.subjectId);
 
-      const teacherAssignments = new Map<string, { name: string, id: string | undefined }>(); // Store name and ID
+      console.log('Class-subject pairs to check:', classSubjectPairs);
 
-      if (classSubjectPairs.size > 0) {
-        const fetchPromises = Array.from(classSubjectPairs.values()).map(async pair => {
-          const { data: assignment, error } = await supabase
+      const teacherAssignments = new Map<string, { name: string, id: string | undefined }>();
+
+      // Process teacher assignments if we have class-subject pairs
+      if (classSubjectPairs.length > 0) {
+        // First try to get teachers from classteachers table
+        for (const pair of classSubjectPairs) {
+          if (!pair.classId || !pair.subjectId) continue;
+          
+          console.log(`Querying for classId=${pair.classId}, subjectId=${pair.subjectId}`);
+          
+          try {
+            // Use lowercase column names to match database structure seen in your screenshot
+            const { data: classteacherData, error: classteacherError } = await supabase
             .from('classteachers')
-            .select('teacherid, users ( firstName, lastName )') // Ensure teacherid from classteachers is selected
+              .select('*')
             .eq('classid', pair.classId)
             .eq('subjectid', pair.subjectId)
             .maybeSingle();
 
-          let teacherNameToSet = 'Teacher N/A';
-          let assignedIdFromDb: string | undefined = undefined;
-
-          if (!error && assignment) {
-            assignedIdFromDb = assignment.teacherid; // Capture the teacherid from classteachers
-            if (assignment.users) {
-              const userData = assignment.users;
-              let fullName = '';
-              if (Array.isArray(userData) && userData.length > 0) {
-                const userObject = userData[0];
-                if (userObject && typeof userObject === 'object') {
-                  fullName = `${userObject.firstName || ''} ${userObject.lastName || ''}`.trim();
-                }
-              } else if (typeof userData === 'object' && userData !== null) {
-                fullName = `${(userData as any).firstName || ''} ${(userData as any).lastName || ''}`.trim();
-              }
-              if (fullName) {
-                teacherNameToSet = fullName;
-              }
+            console.log(`ClassTeacher result for ${pair.classId}-${pair.subjectId}:`, classteacherData);
+            console.log(`ClassTeacher error for ${pair.classId}-${pair.subjectId}:`, classteacherError);
+            
+            let teacherId = null;
+            // Check all possible field names for teacher ID using lowercase as shown in API response
+            if (classteacherData) {
+              teacherId = classteacherData.teacherid;
+              
+              console.log('Found teacher ID in classteachers:', teacherId);
             }
+
+            if (classteacherError || !classteacherData || !teacherId) {
+              // If no specific assignment in classteachers, fallback to the class teacher
+              const classItem = timetableData.find(item => item.classId === pair.classId);
+              
+              // Try to get teacher from classes table
+              if (pair.classId) {
+                const { data: classData } = await supabase
+                  .from('classes')
+                  .select('teacherid')
+                  .eq('id', pair.classId)
+                  .maybeSingle();
+                  
+                const classTeacherId = classData?.teacherid;
+                
+                if (classTeacherId) {
+                  // Get teacher name from users table
+                  const { data: teacherData, error: teacherError } = await supabase
+                    .from('users')
+                    .select('firstName, lastName')
+                    .eq('id', classTeacherId)
+                    .maybeSingle();
+                  
+                  let teacherNameToSet = 'No teacher assigned';
+                  if (!teacherError && teacherData && teacherData.firstName && teacherData.lastName) {
+                    teacherNameToSet = `${teacherData.firstName} ${teacherData.lastName}`.trim();
+                    console.log(`Found teacher name for class ${pair.classId}: ${teacherNameToSet}`);
+                  } else {
+                    console.log(`No teacher name found for class ${pair.classId}`, teacherError);
+                  }
+                  
+                  const key = `${pair.classId}-${pair.subjectId}`;
+                  teacherAssignments.set(key, { name: teacherNameToSet, id: classTeacherId });
+                } else {
+                  console.log(`No teacher ID found for class ${pair.classId}`);
+                  const key = `${pair.classId}-${pair.subjectId}`;
+                  teacherAssignments.set(key, { name: 'No teacher assigned', id: undefined });
+                }
+              } else {
+                console.log('Skipping class teacher lookup - classId is undefined');
+                const key = `${pair.classId || 'unknown'}-${pair.subjectId || 'unknown'}`;
+                teacherAssignments.set(key, { name: 'No class assigned', id: undefined });
+              }
+            } else {
+              // If we found a specific teacher assignment in classteachers
+              const specificTeacherId = teacherId;
+              console.log(`Found specific teacher assignment: ${specificTeacherId}`);
+              
+              // Get teacher name from users table
+              const { data: teacherData, error: teacherError } = await supabase
+                .from('users')
+                .select('firstName, lastName')
+                .eq('id', specificTeacherId)
+                .maybeSingle();
+              
+              let teacherNameToSet = 'No teacher assigned';
+              if (!teacherError && teacherData && teacherData.firstName && teacherData.lastName) {
+                teacherNameToSet = `${teacherData.firstName} ${teacherData.lastName}`.trim();
+                console.log(`Found teacher name from classteachers: ${teacherNameToSet}`);
+              } else {
+                console.log(`No teacher name found for ID ${specificTeacherId}`, teacherError);
+              }
+              
+              const key = `${pair.classId || 'unknown'}-${pair.subjectId || 'unknown'}`;
+              teacherAssignments.set(key, { name: teacherNameToSet, id: specificTeacherId });
+            }
+          } catch (err) {
+            console.error(`Error processing teacher data for ${pair.classId || 'unknown'}-${pair.subjectId || 'unknown'}:`, err);
+            const key = `${pair.classId || 'unknown'}-${pair.subjectId || 'unknown'}`;
+            teacherAssignments.set(key, { name: 'Error loading teacher', id: undefined });
           }
-          // Store both name and the ID from classteachers
-          teacherAssignments.set(`${pair.classId}-${pair.subjectId}`, { name: teacherNameToSet, id: assignedIdFromDb });
-        });
-        await Promise.all(fetchPromises);
+        }
       }
 
-      // 3. Format events, adding the assigned teacher name and ID
-      const formattedEvents: ClassEvent[] = timetableData.map((item: any, index) => {
-        const assignmentKey = `${item.classId}-${item.subjectId}`;
-        const assignmentDetails = teacherAssignments.get(assignmentKey);
+      // 3. Now map the timetable data to formatted events with teacher assignments
+      const formattedEvents: ClassEvent[] = [];
+      
+      for (const item of timetableData) {
+        // Variables for teacher assignment lookup
+        let displayTeacher = 'No teacher assigned';
+        let assignedTeacherActualId = undefined;
         
-        const displayTeacher = assignmentDetails ? assignmentDetails.name : 'Teacher N/A';
-        const assignedTeacherActualId = assignmentDetails ? assignmentDetails.id : undefined;
-        
-        // Get class name
-        const className = item.classes?.classname || '';
-
-        // Robust ID handling
-        let finalId: number;
-        const dbId = item.id; // ID from the database
-
-        if (dbId !== null && dbId !== undefined) {
-            const parsedDbId = parseInt(String(dbId), 10);
-            if (!isNaN(parsedDbId)) {
-                finalId = parsedDbId; // Use if DB ID is a number or numeric string
+        // Look up teacher assignment if we have class and subject IDs
+        if (item.classId && item.subjectId) {
+          const key = `${item.classId}-${item.subjectId}`;
+          const assignment = teacherAssignments.get(key);
+          if (assignment) {
+            displayTeacher = assignment.name;
+            assignedTeacherActualId = assignment.id;
+            console.log(`Using teacher name "${displayTeacher}" for event with class ${item.classId}, subject ${item.subjectId}`);
             } else {
-                // DB ID is a non-numeric string (e.g., UUID) or parseInt failed
-                console.warn(`Database ID "${dbId}" is not a parseable integer. Using index ${index + 1} as a fallback frontend ID.`);
-                finalId = index + 1; // Fallback to index-based ID for frontend use
+            console.log(`No teacher assignment found for class ${item.classId}, subject ${item.subjectId}`);
             }
-          } else {
-            // DB ID is null or undefined
-            finalId = index + 1; // Fallback to index-based ID for frontend use
         }
         
+        // For UUIDs and other non-numeric IDs, use array index to avoid collisions
+        const finalId: number = formattedEvents.length + 1000;
+        
         // Determine event color: Prefer color from allCourses (which sourced from subjects table)
-        const subjectNameFromTimetable = item.subjects?.subjectname;
+        const subjectsProperty = item.subjects;
+        let subjectNameFromTimetable = '';
+        
+        // Handle subjects property which can be array or object
+        if (subjectsProperty) {
+          if (Array.isArray(subjectsProperty) && subjectsProperty.length > 0) {
+            subjectNameFromTimetable = subjectsProperty[0]?.subjectname || '';
+          } else if (typeof subjectsProperty === 'object') {
+            subjectNameFromTimetable = (subjectsProperty as any)?.subjectname || '';
+          }
+        }
+        
         const courseInfo = subjectNameFromTimetable ? allCourses.find(c => c.name === subjectNameFromTimetable) : undefined;
         const eventColor = courseInfo?.color || getRandomColor(subjectNameFromTimetable || item.title || '');
         
-        return {
+        // Handle classes property which can be array or object
+        const classesProperty = item.classes;
+        let className = '';
+        
+        if (classesProperty) {
+          if (Array.isArray(classesProperty) && classesProperty.length > 0) {
+            className = classesProperty[0]?.classname || '';
+          } else if (typeof classesProperty === 'object') {
+            className = (classesProperty as any)?.classname || '';
+          }
+        }
+        
+        // Create and add the event
+        formattedEvents.push({
           id: finalId,
           title: item.title || subjectNameFromTimetable || 'Untitled',
-          subjectid: item.subjectId || '',
+          subjectId: item.subjectId || '',
           startTime: parseInt(String(item.start_time || '9')),
           startMinute: parseInt(String(item.start_minute || '0')),
           endTime: parseInt(String(item.end_time || '10')),
           endMinute: parseInt(String(item.end_minute || '0')),
           day: parseInt(String(item.day || '0')),
           location: item.location || '',
-          teacherid: item.teacherid || '',
+          teacherid: assignedTeacherActualId || '',
           classId: item.classId || '',
-          color: eventColor, // Use the determined eventColor
+          color: eventColor,
           course: subjectNameFromTimetable || 'Unknown',
           teacher: displayTeacher,
           assignedTeacherId: assignedTeacherActualId,
-          className: item.classes?.classname || '',
-          students: item.students || 0,
-        };
+          className: className,
+          students: 0
       });
+      } // End of the for loop
       
-      console.log('Formatted schedule events with assigned teachers:', formattedEvents);
+      console.log('Formatted events with teacher names:', 
+        formattedEvents.map(e => ({id: e.id, title: e.title, teacher: e.teacher}))
+      );
       setClassEvents(formattedEvents);
       
     } catch (error) {
@@ -1388,7 +1618,9 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
   const filteredEvents = classEvents
     .filter(event => { // First, filter by loggedInTeacherId if provided
       if (loggedInTeacherId) {
-        return event.assignedTeacherId === loggedInTeacherId;
+        // Compare as strings to handle type inconsistencies (string vs number)
+        return String(event.assignedTeacherId) === String(loggedInTeacherId) || 
+               String(event.teacherid) === String(loggedInTeacherId);
       }
       return true; // If no loggedInTeacherId, do not filter by teacher at this stage
     })
@@ -1457,12 +1689,21 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
     console.log('Form reset, currentEventId is now:', null);
   };
   
+  // Improve the updateSingleEventTeacher function to make sure state updates correctly
   const updateSingleEventTeacher = (eventId: number, teacherName: string) => {
-    setClassEvents(prevEvents =>
-      prevEvents.map(event =>
+    console.log(`Updating event ID ${eventId} with teacher name: "${teacherName}"`);
+    
+    setClassEvents(prevEvents => {
+      const updatedEvents = prevEvents.map(event =>
         event.id === eventId ? { ...event, teacher: teacherName } : event
-      )
-    );
+      );
+      
+      console.log('Updated events after teacher name change:', 
+        updatedEvents.filter(e => e.id === eventId).map(e => ({id: e.id, title: e.title, teacher: e.teacher}))
+      );
+      
+      return updatedEvents;
+    });
   };
   
   // Handle form submission
@@ -1520,7 +1761,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
         end_minute: endMinute || 0,
         day: Number(formData.day),
         location: formData.location,
-        teacherId: selectedClass.teacherid ? String(selectedClass.teacherid) : null,
+        teacherid: selectedClass.teacherid ? String(selectedClass.teacherid) : null,
         color: courseColor,
         classId: selectedClass.id ? String(selectedClass.id) : null,
         day_date: calculateDateForDay(Number(formData.day))
@@ -1566,13 +1807,13 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
           }
           
           // Second attempt: Try using subjectId
-          if (!updateSuccess && currentEvent.subjectid) {
+          if (!updateSuccess && currentEvent.subjectId) {
             try {
-              console.log('Attempt 2: Updating by subjectId:', currentEvent.subjectid);
+              console.log('Attempt 2: Updating by subjectId:', currentEvent.subjectId);
               const { error } = await supabase
                 .from('timetable')
                 .update(newLessonRecord)
-                .eq('subjectId', currentEvent.subjectid);
+                .eq('subjectId', currentEvent.subjectId);
                 
               if (!error) {
                 console.log('Successfully updated by subjectId');
@@ -1650,13 +1891,13 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
             }
             
             // Try by subjectId
-            if (!deleteSuccess && currentEvent.subjectid) {
+            if (!deleteSuccess && currentEvent.subjectId) {
               try {
-                console.log('Attempting to delete old record by subjectId:', currentEvent.subjectid);
+                console.log('Attempting to delete old record by subjectId:', currentEvent.subjectId);
                 const { error } = await supabase
                   .from('timetable')
                   .delete()
-                  .eq('subjectId', currentEvent.subjectid);
+                  .eq('subjectId', currentEvent.subjectId);
                   
                 if (!error) {
                   console.log('Successfully deleted old record by subjectId');
@@ -1715,13 +1956,24 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
                   location: formData.location,
                   classId: selectedClass.id,
                   className: selectedClass.name, // Keep for UI only
-                  teacher: selectedClass.teacherid ? 'Teacher ID: ' + selectedClass.teacherid : '',
+                  // We'll need to fetch the actual teacher name asynchronously
+                  teacher: 'Updating teacher info...', // Temporary placeholder
                   color: selectedCourse?.color || getRandomColor(formData.course)
                 };
               }
               return event;
             });
           });
+          
+          // After updating the UI state, fetch the actual teacher name
+          if (selectedClass?.id && currentEventId) {
+            fetchAndSetTeacherNameForEvent(
+              currentEventId,
+              selectedClass.id,
+              selectedCourse?.id || null,
+              updateSingleEventTeacher
+            );
+          }
       
           // Set success message and refresh data
           setSuccessMessage('Lesson updated successfully!');
@@ -1775,7 +2027,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
               color: courseColor,
               course: formData.course,
               className: selectedClass.name,
-              teacher: 'Loading teacher...' // Initial placeholder
+              teacher: 'Loading teacher info...' // Initial placeholder
             };
             
             let newId: number; 
@@ -1808,8 +2060,8 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
             const newEvent: ClassEvent = {
               ...baseEventData,
               id: newId,
-              subjectid: (newRecordFromDB.subjectId || newRecordFromDB.subject_id || selectedCourse?.id || '').toString(),
-              teacherid: (newRecordFromDB.teacherId || newRecordFromDB.teacher_id || selectedClass?.teacherid || '').toString(),
+              subjectId: (newRecordFromDB.subjectId || newRecordFromDB.subject_id || selectedCourse?.id || '').toString(),
+              teacherid: (newRecordFromDB.teacherid || newRecordFromDB.teacher_id || selectedClass?.teacherid || '').toString(),
               classId: (newRecordFromDB.classId || newRecordFromDB.class_id || selectedClass?.id || '').toString()
             };
             
@@ -1818,8 +2070,8 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
             // Immediately try to fetch the teacher name for this new event
             fetchAndSetTeacherNameForEvent(
               newEvent.id, // The frontend ID for this new event
-              newRecordFromDB.classId || null,
-              newRecordFromDB.subjectId || null,
+              newRecordFromDB.classId || selectedClass.id || null,
+              newRecordFromDB.subjectId || selectedCourse?.id || null,
               updateSingleEventTeacher
             );
             
@@ -2193,153 +2445,59 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
     setShowScheduleModal(true);
   };
   
-  // Handle opening the delete confirmation modal
+  // Open delete confirmation modal
   const openDeleteConfirmation = (id: number) => {
-    console.log('Opening delete confirmation for lesson ID:', id);
-    // Ensure we have a valid numeric ID
-    if (id === undefined || id === null) {
-      console.error('Invalid lesson ID for deletion:', id);
-      setError('Cannot delete: Invalid lesson ID');
-      return;
-    }
-    
-    // Store ID both ways to be extra safe
-    window.lastDeletedEventId = id;
     setEventToDelete(id);
-    setShowDeleteConfirm(true);
+    setShowDeleteModal(true);
   };
   
-  // Handle delete lesson
+  // Handle cancellation of delete
+  const handleCancelDelete = () => {
+    setEventToDelete(null);
+    setShowDeleteModal(false);
+  };
+  
+  // Handle deletion of a lesson
   const handleDeleteLesson = async () => {
-    // Try to get the ID from multiple sources to ensure we have it
-    let id = eventToDelete;
-    
-    // If state doesn't have it, try the window variable
-    if (id === null && window.lastDeletedEventId) {
-      id = window.lastDeletedEventId;
-      console.log('Using backup ID from window:', id);
-    }
-    
-    if (id === null || id === undefined || isNaN(Number(id))) {
-      console.error('Invalid event ID found for deletion:', id);
-      setError('Cannot delete: Invalid lesson ID');
-      setShowDeleteConfirm(false);
-      return;
-    }
+    if (eventToDelete === null) return;
     
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log('Deleting lesson with ID:', id);
-      
-      // Find the full event object to get the proper database ID
-      const eventToRemove = classEvents.find(event => event.id === id);
-      
+      // Find the event in our state
+      const eventToRemove = classEvents.find(event => event.id === eventToDelete);
       if (!eventToRemove) {
-        console.error('Could not find event with ID:', id);
-        setError('Could not find the lesson to delete');
+        setError("Could not find the specified event to delete.");
+        setEventToDelete(null);
+        setShowDeleteModal(false);
+        setIsLoading(false);
         return;
       }
       
-      console.log('Found event to delete:', eventToRemove);
-      
-      // Try multiple deletion strategies
-      let deleteSuccess = false;
-      
-      // Attempt 1: Try with the numeric ID
-      try {
-        const { error: error1 } = await supabase
+      // Supabase delete
+      const { error: deleteError } = await supabase
           .from('timetable')
           .delete()
-          .eq('id', id);
-          
-        if (!error1) {
-          console.log('Successfully deleted with numeric ID');
-          deleteSuccess = true;
-        } else {
-          console.log('First deletion attempt failed:', error1);
-        }
-      } catch (e) {
-        console.error('Error in first deletion attempt:', e);
+        .eq('id', eventToRemove.id);
+      
+      if (deleteError) {
+        throw deleteError;
       }
       
-      // Attempt 2: Try with the subjectid if it exists and first attempt failed
-      if (!deleteSuccess && eventToRemove.subjectid) {
-        try {
-          const { error: error2 } = await supabase
-            .from('timetable')
-            .delete()
-            .eq('subjectId', eventToRemove.subjectid);
-            
-          if (!error2) {
-            console.log('Successfully deleted with subjectId');
-            deleteSuccess = true;
-          } else {
-            console.log('Second deletion attempt failed:', error2);
-          }
-        } catch (e) {
-          console.error('Error in second deletion attempt:', e);
-        }
-      }
+      // Delete was successful, update our state
+      setClassEvents(prev => prev.filter(event => event.id !== eventToDelete));
+      setSuccessMessage('Lesson successfully deleted!');
       
-      // Attempt 3: Last resort - try with string conversion of the ID
-      if (!deleteSuccess) {
-        try {
-          const { error: error3 } = await supabase
-            .from('timetable')
-            .delete()
-            .eq('id', String(id));
-            
-          if (!error3) {
-            console.log('Successfully deleted with string ID');
-            deleteSuccess = true;
-          } else {
-            console.log('Third deletion attempt failed:', error3);
-            setError('Failed to delete lesson: ' + error3.message);
-            return;
-          }
-        } catch (e) {
-          console.error('Error in third deletion attempt:', e);
-          setError('Failed to delete lesson after multiple attempts');
-          return;
-        }
-      }
-      
-      if (!deleteSuccess) {
-        setError('Failed to delete lesson after trying multiple methods');
-        return;
-      }
-      
-      console.log('Successfully deleted lesson from database');
-      
-      // Remove from local state
-      setClassEvents(prev => {
-        const updatedEvents = prev.filter(event => event.id !== id);
-        console.log('Updated events after deletion:', updatedEvents);
-        return updatedEvents;
-      });
-      
-      setShowDeleteConfirm(false);
+      // Clean up
       setEventToDelete(null);
-      window.lastDeletedEventId = undefined;
+      setShowDeleteModal(false);
       
-      // Show success message
-      setSuccessMessage('Lesson deleted successfully!');
+      setTimeout(() => setSuccessMessage(null), 3000);
       
-      // Clear success message after 5 seconds
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 5000);
-      
-      // Force refresh data from database to ensure UI is in sync
-      setTimeout(() => {
-        fetchTimetableData();
-      }, 1000);
-      
-    } catch (error: any) {
-      console.error('Error in delete operation:', error);
-      setError('An unexpected error occurred: ' + (error.message || 'Unknown error'));
+    } catch (error) {
+      console.error('Error deleting lesson:', error);
+      setError(`Failed to delete lesson: ${(error as any).message || 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -2351,6 +2509,36 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
   // Get unique courses for the filter dropdown (uses names)
   const uniqueCourseNamesForDropdown = [...new Set(coursesForDropdown.map(course => course.name || ''))].filter(Boolean);
 
+  // Add to the useEffect that processes filtered events to track what's happening to the data
+  // Find the useEffect that sets up filteredEvents or wherever the filtered events are defined
+  
+  // Around line 1500, add this code to log filtered events just before they're rendered
+  useEffect(() => {
+    // Log events to help debug why teacher names aren't showing
+    if (classEvents.length > 0) {
+      console.log('Current class events state:', 
+        classEvents.map(e => ({id: e.id, title: e.title, teacher: e.teacher}))
+      );
+    }
+    
+    const filtered = classEvents
+      .filter(event => (filterCourse ? (event.course || '') === filterCourse : true))
+      .filter(event => (filterClass ? (event.className === filterClass || classes.find(c => c.id === event.classId)?.name === filterClass) : true))
+      .filter(event => (filterTeacher ? (event.teacher === filterTeacher) : true));
+      
+    if (filtered.length > 0) {
+      console.log('Filtered events that will be rendered:', 
+        filtered.map(e => ({id: e.id, title: e.title, teacher: e.teacher}))
+      );
+    }
+  }, [classEvents, filterClass, filterCourse, filterTeacher, classes]);
+
+  // Handle opening the details modal
+  const handleViewDetails = (event: ClassEvent) => {
+    setSelectedEvent(event);
+    setShowDetailsModal(true);
+  };
+
   return (
     <Container>
       <Header>
@@ -2360,10 +2548,13 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
             <FiArrowUp size={14} />
             Current Time
           </Button>
-          <PrimaryButton onClick={() => setShowScheduleModal(true)}>
-            <FiPlus size={14} />
-            Schedule Lesson
-          </PrimaryButton>
+          {/* Only show Schedule button if not in read-only mode */}
+          {!readOnly && (
+            <PrimaryButton onClick={() => setShowScheduleModal(true)}>
+              <FiPlus size={14} />
+              {loggedInTeacherId ? 'Add Lesson to Schedule' : 'Schedule Lesson'}
+            </PrimaryButton>
+          )}
         </HeaderControls>
       </Header>
       
@@ -2607,6 +2798,9 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
                 {filteredEvents
                   .filter(event => event.day === dayIndex)
                   .map(event => {
+                    // Add a debug log here
+                    console.log(`Rendering event ID ${event.id}: "${event.title}" with teacher: "${event.teacher}"`);
+                    
                     const startMinute = event.startMinute || 0;
                     const endMinute = event.endMinute || 0;
                     
@@ -2616,85 +2810,117 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
                     const startTimeFormatted = formatTime(event.startTime, startMinute);
                     const endTimeFormatted = formatTime(event.endTime, endMinute);
                     
+                    // Handle teacher display - ensure we have valid data
+                    let teacherDisplay = 'No teacher assigned';
+                    if (event.teacher && typeof event.teacher === 'string' && event.teacher !== 'No teacher assigned') {
+                      teacherDisplay = event.teacher;
+                      console.log(`Using teacher name for display: "${teacherDisplay}"`);
+                    } else {
+                      console.log(`No valid teacher name found for event ${event.id}, using default text`);
+                    }
+                    
+                    // Check if current user is an admin or the assigned teacher for this lesson
+                    // Compare string values to handle possible type inconsistencies
+                    const isTeacherForThisLesson = 
+                      loggedInTeacherId && (
+                        String(loggedInTeacherId) === String(event.assignedTeacherId) || 
+                        String(loggedInTeacherId) === String(event.teacherid)
+                      );
+                    
+                    // Admin has full permissions, teacher can only modify their own lessons
+                    // Don't allow any modifications in read-only mode
+                    const canModifyLesson = !readOnly && (!loggedInTeacherId || isTeacherForThisLesson);
+                    
+                    console.log(`Event ${event.id}: Teacher permissions check:`, {
+                      loggedInTeacherId,
+                      eventAssignedTeacher: event.assignedTeacherId,
+                      eventTeacherid: event.teacherid,
+                      isTeacherForThisLesson,
+                      canModifyLesson
+                    });
+                    
                     return (
                       <ClassCard 
                         key={event.id}
                         $top={top}
                         $height={height}
                         $color={event.color}
+                        onClick={() => handleViewDetails(event)} // Add click handler to open details
                       >
-                            <ActionButtons className="action-buttons">
-                              <ActionButton 
-                                title="Edit lesson"
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Prevent card click event
-                                  handleEditLesson(event);
-                                }}
-                              >
-                                <FiEdit size={14} />
-                              </ActionButton>
-                              <ActionButton 
-                                className="delete-btn"
-                                title="Delete lesson"
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Prevent card click event
-                                  console.log('Delete button clicked for event:', event);
-                                  console.log('Event ID to delete:', event.id, 'Type:', typeof event.id);
-                                  
-                                  // Get alternative identifiers in case ID is NaN
-                                  const title = event.title || '';
-                                  const startTime = event.startTime || 0;
-                                  const day = event.day;
-                                  
-                                  // First check if we have a proper ID
-                                  if (typeof event.id === 'number' && !isNaN(event.id)) {
-                                    console.log('Using numeric ID for deletion:', event.id);
-                                    openDeleteConfirmation(event.id);
-                                    return;
-                                  }
-                                  
-                                  console.log('Event ID is invalid, searching for matching event in state...');
-                                  
-                                  // Try to find a matching event in our classEvents array by properties
-                                  const matchingEvents = classEvents.filter(e => 
-                                    e.title === title && 
-                                    e.startTime === startTime && 
-                                    e.day === day
-                                  );
-                                  
-                                  console.log('Found matching events:', matchingEvents);
-                                  
-                                  if (matchingEvents.length === 1) {
-                                    // We found exactly one match, use its ID
-                                    const matchId = matchingEvents[0].id;
-                                    console.log('Found exactly one matching event, using ID:', matchId);
+                            {canModifyLesson && (
+                              <ActionButtons className="action-buttons">
+                                <ActionButton 
+                                  title="Edit lesson"
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Prevent card click event
+                                    handleEditLesson(event);
+                                  }}
+                                >
+                                  <FiEdit size={14} />
+                                </ActionButton>
+                                <ActionButton 
+                                  className="delete-btn"
+                                  title="Delete lesson"
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Prevent card click event
+                                    console.log('Delete button clicked for event:', event);
+                                    console.log('Event ID to delete:', event.id, 'Type:', typeof event.id);
                                     
-                                    if (typeof matchId === 'number' && !isNaN(matchId)) {
-                                      openDeleteConfirmation(matchId);
-                                    } else {
-                                      setError('Cannot delete: Found event has invalid ID');
+                                    // Get alternative identifiers in case ID is NaN
+                                    const title = event.title || '';
+                                    const startTime = event.startTime || 0;
+                                    const day = event.day;
+                                    
+                                    // First check if we have a proper ID
+                                    if (typeof event.id === 'number' && !isNaN(event.id)) {
+                                      console.log('Using numeric ID for deletion:', event.id);
+                                      openDeleteConfirmation(event.id);
+                                      return;
                                     }
-                                  } else if (matchingEvents.length > 1) {
-                                    // Multiple matches found, this is unusual but we'll use the first valid ID
-                                    console.log('Found multiple matching events, using first valid ID');
                                     
-                                    const validEvent = matchingEvents.find(e => typeof e.id === 'number' && !isNaN(e.id));
+                                    console.log('Event ID is invalid, searching for matching event in state...');
                                     
-                                    if (validEvent) {
-                                      openDeleteConfirmation(validEvent.id);
+                                    // Try to find a matching event in our classEvents array by properties
+                                    const matchingEvents = classEvents.filter(e => 
+                                      e.title === title && 
+                                      e.startTime === startTime && 
+                                      e.day === day
+                                    );
+                                    
+                                    console.log('Found matching events:', matchingEvents);
+                                    
+                                    if (matchingEvents.length === 1) {
+                                      // We found exactly one match, use its ID
+                                      const matchId = matchingEvents[0].id;
+                                      console.log('Found exactly one matching event, using ID:', matchId);
+                                      
+                                      if (typeof matchId === 'number' && !isNaN(matchId)) {
+                                        openDeleteConfirmation(matchId);
+                                      } else {
+                                        setError('Cannot delete: Found event has invalid ID');
+                                      }
+                                    } else if (matchingEvents.length > 1) {
+                                      // Multiple matches found, this is unusual but we'll use the first valid ID
+                                      console.log('Found multiple matching events, using first valid ID');
+                                      
+                                      const validEvent = matchingEvents.find(e => typeof e.id === 'number' && !isNaN(e.id));
+                                      
+                                      if (validEvent) {
+                                        openDeleteConfirmation(validEvent.id);
+                                      } else {
+                                        setError('Cannot delete: All matching events have invalid IDs');
+                                      }
                                     } else {
-                                      setError('Cannot delete: All matching events have invalid IDs');
+                                      // No matches found, show an error
+                                      console.error('No matching events found for deletion');
+                                      setError('Cannot delete: No matching lesson found');
                                     }
-                                  } else {
-                                    // No matches found, show an error
-                                    console.error('No matching events found for deletion');
-                                    setError('Cannot delete: No matching lesson found');
-                                  }
-                                }}
-                              >
-                                <FiX size={14} />
-                              </ActionButton>
-                            </ActionButtons>
+                                  }}
+                                >
+                                  <FiX size={14} />
+                                </ActionButton>
+                              </ActionButtons>
+                            )}
                             
                         <ClassTitle>{event.title}</ClassTitle>
                         <ClassDetails>
@@ -2707,18 +2933,16 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
                             {event.location}
                           </ClassDetails>
                         )}
-                            {event.className && (
-                              <ClassDetails>
-                                <ClassIcon><FiUsers size={12} /></ClassIcon>
-                                Class: {event.className}
-                          </ClassDetails>
-                        )}
-                        {event.teacher && (
+                        {event.className && (
                           <ClassDetails>
-                            <ClassIcon><FiUser size={12} /></ClassIcon>
-                                Teacher: {event.teacher}
+                            <ClassIcon><FiUsers size={12} /></ClassIcon>
+                            Class: {event.className}
                           </ClassDetails>
                         )}
+                        <TeacherDetail>
+                          <ClassIcon><FiUser size={12} /></ClassIcon>
+                          <strong>{teacherDisplay}</strong>
+                        </TeacherDetail>
                       </ClassCard>
                     );
                   })
@@ -2733,7 +2957,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
       </FadeIn>
       
       {/* Schedule Lesson Modal */}
-      {showScheduleModal && (
+      {showScheduleModal && !readOnly && (
         <Modal>
           <ModalContent>
             <ModalHeader>
@@ -2749,43 +2973,242 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId }) => {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
+      {showDeleteModal && !readOnly && (
         <Modal>
-          <ModalContent style={{ maxWidth: '400px' }}>
+          <ModalContent>
             <ModalHeader>
-              <ModalTitle>Delete Lesson</ModalTitle>
-              <CloseButton onClick={() => {
-                setShowDeleteConfirm(false);
-                setEventToDelete(null);
-              }}>
+              <ModalTitle>Confirm Deletion</ModalTitle>
+              <CloseButton onClick={() => setShowDeleteModal(false)}>
+                <FiX size={20} />
+              </CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <p>Are you sure you want to delete this class from the schedule? This action cannot be undone.</p>
+            </ModalBody>
+            <ModalFooter>
+              <CancelButton onClick={() => setShowDeleteModal(false)}>
+                Cancel
+              </CancelButton>
+              <DeleteConfirmButton onClick={handleDeleteLesson}>
+                Delete
+              </DeleteConfirmButton>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      )}
+
+      {/* View Details Modal */}
+      {showDetailsModal && selectedEvent && (
+        <Modal>
+          <ModalContent style={{ maxWidth: '550px' }}>
+            <ModalHeader style={{ 
+              borderBottom: '1px solid #e5e7eb', 
+              paddingBottom: '16px', 
+              marginBottom: '20px'
+            }}>
+              <ModalTitle>Lesson Details</ModalTitle>
+              <CloseButton onClick={() => setShowDetailsModal(false)}>
                 <FiX size={20} />
               </CloseButton>
             </ModalHeader>
             
-            <div style={{ marginBottom: '20px' }}>
-              Are you sure you want to delete this lesson? This action cannot be undone.
+            {/* Lesson Header Section */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              marginBottom: '24px',
+              padding: '0 8px'
+            }}>
+              <h3 style={{ 
+                fontSize: '28px', 
+                fontWeight: '700', 
+                color: '#1e293b',
+                margin: '0 0 8px 0'
+              }}>
+                {selectedEvent.title}
+              </h3>
+              <div style={{ 
+                display: 'inline-block', 
+                padding: '6px 10px', 
+                backgroundColor: `${selectedEvent.color}20`, // Using 20% opacity of the color
+                border: `2px solid ${selectedEvent.color}`,
+                borderRadius: '6px',
+                color: selectedEvent.color,
+                fontSize: '14px',
+                fontWeight: '600',
+                alignSelf: 'flex-start'
+              }}>
+                {selectedEvent.course || 'No course assigned'}
+              </div>
             </div>
             
-            <ButtonGroup>
-              <CancelButton onClick={() => {
-                setShowDeleteConfirm(false);
-                setEventToDelete(null);
+            {/* Core Info Section */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '24px 20px',
+              padding: '0 8px 24px 8px',
+              borderBottom: '1px solid #e5e7eb'
+            }}>
+              {/* Time */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ 
+                  backgroundColor: '#f1f5f9', 
+                  padding: '10px',
+                  borderRadius: '8px',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FiClock size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Time</div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#334155' }}>
+                    {formatTime(selectedEvent.startTime, selectedEvent.startMinute || 0)} - {formatTime(selectedEvent.endTime, selectedEvent.endMinute || 0)}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Day */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ 
+                  backgroundColor: '#f1f5f9', 
+                  padding: '10px',
+                  borderRadius: '8px',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FiCalendar size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Day</div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#334155' }}>
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][selectedEvent.day]}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Class */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ 
+                  backgroundColor: '#f1f5f9', 
+                  padding: '10px',
+                  borderRadius: '8px',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FiUsers size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Class</div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#334155' }}>
+                    {selectedEvent.className || 'Not assigned'}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Location */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ 
+                  backgroundColor: '#f1f5f9', 
+                  padding: '10px',
+                  borderRadius: '8px',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FiMapPin size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Location</div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#334155' }}>
+                    {selectedEvent.location || 'No location specified'}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Teacher - Full Width */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'flex-start', 
+                gap: '12px',
+                gridColumn: 'span 2'
               }}>
-                Cancel
-              </CancelButton>
+                <div style={{ 
+                  backgroundColor: '#f1f5f9', 
+                  padding: '10px',
+                  borderRadius: '8px',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FiUser size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Teacher</div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#334155' }}>
+                    {selectedEvent.teacher}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+           
+            
+            <ModalFooter style={{ 
+              marginTop: '20px', 
+              borderTop: '1px solid #e5e7eb',
+              paddingTop: '16px'
+            }}>
               <SubmitButton 
-                style={{ backgroundColor: '#ef4444', color: 'white' }}
-                onClick={handleDeleteLesson}
-                disabled={isLoading}
+                onClick={() => setShowDetailsModal(false)} 
+                style={{ minWidth: '100px' }}
               >
-                {isLoading ? 'Deleting...' : 'Delete Lesson'}
+                Close
               </SubmitButton>
-            </ButtonGroup>
+            </ModalFooter>
           </ModalContent>
         </Modal>
       )}
     </Container>
   );
 };
+
+// Helper component for detail items in the modal
+const DetailItem = ({ icon, label, children, span = 1 }) => (
+  <div style={{ 
+    gridColumn: `span ${span}`,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px'
+  }}>
+    <div style={{ 
+      fontSize: '13px', 
+      color: '#64748b',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px'
+    }}>
+      {icon}
+      {label}
+    </div>
+    <div style={{ 
+      fontSize: '16px', 
+      color: '#1e293b',
+      fontWeight: '500'
+    }}>
+      {children}
+    </div>
+  </div>
+);
 
 export default Timetables; 
