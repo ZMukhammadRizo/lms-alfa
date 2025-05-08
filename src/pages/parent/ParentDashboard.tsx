@@ -861,6 +861,7 @@ const StudentAvatar = styled.div`
 	font-weight: 600;
 	font-size: 18px;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	margin: 10px;
 `
 
 const StudentDetails = styled.div`
@@ -868,7 +869,7 @@ const StudentDetails = styled.div`
 `
 
 const StudentName = styled.h4`
-	margin: 0 0 4px 0;
+	margin: 0 0 4px 0px;
 	font-size: 1.25rem;
 	font-weight: 600;
 `
