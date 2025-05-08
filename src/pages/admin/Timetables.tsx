@@ -40,7 +40,8 @@ const formatTime = (hour: number, minute: number = 0): string => {
 
 // Type definitions
 interface ClassEvent {
-  id: number;
+  id: number; // Frontend temporary ID
+  dbId: string; // Actual database UUID
   title: string;
   subjectId: string;
   startTime: number; // 24-hour format (e.g., 9 for 9:00 AM)
@@ -975,7 +976,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
     assignedClass: ''
   });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [eventToDelete, setEventToDelete] = useState<number | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null); // Changed type to string | null
   const [availableCourses, setAvailableCourses] = useState<CourseData[]>([]);
   const [teacherSpecificCourses, setTeacherSpecificCourses] = useState<CourseData[]>([]); // Courses specific to a teacher
   const [isAnimating, setIsAnimating] = useState(false);
@@ -1535,7 +1536,8 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
         
         // Create and add the event
         formattedEvents.push({
-          id: finalId,
+          id: finalId, // Keep frontend ID for keys/UI state if needed
+          dbId: item.id, // Store the actual database UUID
           title: item.title || subjectNameFromTimetable || 'Untitled',
           subjectId: item.subjectId || '',
           startTime: parseInt(String(item.start_time || '9')),
@@ -1761,7 +1763,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
         end_minute: endMinute || 0,
         day: Number(formData.day),
         location: formData.location,
-        teacherid: selectedClass.teacherid ? String(selectedClass.teacherid) : null,
+        teacherId: selectedClass.teacherid ? String(selectedClass.teacherid) : null, // Corrected field name
         color: courseColor,
         classId: selectedClass.id ? String(selectedClass.id) : null,
         day_date: calculateDateForDay(Number(formData.day))
@@ -2060,6 +2062,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
             const newEvent: ClassEvent = {
               ...baseEventData,
               id: newId,
+              dbId: newRecordFromDB.id, // Add the database UUID here
               subjectId: (newRecordFromDB.subjectId || newRecordFromDB.subject_id || selectedCourse?.id || '').toString(),
               teacherid: (newRecordFromDB.teacherid || newRecordFromDB.teacher_id || selectedClass?.teacherid || '').toString(),
               classId: (newRecordFromDB.classId || newRecordFromDB.class_id || selectedClass?.id || '').toString()
@@ -2446,7 +2449,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
   };
   
   // Open delete confirmation modal
-  const openDeleteConfirmation = (id: number) => {
+  const openDeleteConfirmation = (id: string) => { // Changed parameter type to string
     setEventToDelete(id);
     setShowDeleteModal(true);
   };
@@ -2465,8 +2468,8 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
       setIsLoading(true);
       setError(null);
       
-      // Find the event in our state
-      const eventToRemove = classEvents.find(event => event.id === eventToDelete);
+      // Find the event in our state using dbId
+      const eventToRemove = classEvents.find(event => event.dbId === eventToDelete);
       if (!eventToRemove) {
         setError("Could not find the specified event to delete.");
         setEventToDelete(null);
@@ -2475,18 +2478,18 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
         return;
       }
       
-      // Supabase delete
+      // Supabase delete using the database UUID
       const { error: deleteError } = await supabase
           .from('timetable')
           .delete()
-        .eq('id', eventToRemove.id);
+        .eq('id', eventToDelete); // Use eventToDelete which holds the dbId (UUID)
       
       if (deleteError) {
         throw deleteError;
       }
       
-      // Delete was successful, update our state
-      setClassEvents(prev => prev.filter(event => event.id !== eventToDelete));
+      // Delete was successful, update our state by filtering using dbId
+      setClassEvents(prev => prev.filter(event => event.dbId !== eventToDelete));
       setSuccessMessage('Lesson successfully deleted!');
       
       // Clean up
@@ -2864,56 +2867,15 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                                   onClick={(e) => {
                                     e.stopPropagation(); // Prevent card click event
                                     console.log('Delete button clicked for event:', event);
-                                    console.log('Event ID to delete:', event.id, 'Type:', typeof event.id);
+                                    console.log('Event DB ID to delete:', event.dbId, 'Type:', typeof event.dbId);
                                     
-                                    // Get alternative identifiers in case ID is NaN
-                                    const title = event.title || '';
-                                    const startTime = event.startTime || 0;
-                                    const day = event.day;
-                                    
-                                    // First check if we have a proper ID
-                                    if (typeof event.id === 'number' && !isNaN(event.id)) {
-                                      console.log('Using numeric ID for deletion:', event.id);
-                                      openDeleteConfirmation(event.id);
-                                      return;
-                                    }
-                                    
-                                    console.log('Event ID is invalid, searching for matching event in state...');
-                                    
-                                    // Try to find a matching event in our classEvents array by properties
-                                    const matchingEvents = classEvents.filter(e => 
-                                      e.title === title && 
-                                      e.startTime === startTime && 
-                                      e.day === day
-                                    );
-                                    
-                                    console.log('Found matching events:', matchingEvents);
-                                    
-                                    if (matchingEvents.length === 1) {
-                                      // We found exactly one match, use its ID
-                                      const matchId = matchingEvents[0].id;
-                                      console.log('Found exactly one matching event, using ID:', matchId);
-                                      
-                                      if (typeof matchId === 'number' && !isNaN(matchId)) {
-                                        openDeleteConfirmation(matchId);
-                                      } else {
-                                        setError('Cannot delete: Found event has invalid ID');
-                                      }
-                                    } else if (matchingEvents.length > 1) {
-                                      // Multiple matches found, this is unusual but we'll use the first valid ID
-                                      console.log('Found multiple matching events, using first valid ID');
-                                      
-                                      const validEvent = matchingEvents.find(e => typeof e.id === 'number' && !isNaN(e.id));
-                                      
-                                      if (validEvent) {
-                                        openDeleteConfirmation(validEvent.id);
-                                      } else {
-                                        setError('Cannot delete: All matching events have invalid IDs');
-                                      }
+                                    // Use the dbId directly
+                                    if (typeof event.dbId === 'string' && event.dbId) {
+                                      console.log('Using dbId (UUID) for deletion:', event.dbId);
+                                      openDeleteConfirmation(event.dbId);
                                     } else {
-                                      // No matches found, show an error
-                                      console.error('No matching events found for deletion');
-                                      setError('Cannot delete: No matching lesson found');
+                                      console.error('Cannot delete: Event is missing a valid dbId (UUID).');
+                                      setError('Cannot delete: Missing lesson identifier.');
                                     }
                                   }}
                                 >
