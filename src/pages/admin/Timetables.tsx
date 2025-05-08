@@ -1761,7 +1761,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
         end_minute: endMinute || 0,
         day: Number(formData.day),
         location: formData.location,
-        teacherid: selectedClass.teacherid ? String(selectedClass.teacherid) : null,
+        teacherId: selectedClass.teacherid ? String(selectedClass.teacherid) : null, // Corrected field name
         color: courseColor,
         classId: selectedClass.id ? String(selectedClass.id) : null,
         day_date: calculateDateForDay(Number(formData.day))
