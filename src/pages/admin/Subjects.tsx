@@ -1851,15 +1851,9 @@ const Subjects: React.FC = () => {
                       }
                       $hasVideo={!!lesson.videourl}
                     >
-                      <FiPlay />
-                      {lesson.videourl ? 'Watch Video' : 'Upload Video'}
+                      <FiEdit2 />
+                      Edit lesson
                     </WatchButton>
-                    <EditButton 
-                      onClick={(e) => handleEditLesson(lesson, e)}
-                    >
-                    <FiEdit2 />
-                      Edit
-                    </EditButton>
                     <DeleteButton 
                       onClick={(e) => handleShowDeleteConfirmation(lesson.id, e)}
                     >

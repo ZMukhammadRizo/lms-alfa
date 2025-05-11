@@ -15,17 +15,21 @@ import AssignmentFiles from './pages/admin/AssignmentFiles'
 import AdminAssignments from './pages/admin/Assignments'
 import Classes from './pages/admin/Classes'
 import Dashboard from './pages/admin/Dashboard'
+import GroupStudents from './pages/admin/GroupStudents'
 import AdminGradesModule from './pages/admin/GradesModule'
 import LessonDetail from './pages/admin/LessonDetail'
 import LessonsManagePage from './pages/admin/LessonsManagePage'
+import MorningClasses from './pages/admin/MorningClasses'
 import NewClassPage from './pages/admin/NewClassPage'
 import ProfilePage from './pages/admin/ProfilePage'
 import Roles from './pages/admin/Roles'
 import Settings from './pages/admin/Settings'
+import SubjectGroups from './pages/admin/SubjectGroups'
 import Subjects from './pages/admin/Subjects'
 import SubjectsManagePage from './pages/admin/SubjectsManagePage'
 import Timetables from './pages/admin/Timetables'
 import Users from './pages/admin/Users'
+import WeekendClasses from './pages/admin/WeekendClasses'
 import Debug from './pages/auth/Debug'
 import Login from './pages/auth/Login'
 import AnnouncementsPage from './pages/parent/AnnouncementsPage'
@@ -130,8 +134,10 @@ function AppContent() {
 						<Route path='roles' element={<Roles />} />
 						<Route path='subjects' element={<Subjects />} />
 						<Route path='classes' element={<Classes />} />
+						<Route path='morning-classes' element={<MorningClasses />} />
+						<Route path='morning-classes/:subjectId' element={<SubjectGroups />} />
+						<Route path='morning-classes/:subjectId/groups/:groupId' element={<GroupStudents />} />
 						<Route path='assignments' element={<AdminAssignments />} />
-						<Route path='assignments/files/:id' element={<AssignmentFiles />} />
 						<Route path='grades/*' element={<AdminGradesModule />} />
 						<Route path='timetables' element={<Timetables />} />
 						<Route path='settings' element={<Settings />} />
