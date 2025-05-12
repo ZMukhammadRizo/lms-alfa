@@ -727,8 +727,11 @@ const SectionsComponent: React.FC<SectionsProps> = ({
           <FiArrowLeft />
           Back to Grades
         </BackToGradesLink>
-        <SectionPageTitle>Grade {grade} Sections</SectionPageTitle>
-        <SectionPageDescription>{sections.length} sections in Grade {grade}</SectionPageDescription>
+        <SectionPageTitle>
+          {/* Show just the grade if it's not a number, otherwise show "Grade X" */}
+          {isNaN(Number(grade)) ? `${grade} Sections` : `Grade ${grade} Sections`}
+        </SectionPageTitle>
+        <SectionPageDescription>{sections.length} sections in {isNaN(Number(grade)) ? grade : `Grade ${grade}`}</SectionPageDescription>
       </SectionHeaderContainer>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -925,7 +928,11 @@ const SectionsComponent: React.FC<SectionsProps> = ({
 
         {sections.length === 0 && (
           <EmptyState>
-            <EmptyStateText>No sections found for Grade {grade}.</EmptyStateText>
+            <EmptyStateText>No sections found for {isNaN(Number(grade)) ? grade : `Grade ${grade}`}.</EmptyStateText>
+            <EmptyStateActionButton onClick={onCreateNewSection}>
+              <FiPlus />
+              Create Your First Section
+            </EmptyStateActionButton>
           </EmptyState>
         )}
       </SectionsGrid>
@@ -1095,11 +1102,34 @@ const EmptyState = styled.div`
 `;
 
 const EmptyStateText = styled.p`
-  color: #64748b;
   font-size: 16px;
-  text-align: center;
-  max-width: 400px;
-  line-height: 1.5;
+  color: #6B7280;
+  margin: 0;
+`;
+
+const EmptyStateActionButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #4F46E5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #4338ca;
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
 `;
 
 // Add LoadingMessage styled component
@@ -1642,7 +1672,7 @@ const SelectedCount = styled.div`
 // Add the CancelButton styled component
 
 // Main component
-const Classes: React.FC = () => {
+export const Classes: React.FC = () => {
   // State for search, filters, and view mode
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('');
@@ -2091,6 +2121,15 @@ const Classes: React.FC = () => {
 
         console.log(`Fetched ${classesData?.length || 0} classes for level ID ${levelId}`);
 
+        // If no classes/sections found for this level, don't show an error - just set empty sections array
+        // This will show the "No sections found" message but still allow adding new sections
+        if (!classesData || classesData.length === 0) {
+          console.log(`No sections found for level ${selectedGradeForSections} (ID: ${levelId})`);
+          setSections([]);
+          setIsSectionsLoading(false);
+          return;
+        }
+        
         // Process each class into a section format
         const processedSections = await Promise.all(
           (classesData || []).map(async (cls) => {
@@ -2372,20 +2411,13 @@ const Classes: React.FC = () => {
       return;
     }
     
-    // Extract the grade from the class name (e.g., "Grade 10" -> "10")
-    const gradeMatch = cls.classname.match(/\d+/);
-    const gradeNumber = gradeMatch ? gradeMatch[0] : ''; 
+    // Set the selected grade/level directly from the class name
+    // This allows both numeric grades like "10" and named levels like "Middle School"
+    setSelectedGradeForSections(cls.classname);
+    setShowSections(true);
     
-    if (gradeNumber) {
-      setSelectedGradeForSections(gradeNumber);
-      setShowSections(true);
-      
-      // Reset section search when navigating to sections view
-      setSectionSearchTerm('');
-    } else {
-      // If no sections found for this grade
-      toast.warning(`No sections found for ${cls.classname}`);
-    }
+    // Reset section search when navigating to sections view
+    setSectionSearchTerm('');
   };
 
   const handleStudentStatusFilterChange = (status: string) => {
@@ -2501,8 +2533,20 @@ const Classes: React.FC = () => {
       }
     }
     
-    // Set suggested values
-    setSuggestedSectionName(`${selectedGradeForSections}${nextSectionLetter}`);
+    // Check if grade is a number (like "10") or a name (like "Middle School")
+    const isNumericGrade = !isNaN(Number(selectedGradeForSections));
+    
+    // Set suggested values based on grade type
+    let suggestedName;
+    if (isNumericGrade) {
+      // For numeric grades, use format like "10A"
+      suggestedName = `${selectedGradeForSections}${nextSectionLetter}`;
+    } else {
+      // For named grades, use format like "Middle School A"
+      suggestedName = `${selectedGradeForSections} ${nextSectionLetter}`;
+    }
+    
+    setSuggestedSectionName(suggestedName);
     setSuggestedRoomName(`Room ${nextSectionLetter}`);
     
     // Open the modal
@@ -2553,12 +2597,13 @@ const Classes: React.FC = () => {
       console.log('Found level ID:', levelId, 'for grade', selectedGradeForSections);
 
       // 3. Extract section letter and Find or Create the Category ID
-      const sectionLetterMatch = sectionName.match(/([A-Z])$/i); // Match last letter(s), case-insensitive
+      // Modified regex to extract the last letter - works for both "10A" and "Middle School A"
+      const sectionLetterMatch = sectionName.match(/([A-Z])$/i); // Match last letter, case-insensitive
       const sectionLetter = sectionLetterMatch ? sectionLetterMatch[1].toUpperCase() : null;
 
       if (!sectionLetter) {
           console.error('Could not extract section letter from name:', sectionName);
-          toast.error('Invalid section name format. Name should end with a letter (e.g., 10A).');
+          toast.error('Invalid section name format. Section name should end with a letter (e.g., "10A" or "Middle School A").');
           setIsAddSectionModalOpen(false);
           return;
       }
@@ -5281,5 +5326,3 @@ const StyledSelect = styled.select`
     cursor: not-allowed;
   }
 `;
-
-export default Classes;
