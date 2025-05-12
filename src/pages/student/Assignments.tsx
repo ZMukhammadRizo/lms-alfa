@@ -11,7 +11,7 @@ import {
 	FiSearch,
 	FiVideo,
 } from 'react-icons/fi'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
 import Card from '../../components/common/Card'
@@ -174,31 +174,6 @@ const Assignments: React.FC = () => {
 		}
 	}
 
-	// Local implementation of getDaysRemaining
-	const getLocalDaysRemaining = (dueDateStr: string): number => {
-		try {
-			const dueDate = new Date(dueDateStr)
-			const today = new Date()
-
-			// If dueDate is invalid, return 0
-			if (isNaN(dueDate.getTime())) {
-				return 0
-			}
-
-			// Set time to 00:00:00 for accurate day calculation
-			today.setHours(0, 0, 0, 0)
-			dueDate.setHours(0, 0, 0, 0)
-
-			const differenceMs = dueDate.getTime() - today.getTime()
-			const differenceDays = Math.ceil(differenceMs / (1000 * 3600 * 24))
-
-			return differenceDays
-		} catch (error) {
-			console.error('Error calculating days remaining:', error)
-			return 0
-		}
-	}
-
 	// Get status text
 	const getStatusText = (assignment: ExtendedAssignment): string => {
 		const { due_date, submission } = assignment
@@ -214,6 +189,31 @@ const Assignments: React.FC = () => {
 		// Check if assignment has been submitted but not graded
 		if (submission) {
 			return 'Submitted'
+		}
+
+		// Local implementation of getDaysRemaining
+		const getLocalDaysRemaining = (dueDateStr: string): number => {
+			try {
+				const dueDate = new Date(dueDateStr)
+				const today = new Date()
+
+				// If dueDate is invalid, return 0
+				if (isNaN(dueDate.getTime())) {
+					return 0
+				}
+
+				// Set time to 00:00:00 for accurate day calculation
+				today.setHours(0, 0, 0, 0)
+				dueDate.setHours(0, 0, 0, 0)
+
+				const differenceMs = dueDate.getTime() - today.getTime()
+				const differenceDays = Math.ceil(differenceMs / (1000 * 3600 * 24))
+
+				return differenceDays
+			} catch (error) {
+				console.error('Error calculating days remaining:', error)
+				return 0
+			}
 		}
 
 		// If not submitted, check due date
@@ -510,8 +510,8 @@ const Assignments: React.FC = () => {
 						</AssignmentContent>
 
 						<AssignmentFooter>
-							<ViewDetailsButton onClick={() => openAssignmentDetails(assignment)}>
-								View Details
+							<ViewDetailsButton>
+								<Link to={`/student/assignments/${assignment.id}`}>View Details</Link>
 							</ViewDetailsButton>
 						</AssignmentFooter>
 					</AssignmentCard>
