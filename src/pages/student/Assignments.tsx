@@ -174,6 +174,31 @@ const Assignments: React.FC = () => {
 		}
 	}
 
+	// Local implementation of getDaysRemaining
+	const getLocalDaysRemaining = (dueDateStr: string): number => {
+		try {
+			const dueDate = new Date(dueDateStr)
+			const today = new Date()
+
+			// If dueDate is invalid, return 0
+			if (isNaN(dueDate.getTime())) {
+				return 0
+			}
+
+			// Set time to 00:00:00 for accurate day calculation
+			today.setHours(0, 0, 0, 0)
+			dueDate.setHours(0, 0, 0, 0)
+
+			const differenceMs = dueDate.getTime() - today.getTime()
+			const differenceDays = Math.ceil(differenceMs / (1000 * 3600 * 24))
+
+			return differenceDays
+		} catch (error) {
+			console.error('Error calculating days remaining:', error)
+			return 0
+		}
+	}
+
 	// Get status text
 	const getStatusText = (assignment: ExtendedAssignment): string => {
 		const { due_date, submission } = assignment
@@ -223,31 +248,6 @@ const Assignments: React.FC = () => {
 	const handleCourseSelect = (courseId: string | null) => {
 		setSelectedCourse(courseId)
 		setShowCourseDropdown(false)
-	}
-
-	// Local implementation of getDaysRemaining
-	const getLocalDaysRemaining = (dueDateStr: string): number => {
-		try {
-			const dueDate = new Date(dueDateStr)
-			const today = new Date()
-
-			// If dueDate is invalid, return 0
-			if (isNaN(dueDate.getTime())) {
-				return 0
-			}
-
-			// Set time to 00:00:00 for accurate day calculation
-			today.setHours(0, 0, 0, 0)
-			dueDate.setHours(0, 0, 0, 0)
-
-			const differenceMs = dueDate.getTime() - today.getTime()
-			const differenceDays = Math.ceil(differenceMs / (1000 * 3600 * 24))
-
-			return differenceDays
-		} catch (error) {
-			console.error('Error calculating days remaining:', error)
-			return 0
-		}
 	}
 
 	// Get course name for dropdown display
