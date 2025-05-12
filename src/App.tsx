@@ -138,14 +138,14 @@ function AppContent() {
 						<Route path='profile' element={<ProfilePage />} />
 						<Route path='announcements' element={<AdminAnnouncements />} />
 						<Route path='announcements/create' element={<AnnouncementCreate />} />
-						<Route path='new-class' element={<NewClassPage />} />
-						<Route path='subjects' element={<SubjectsManagePage />} />
 						<Route path='subjects/:subjectId/lessons' element={<LessonsManagePage />} />
 						<Route path='lessons/:id' element={<LessonDetail />} />
 					</Route>
 
 					{/* Teacher routes */}
 					<Route path='/teacher' element={<TeacherLayout />}>
+						<Route path='subjects' element={<SubjectsManagePage />} />
+						<Route path='new-class' element={<NewClassPage />} />
 						<Route path='dashboard' element={<TeacherDashboard />} />
 						<Route path='profile' element={<ProfilePage />} />
 						<Route path='classes' element={<TeacherClasses />} />

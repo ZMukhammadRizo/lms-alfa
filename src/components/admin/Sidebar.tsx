@@ -25,6 +25,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import styled, { css } from 'styled-components'
 import { useAuth } from '../../contexts/AuthContext'
 import LogoutButton from '../common/LogoutButton'
+import { moduleLeaderMenu } from '../teacher/TeacherSidebar'
 
 interface SidebarProps {
 	isCollapsed: boolean
@@ -271,7 +272,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 		if (userInfo) {
 			try {
 				const parsedInfo = JSON.parse(userInfo)
-				return parsedInfo.role || 'Student'
+				if (parsedInfo.role && typeof parsedInfo.role === 'object') {
+					if (parsedInfo.role.parent && parsedInfo.role.parent.name) {
+						return parsedInfo.role.parent.name || 'Student'
+					}
+
+					return parsedInfo.role.name || 'Student'
+				}
+
+				if (parsedInfo.role && typeof parsedInfo.role === 'string') {
+					return parsedInfo.role || 'Student'
+				}
+
+				return 'Student'
 			} catch (error) {
 				console.error('Error parsing user info:', error)
 				return 'Student'
@@ -286,7 +299,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 		if (userInfo) {
 			try {
 				const parsedInfo = JSON.parse(userInfo)
-				return parsedInfo.isModuleLeader || false
+
+				if (parsedInfo.role && typeof parsedInfo.role === 'object') {
+					return parsedInfo.role.name === 'ModuleLeader' || false
+				}
+
+				if (parsedInfo.role && typeof parsedInfo.role === 'string') {
+					return parsedInfo.role === 'ModuleLeader' || false
+				}
+
+				if (parsedInfo.isModuleLeader) {
+					return parsedInfo.isModuleLeader || false
+				}
+
+				return false
 			} catch (error) {
 				console.error('Error parsing user info:', error)
 				return false
@@ -295,8 +321,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 		return user?.isModuleLeader || false
 	}
 
+	const getUserParentRole = () => {
+		const userInfo = localStorage.getItem('lms_user')
+		if (userInfo) {
+			const parsedInfo = JSON.parse(userInfo)
+			if (parsedInfo.role && typeof parsedInfo.role === 'object') {
+				return parsedInfo.role.parent.name || 'Student'
+			}
+
+			return 'Unknown'
+		}
+
+		return 'Unknown'
+	}
+
 	const role = getUserRole()
+	const parentRole = getUserParentRole()
 	console.log('Detected user role:', role)
+	console.log('Detected user parent role:', parentRole)
 
 	// Admin menu items
 	const adminMenu = [
@@ -308,12 +350,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 		{ path: '/admin/assignments', icon: <FiFileText />, label: 'Assignments' },
 		{ path: '/admin/grades', icon: <FiClipboard />, label: 'Grades' },
 		{ path: '/admin/timetables', icon: <FiCalendar />, label: 'Timetables' },
-	]
-
-	// Module leader specific menu items
-	const moduleLeaderMenu = [
-		{ path: '/admin/new-class', icon: <FiPlus />, label: 'Create New Class' },
-		{ path: '/admin/subjects', icon: <FiBookOpen />, label: 'Manage Subjects' },
 	]
 
 	// Announcements submenu for admin
@@ -328,6 +364,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 		{ path: '/teacher/students', icon: <FiUsers />, label: 'Students' },
 		{ path: '/teacher/schedule', icon: <FiCalendar />, label: 'Schedule' },
 	]
+
+	console.log(role);
+	console.log(parentRole);
+
 
 	return (
 		<>
@@ -404,34 +444,35 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 											subItems={announcementsSubItems}
 											onMobileClick={handleNavItemClick}
 										/>
-
-										{isModuleLeader() && (
-											<>
-												<AnimatePresence>
-													{(!isCollapsed || isMobile) && (
-														<SectionLabel
-															initial={{ opacity: 0 }}
-															animate={{ opacity: 1 }}
-															exit={{ opacity: 0 }}
-															transition={{ delay: 0.2 }}
-														>
-															Module Leader
-														</SectionLabel>
-													)}
-												</AnimatePresence>
-
-												{moduleLeaderMenu.map(item => (
-													<MenuItem
-														key={item.path}
-														icon={item.icon}
-														label={item.label}
-														to={item.path}
-														isCollapsed={isMobile ? false : isCollapsed}
-													/>
-												))}
-											</>
-										)}
 									</>
+								)}
+								{role === 'ModuleLeader' || isModuleLeader() ? (
+									<>
+										<AnimatePresence>
+											{(!isCollapsed || isMobile) && (
+												<SectionLabel
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													exit={{ opacity: 0 }}
+													transition={{ delay: 0.2 }}
+												>
+													Module Leader
+												</SectionLabel>
+											)}
+										</AnimatePresence>
+
+										{moduleLeaderMenu.map(item => (
+											<MenuItem
+												key={item.path}
+												icon={item.icon}
+												label={item.label}
+												to={item.path}
+												isCollapsed={isMobile ? false : isCollapsed}
+											/>
+										))}
+									</>
+								) : (
+									''
 								)}
 								{role === 'Teacher' && (
 									<>
@@ -447,6 +488,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 										))}
 									</>
 								)}
+								{role}
 							</MenuSection>
 
 							<MenuSection>

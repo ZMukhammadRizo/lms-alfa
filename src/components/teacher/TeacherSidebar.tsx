@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 import {
 	FiBook,
+	FiBookOpen,
 	FiCalendar,
 	FiCheckSquare,
 	FiChevronLeft,
@@ -11,6 +12,7 @@ import {
 	FiHome,
 	FiMenu,
 	FiMessageSquare,
+	FiPlus,
 	FiSettings,
 	FiUser,
 	FiX,
@@ -33,6 +35,11 @@ interface MenuItemProps {
 	isCollapsed: boolean
 	onMobileClick?: () => void
 }
+
+// Module leader specific menu items
+export const moduleLeaderMenu = [
+	{ path: '/teacher/subjects', icon: <FiBookOpen />, label: 'Manage Subjects' },
+]
 
 const MenuItem: React.FC<MenuItemProps> = ({ icon, label, to, isCollapsed, onMobileClick }) => {
 	const location = useLocation()
@@ -124,11 +131,6 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 		return user?.fullName || user?.username || 'User'
 	}
 
-	// Get user role display
-	const getUserRole = () => {
-		return user?.role || 'User'
-	}
-
 	// Add scroll lock functionality
 	useEffect(() => {
 		if (isMobile) {
@@ -167,6 +169,73 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 			}
 		}
 	}
+
+	const getUserRealRole = () => {
+		const userInfo = localStorage.getItem('lms_user')
+		if (userInfo) {
+			try {
+				const parsedInfo = JSON.parse(userInfo)
+				if (parsedInfo.role && typeof parsedInfo.role === 'object') {
+					return parsedInfo.role.name || 'Student'
+				}
+
+				if (parsedInfo.role && typeof parsedInfo.role === 'string') {
+					return parsedInfo.role || 'Student'
+				}
+
+				return 'Student'
+			} catch (error) {
+				console.error('Error parsing user info:', error)
+				return 'Student'
+			}
+		}
+		return user?.role || 'Student'
+	}
+
+	// Check if user is a module leader
+	const isModuleLeader = () => {
+		const userInfo = localStorage.getItem('lms_user')
+		if (userInfo) {
+			try {
+				const parsedInfo = JSON.parse(userInfo)
+
+				if (parsedInfo.role && typeof parsedInfo.role === 'object') {
+					return parsedInfo.role.name === 'ModuleLeader' || false
+				}
+
+				if (parsedInfo.role && typeof parsedInfo.role === 'string') {
+					return parsedInfo.role === 'ModuleLeader' || false
+				}
+
+				if (parsedInfo.isModuleLeader) {
+					return parsedInfo.isModuleLeader || false
+				}
+
+				return false
+			} catch (error) {
+				console.error('Error parsing user info:', error)
+				return false
+			}
+		}
+		return user?.isModuleLeader || false
+	}
+
+	const getUserParentRole = () => {
+		const userInfo = localStorage.getItem('lms_user')
+		if (userInfo) {
+			const parsedInfo = JSON.parse(userInfo)
+			if (parsedInfo.role && typeof parsedInfo.role === 'object') {
+				return parsedInfo.role.parent.name || 'Student'
+			}
+
+			return 'Unknown'
+		}
+
+		return 'Unknown'
+	}
+
+	const realRole = getUserRealRole()
+	const parentRole = getUserParentRole()
 
 	return (
 		<>
@@ -273,6 +342,29 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 									onMobileClick={handleNavItemClick}
 								/>
 							</MenuSection>
+
+							{parentRole === 'Teacher' && realRole === 'ModuleLeader' ? (
+								<MenuSection>
+									<SectionLabel
+										initial={{ opacity: 0 }}
+										animate={{ opacity: 1 }}
+										exit={{ opacity: 0 }}
+										transition={{ delay: 0.2 }}
+									>
+										MODULE LEADER
+									</SectionLabel>
+									{moduleLeaderMenu.map(item => (
+										<MenuItem
+											key={item.path}
+											icon={item.icon}
+											label={item.label}
+											to={item.path}
+											isCollapsed={isMobile ? false : isCollapsed}
+											onMobileClick={handleNavItemClick}
+										/>
+									))}
+								</MenuSection>
+							) : null}
 
 							<MenuSection>
 								<AnimatePresence>

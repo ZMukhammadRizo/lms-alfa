@@ -2,7 +2,17 @@ import React, { createContext, ReactNode, useContext, useEffect, useState } from
 import { useLocation, useNavigate } from 'react-router-dom'
 import supabase from '../config/supabaseClient'
 
-type UserRole = 'Admin' | 'Teacher' | 'Student'
+type UserRole =
+	| 'Admin'
+	| 'Teacher'
+	| 'Student'
+	| 'Parent'
+	| {
+			name: string
+			parent: {
+				name: string
+			}
+	  }
 
 export interface User {
 	id: string
@@ -24,7 +34,7 @@ interface AuthContextType {
 	login: (
 		username: string,
 		password: string
-	) => Promise<{ ok: boolean; role: string | null; msg: string }>
+	) => Promise<{ ok: boolean; role: UserRole | null; msg: string }>
 	logout: () => void
 	updateProfile: (
 		userId: string,
@@ -40,6 +50,9 @@ interface AuthContextType {
 		msg: string
 	}
 	loading: boolean
+	getRoleName: (role: UserRole) => string
+	getParentRoleName: (role: UserRole) => string | null
+	getEffectiveRoleName: (role: UserRole) => string
 }
 
 const LOCAL_USER_KEY = 'lms_user'
@@ -56,6 +69,47 @@ export const useAuth = () => {
 
 interface AuthProviderProps {
 	children: ReactNode
+}
+
+// Helper function to extract the role name
+export const getRoleName = (role: UserRole): string => {
+	if (typeof role === 'string') {
+		return role
+	}
+
+	if (role && typeof role === 'object' && role.name) {
+		return role.name
+	}
+
+	return 'Unknown'
+}
+
+// Helper function to extract the parent role name
+export const getParentRoleName = (role: UserRole): string | null => {
+	if (typeof role === 'string') {
+		return null // Base roles don't have parents
+	}
+
+	if (role && typeof role === 'object' && role.parent && role.parent.name) {
+		return role.parent.name
+	}
+
+	return null
+}
+
+// Helper function to get the effective role name (parent role if it exists, otherwise the role name)
+export const getEffectiveRoleName = (role: UserRole): string => {
+	const parentRole = getParentRoleName(role)
+	return parentRole || getRoleName(role)
+}
+
+// Helper function to get the dashboard route based on role
+export const getDashboardRoute = (role: UserRole): string => {
+	console.log(`Role in the getDashboardRoute:`, role)
+
+	// Use the effective role (parent if available, otherwise the role itself)
+	const effectiveRole = getEffectiveRoleName(role)
+	return `/${effectiveRole.toLowerCase()}/dashboard`
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -107,22 +161,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 				// ✅ Fetch role if token refresh worked
 				const { data: userData } = await supabase
 					.from('users')
-					.select('*')
+					.select(
+						`
+    *,
+    role:roles!users_role_id_fkey (
+      name,
+      parent:parent_role (
+        name
+      )
+    )
+  `
+					)
 					.eq('id', refreshedSession.session.user.id)
 					.single()
-
 				if (userData && mounted) {
 					const savedUser = localStorage.getItem(LOCAL_USER_KEY)
 					if (savedUser) {
-						setUser({
+						const userWithRole = {
 							...userData,
 							username: userData.email?.split('@')[0] ?? '',
 							fullName: `${userData.firstName} ${userData.lastName}`,
 							role: userData.role,
 							isRoleManager: userData.is_role_manager,
 							isModuleLeader: userData.is_module_leader,
-						})
+						}
+
+						setUser(userWithRole)
 						setIsAuthenticated(true)
+
+						console.log('User role:', userData.role)
+						console.log('Role name:', getRoleName(userData.role))
+						console.log('Parent role name:', getParentRoleName(userData.role))
+						console.log('Effective role name:', getEffectiveRoleName(userData.role))
 
 						// Optional auto-redirect to dashboard
 						const currentPath = location.pathname
@@ -130,7 +200,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 							currentPath === '/' || currentPath === '/login' || currentPath === '/register'
 
 						if (isUnauthenticatedRoute) {
-							navigate(`/${userData.role.toLowerCase()}/dashboard`, { replace: true })
+							// Use the helper function to determine the dashboard route
+							const dashboardRoute = getDashboardRoute(userData.role)
+							console.log(`Dashboard route: ${dashboardRoute}`)
+
+							navigate(dashboardRoute, { replace: true })
 						}
 					}
 				}
@@ -157,7 +231,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 	const login = async (
 		email: string,
 		password: string
-	): Promise<{ ok: boolean; role: string | null; msg: string }> => {
+	): Promise<{ ok: boolean; role: UserRole | null; msg: string }> => {
 		console.log('Attempting login:', { email })
 
 		const {
@@ -173,7 +247,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		// Fetch user role from database
 		const { data: userData, error: roleError } = await supabase
 			.from('users')
-			.select('role')
+			.select(
+				`
+			role:roles!users_role_id_fkey (
+      name,
+      parent:parent_role (
+        name
+      )
+    )
+			`
+			)
 			.eq('id', supabaseUser.id)
 			.single()
 
@@ -196,8 +279,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		const { error: userLastLoginError } = await supabase
 			.from('users')
 			.update({
-				// identify user's timezone and add it to the lastLogin
-
 				lastLogin: new Date().toISOString(),
 			})
 			.eq('id', supabaseUser.id)
@@ -206,9 +287,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 			console.error('Error updating user last login:', userLastLoginError)
 		}
 
-		const role = userData.role as UserRole
+		const role = userData.role as unknown as UserRole
 
-		console.log(supabaseUser.email?.split('@')[0])
+		console.log('Role data from login:', role)
+		console.log('Role name:', getRoleName(role))
+		console.log('Parent role name:', getParentRoleName(role))
+		console.log('Effective role name:', getEffectiveRoleName(role))
 
 		const newUser: User = {
 			fullName: `${userNames.firstName} ${userNames.lastName}`,
@@ -228,7 +312,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(newUser))
 
 		console.log('Login successful, user set:', newUser)
-		console.log('Session: ', session)
+
+		// Navigate based on the role's parent or the role itself
+		const dashboardRoute = getDashboardRoute(role)
+		navigate(dashboardRoute, { replace: true })
 
 		return { ok: true, role, msg: 'Login successful' }
 	}
@@ -275,7 +362,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 				.from('users')
 				.update({ ...fields })
 				.eq('id', userId)
-				.select()
+				.select(
+					`
+						 *,
+				role:roles!users_role_id_fkey (
+      name,
+      parent:parent_role (
+        name
+      )
+    )
+					`
+				)
 				.single()
 
 			if (error || !data) {
@@ -283,16 +380,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 				return { ok: false, msg: 'Failed to update profile', profile: null }
 			}
 
-			console.log(data)
-			setUser({
+			console.log('Updated profile data:', data)
+			console.log('Role name:', getRoleName(data.role))
+			console.log('Parent role name:', getParentRoleName(data.role))
+
+			const updatedUser = {
 				...data,
 				username: data.email?.split('@')[0] ?? '',
 				fullName: `${data.firstName} ${data.lastName}`,
 				role: data.role,
 				isModuleLeader: data.is_module_leader,
-			})
-			localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(data))
-			return { ok: true, msg: 'Profile updated successfully', profile: data }
+			}
+
+			setUser(updatedUser)
+			localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(updatedUser))
+			return { ok: true, msg: 'Profile updated successfully', profile: updatedUser }
 		} catch (error) {
 			console.error('Error during profile update:', error)
 			return { ok: false, msg: 'Failed to update profile', profile: null }
@@ -327,8 +429,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 				.from('users')
 				.update({ password: _newPassword })
 				.eq('id', user.id)
-				.select()
-				.single()
+				.select(
+					`
+						 *,
+						role:roles!users_role_id_fkey (
+      name,
+      parent:parent_role (
+        name
+      )
+    )
+					`
+				)
 
 			if (dbError || !data) {
 				console.error('Error updating password in database:', dbError)
@@ -336,7 +447,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 			}
 
 			console.log('Password updated successfully:', data)
-			console.log('Password updated successfully (auth):', authData.user)
 
 			// Update local user state
 			const updatedUser = { ...user, password: _newPassword }
@@ -362,6 +472,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 				loading,
 				updatePassword,
 				isRoleManager,
+				getRoleName: role => getRoleName(role),
+				getParentRoleName: role => getParentRoleName(role),
+				getEffectiveRoleName: role => getEffectiveRoleName(role),
 			}}
 		>
 			{children}

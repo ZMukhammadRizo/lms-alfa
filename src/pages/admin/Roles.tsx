@@ -295,7 +295,7 @@ const Roles: React.FC = () => {
 				const { count, error: userCountsError } = await supabase
 					.from('users')
 					.select('*', { count: 'exact' })
-					.eq('role_id', role.id)
+					.eq('role', role.name)
 
 				if (userCountsError) {
 					console.error('Error fetching user count:', userCountsError)
