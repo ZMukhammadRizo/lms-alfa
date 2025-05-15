@@ -12,6 +12,8 @@ import {
 	FiTrash2,
 	FiUsers,
 	FiX,
+	FiEdit,
+	FiUploadCloud,
 } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -19,15 +21,80 @@ import Button from '../../components/common/Button'
 import ConfirmationModal from '../../components/common/ConfirmationModal'
 import supabase from '../../config/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
-import { useAnnouncements } from '../../stores/useAnnouncementStore'
+import { useAnnouncements, UpdateAnnouncementData } from '../../stores/useAnnouncementStore'
 import { showError } from '../../utils/toast'
+
+// Define styled components used by the form
+const FormGroup = styled.div<{ flex?: number }>`
+	margin-bottom: 16px;
+	flex: ${props => props.flex || 1};
+`
+
+const FormLabel = styled.label`
+	display: block;
+	margin-bottom: 8px;
+	font-size: 14px;
+	font-weight: 500;
+	color: ${props => props.theme.colors.text.primary};
+`
+
+const FormInput = styled.input<{ isStyledFile?: boolean }>`
+	width: 100%;
+	padding: 10px 12px;
+	font-size: 14px;
+	border: 1px solid ${props => props.theme.colors.border.light};
+	border-radius: 6px;
+	background-color: ${props => props.theme.colors.background.primary};
+	color: ${props => props.theme.colors.text.primary};
+
+	&:focus {
+		outline: none;
+		border-color: ${props => props.theme.colors.primary[500]};
+		box-shadow: 0 0 0 2px ${props => props.theme.colors.primary[100]};
+	}
+
+	&:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+
+	${props => props.isStyledFile && `
+		display: none; // Hide the actual file input
+	`}
+`
+
+const FormSelect = styled.select`
+	width: 100%;
+	padding: 10px 12px;
+	font-size: 14px;
+	border: 1px solid ${props => props.theme.colors.border.light};
+	border-radius: 6px;
+	background-color: ${props => props.theme.colors.background.primary};
+	color: ${props => props.theme.colors.text.primary};
+
+	&:focus {
+		outline: none;
+		border-color: ${props => props.theme.colors.primary[500]};
+		box-shadow: 0 0 0 2px ${props => props.theme.colors.primary[100]};
+	}
+
+	&:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+`
 
 interface AnnouncementFormData {
 	title: string
 	content: string
 	isImportant: boolean
-	targetAudience: 'all' | 'student' | 'teacher' | 'admin'
+	targetAudience: string
 	created_by: string
+	photo_file?: File | null
+	video_file?: File | null
+	// For display and removal logic
+	current_photo_url?: string | null
+	current_video_url?: string | null
 }
 
 const emptyFormData: AnnouncementFormData = {
@@ -36,6 +103,10 @@ const emptyFormData: AnnouncementFormData = {
 	isImportant: false,
 	targetAudience: 'all',
 	created_by: 'Admin',
+	photo_file: null,
+	video_file: null,
+	current_photo_url: null,
+	current_video_url: null,
 }
 
 interface Announcement {
@@ -52,9 +123,9 @@ interface Announcement {
 }
 
 const Announcements: React.FC = () => {
-	const { createAnnouncement, deleteAnnouncement, isLoading, error } = useAnnouncements()
+	const { createAnnouncement, deleteAnnouncement, updateAnnouncement, isLoading, error } = useAnnouncements()
 	const { user } = useAuth()
-	const [isCreating, setIsCreating] = useState(false)
+	const [isFormOpen, setIsFormOpen] = useState(false)
 	const [formData, setFormData] = useState<AnnouncementFormData>(emptyFormData)
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 	const [selectedAnnouncementId, setSelectedAnnouncementId] = useState<string | null>(null)
@@ -68,6 +139,12 @@ const Announcements: React.FC = () => {
 	const [roles, setRoles] = useState<any[]>([])
 	const [announcements, setAnnouncements] = useState<Announcement[]>([])
 	const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(false)
+	const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null)
+	const [isDraggingPhoto, setIsDraggingPhoto] = useState(false)
+	const [isDraggingVideo, setIsDraggingVideo] = useState(false)
+	
+	// Dedicated state for audience selection to troubleshoot select issues
+	const [selectedAudience, setSelectedAudience] = useState('all');
 
 	// Show success message for 3 seconds then hide it
 	useEffect(() => {
@@ -131,22 +208,77 @@ const Announcements: React.FC = () => {
 		console.log(filterChips)
 	}, [filterChips])
 
+	// Replace the handleAudienceChange function with this improved version
+	const handleAudienceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+		const value = e.target.value;
+		console.log(`*** Direct audience change handler - changing to: '${value}'`);
+		
+		// Update both state variables
+		setSelectedAudience(value);
+		setFormData(prev => ({...prev, targetAudience: value}));
+		
+		// Wait for the next rendering cycle and then manually update all select elements
+		setTimeout(() => {
+			const selects = document.querySelectorAll('select[name="targetAudience"]');
+			console.log(`Found ${selects.length} audience selects to update`);
+			
+			selects.forEach(select => {
+				(select as HTMLSelectElement).value = value;
+			});
+			
+			// Force update select elements in the create form too - be more specific
+			const createFormSelect = document.querySelector('.FormCard select[name="targetAudience"]');
+			if (createFormSelect) {
+				(createFormSelect as HTMLSelectElement).value = value;
+			}
+			
+			// Another approach is to force a re-render of the entire form
+			document.querySelectorAll('select').forEach(select => {
+				// Simulate a change event to ensure the browser updates the visual display
+				const event = new Event('change', { bubbles: true });
+				select.dispatchEvent(event);
+			});
+		}, 50); // Longer timeout to ensure DOM is ready
+	};
+
+	// Original form change handler
 	const handleFormChange = (
 		e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
 	) => {
-		const { name, value, type } = e.target
+		const { name, value, type } = e.target;
+		
+		// Skip targetAudience as it's handled by handleAudienceChange
+		if (name === 'targetAudience') {
+			console.log(`*** handleFormChange - targetAudience is now handled separately, value was: '${value}'`);
+			return;
+		}
 
 		if (type === 'checkbox') {
-			const checked = (e.target as HTMLInputElement).checked
-			setFormData(prev => ({ ...prev, [name]: checked }))
+			const checked = (e.target as HTMLInputElement).checked;
+			setFormData(prev => ({ ...prev, [name]: checked }));
 		} else {
-			setFormData(prev => ({ ...prev, [name]: value }))
+			// Ensure value is a string before trimming, then trim
+			const finalValue = typeof value === 'string' ? value.trim() : value;
+			setFormData(prev => {
+				const newState = { ...prev, [name]: finalValue };
+				return newState;
+			});
 		}
-	}
+	};
 
+	// Ensure selectedAudience stays in sync when formData.targetAudience changes
 	useEffect(() => {
-		console.log(formData)
-	}, [formData])
+		console.log(`*** useEffect triggered by formData - formData.targetAudience: '${formData.targetAudience}'`);
+		if (formData.targetAudience !== selectedAudience) {
+			console.log(`*** Syncing selectedAudience to match formData.targetAudience: '${formData.targetAudience}'`);
+			setSelectedAudience(formData.targetAudience);
+		}
+	}, [formData]);
+
+	// Monitor selectedAudience changes
+	useEffect(() => {
+		console.log(`*** selectedAudience changed to: '${selectedAudience}'`);
+	}, [selectedAudience]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
@@ -159,40 +291,115 @@ const Announcements: React.FC = () => {
 		setFormSubmitting(true)
 		setFormError(null)
 		try {
-			const success = await createAnnouncement({
-				...formData,
-				targetAudience:
-					formData.targetAudience.charAt(0).toUpperCase() + formData.targetAudience.slice(1),
-				isImportant: formData.isImportant,
-				created_by: user?.id || 'Admin',
-				created_at: new Date().toISOString(),
-				created_by_name: user?.firstName + ' ' + user?.lastName || user?.role,
-			})
-
-			if (success) {
-				setIsCreating(false)
-				setFormData(emptyFormData)
-				setSuccessMessage('Announcement created successfully!')
+			if (editingAnnouncement) {
+				// For updating an existing announcement
+				const updateData: UpdateAnnouncementData = {
+					title: formData.title,
+					content: formData.content,
+					isImportant: formData.isImportant,
+					targetAudience: formData.targetAudience,
+					photo_file: formData.photo_file,
+					video_file: formData.video_file,
+					// Properly handle photo/video removal
+					photo_url: formData.current_photo_url === null ? null : (editingAnnouncement?.photo_url || null),
+					video_url: formData.current_video_url === null ? null : (editingAnnouncement?.video_url || null),
+					photo_name: editingAnnouncement.photo_name,
+					video_name: editingAnnouncement.video_name,
+				};
+				
+				console.log('Submitting update with data:', {
+					formState: formData,
+					updateData: updateData,
+					currentPhotoUrl: formData.current_photo_url,
+					photoUrlInRequest: updateData.photo_url
+				});
+				
+				// Call updateAnnouncement from the store
+				const success = await updateAnnouncement(editingAnnouncement.id, updateData);
+				
+				if (success) {
+					setIsFormOpen(false);
+					setEditingAnnouncement(null);
+					setFormData(emptyFormData);
+					setSuccessMessage('Announcement updated successfully!');
+					await handleRefresh(); // Refresh the list
+				} else {
+					setFormError('Failed to update announcement. Please try again.');
+				}
 			} else {
-				setFormError('Failed to create announcement. Please try again.')
+				// For creating a new announcement
+				const createData = {
+					...formData,
+					targetAudience:
+						formData.targetAudience.charAt(0).toUpperCase() + formData.targetAudience.slice(1),
+					isImportant: formData.isImportant,
+					created_by: user?.id || 'Admin',
+					created_at: new Date().toISOString(),
+					created_by_name: user?.firstName + ' ' + user?.lastName || user?.role,
+					photo_file: formData.photo_file, // Pass the file for creation
+					video_file: formData.video_file,
+				};
+				
+				const success = await createAnnouncement(createData);
+
+				if (success) {
+					setIsFormOpen(false)
+					setFormData(emptyFormData)
+					setSuccessMessage('Announcement created successfully!')
+					setSelectedAudience('all')
+					await handleRefresh(); // Refresh the list
+				} else {
+					setFormError('Failed to create announcement. Please try again.')
+				}
 			}
 		} catch (err) {
-			console.error('Error creating announcement:', err)
-			setFormError('An unexpected error occurred. Please try again.')
+			console.error('Error submitting form:', err)
+			const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
+			setFormError(`Error: ${errorMessage}. Please try again.`)
 		} finally {
 			setFormSubmitting(false)
 		}
 	}
 
-	const handleCancelCreate = () => {
-		setIsCreating(false)
+	const handleCancelForm = () => {
+		setIsFormOpen(false)
+		setEditingAnnouncement(null)
 		setFormData(emptyFormData)
+		setSelectedAudience('all')
 		setFormError(null)
 	}
 
 	const handleDeleteClick = (id: string) => {
 		setSelectedAnnouncementId(id)
 		setDeleteConfirmOpen(true)
+	}
+
+	const handleEditClick = (announcement: Announcement) => {
+		console.log('Edit announcement:', announcement);
+		console.log('Photo URL:', announcement.photo_url);
+		console.log('Video URL:', announcement.video_url);
+		
+		const audienceValue = announcement.targetAudience.toLowerCase().trim();
+		console.log(`*** Setting audience for edit to: '${audienceValue}'`);
+		
+		setEditingAnnouncement(announcement);
+		setFormData({
+			title: announcement.title,
+			content: announcement.content,
+			isImportant: announcement.isImportant,
+			targetAudience: audienceValue,
+			created_by: announcement.created_by,
+			photo_file: null, 
+			video_file: null,
+			current_photo_url: announcement.photo_url || null, 
+			current_video_url: announcement.video_url || null,
+		});
+		
+		// Set the dedicated audience state too
+		setSelectedAudience(audienceValue);
+		
+		setIsFormOpen(true);
+		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
 	const handleConfirmDelete = async () => {
@@ -306,7 +513,13 @@ const Announcements: React.FC = () => {
 
 				{canManageAnnouncements && (
 					<CreateAnnouncementButton
-						onClick={() => navigate('/admin/announcements/create')}
+						onClick={() => {
+							setEditingAnnouncement(null);
+							setFormData(emptyFormData);
+							setSelectedAudience('all');
+							setIsFormOpen(true);
+							setFormError(null);
+						}}
 						startIcon={<FiPlus />}
 						variant='primary'
 						disabled={isLoading}
@@ -383,9 +596,21 @@ const Announcements: React.FC = () => {
 				)}
 			</FilterChipsContainer>
 
-			{isCreating && (
+			{isFormOpen && (
 				<FormCard>
-					<CardTitle>Create New Announcement</CardTitle>
+					<CardHeader>
+						<CardTitle>{editingAnnouncement ? 'Edit Announcement' : 'Create New Announcement'}</CardTitle>
+						{editingAnnouncement && (
+							<EditingBadge>
+								<FiEdit size={14} />
+								<span>Editing mode</span>
+							</EditingBadge>
+						)}
+						<CloseFormButton onClick={handleCancelForm}>
+							<FiX size={20} />
+						</CloseFormButton>
+					</CardHeader>
+					
 					{formError && (
 						<FormErrorMessage>
 							<FiAlertCircle /> {formError}
@@ -421,27 +646,36 @@ const Announcements: React.FC = () => {
 						</FormGroup>
 
 						<FormRow>
-							<FormGroup>
-								<FormLabel htmlFor='target'>Target Audience*</FormLabel>
+							<FormGroup flex={2}>
+								<FormLabel htmlFor='targetAudience'>Target Audience*</FormLabel>
 								<FormSelect
-									id='target'
-									name='target'
-									value={formData.targetAudience}
-									onChange={handleFormChange}
-									disabled={formSubmitting}
+									id='targetAudience'
+									name='targetAudience'
+									value={selectedAudience}
+									onChange={handleAudienceChange}
+									disabled={formSubmitting || isLoadingRoles}
 								>
 									<option value='all'>All Users</option>
-									<option value='student'>Students Only</option>
-									<option value='teacher'>Teachers Only</option>
-									<option value='admin'>Administrators Only</option>
+									{isLoadingRoles ? (
+										<option disabled>Loading roles...</option>
+									) : (
+										roles.map(role => (
+											<option 
+												key={role.id} 
+												value={role.name.toLowerCase()}
+											>
+												{role.name}
+											</option>
+										))
+									)}
 								</FormSelect>
 							</FormGroup>
 
-							<FormGroup>
+							<FormGroup flex={1}>
 								<FormCheckboxLabel>
 									<FormCheckbox
 										type='checkbox'
-										name='important'
+										name='isImportant'
 										checked={formData.isImportant}
 										onChange={handleFormChange}
 										disabled={formSubmitting}
@@ -451,11 +685,134 @@ const Announcements: React.FC = () => {
 							</FormGroup>
 						</FormRow>
 
+						{/* Media Section */}
+						<MediaSection>
+							<MediaSectionTitle>Media Attachments</MediaSectionTitle>
+							
+							{/* Photo Upload */}
+							<FormGroup>
+								<FormLabel htmlFor='photo_file'>Photo</FormLabel>
+								{formData.current_photo_url ? (
+									<MediaPreviewContainer>
+										<MediaPreview>
+											<img src={formData.current_photo_url} alt='Current photo' />
+										</MediaPreview>
+										<MediaActions>
+											<MediaActionButton 
+												type="button" 
+												onClick={() => {
+													console.log("Removing photo");
+													setFormData(prev => ({
+														...prev, 
+														current_photo_url: null, 
+														photo_file: null
+													}));
+												}}
+											>
+												<FiTrash2 size={14} />
+												<span>Remove Photo</span>
+											</MediaActionButton>
+										</MediaActions>
+									</MediaPreviewContainer>
+								) : (
+									<StyledFileInputContainer>
+										<StyledFileLabel 
+											htmlFor="photo_file"
+											onDragEnter={() => setIsDraggingPhoto(true)}
+											onDragLeave={() => setIsDraggingPhoto(false)}
+											onDragOver={(e) => e.preventDefault()} // Necessary to allow drop
+											onDrop={() => setIsDraggingPhoto(false)}
+											className={isDraggingPhoto ? 'drag-over' : ''}
+										>
+											<FiUploadCloud size={20} />
+											<span>{formData.photo_file ? formData.photo_file.name : 'Choose a photo or drag & drop'}</span>
+										</StyledFileLabel>
+										<FormInput
+											type='file'
+											id='photo_file'
+											name='photo_file'
+											accept='image/*'
+											onChange={e => {
+												const file = e.target.files ? e.target.files[0] : null;
+												setFormData(prev => ({ 
+													...prev, 
+													photo_file: file,
+													current_photo_url: null 
+												}));
+											}}
+											disabled={formSubmitting}
+											isStyledFile
+										/>
+										<FileInputHint>Supported formats: JPG, PNG, GIF (max 5MB)</FileInputHint>
+									</StyledFileInputContainer>
+								)}
+							</FormGroup>
+
+							{/* Video Upload */}
+							<FormGroup>
+								<FormLabel htmlFor='video_file'>Video</FormLabel>
+								{formData.current_video_url ? (
+									<MediaPreviewContainer>
+										<MediaPreview>
+											<video src={formData.current_video_url} controls />
+										</MediaPreview>
+										<MediaActions>
+											<MediaActionButton 
+												type="button" 
+												onClick={() => {
+													console.log("Removing video");
+													setFormData(prev => ({
+														...prev, 
+														current_video_url: null, 
+														video_file: null
+													}));
+												}}
+											>
+												<FiTrash2 size={14} />
+												<span>Remove Video</span>
+											</MediaActionButton>
+										</MediaActions>
+									</MediaPreviewContainer>
+								) : (
+									<StyledFileInputContainer>
+										<StyledFileLabel 
+											htmlFor="video_file"
+											onDragEnter={() => setIsDraggingVideo(true)}
+											onDragLeave={() => setIsDraggingVideo(false)}
+											onDragOver={(e) => e.preventDefault()} // Necessary to allow drop
+											onDrop={() => setIsDraggingVideo(false)}
+											className={isDraggingVideo ? 'drag-over' : ''}
+										>
+											<FiUploadCloud size={20} />
+											<span>{formData.video_file ? formData.video_file.name : 'Choose a video or drag & drop'}</span>
+										</StyledFileLabel>
+										<FormInput
+											type='file'
+											id='video_file'
+											name='video_file'
+											accept='video/*'
+											onChange={e => {
+												const file = e.target.files ? e.target.files[0] : null;
+												setFormData(prev => ({ 
+													...prev, 
+													video_file: file,
+													current_video_url: null
+												}));
+											}}
+											disabled={formSubmitting}
+											isStyledFile
+										/>
+										<FileInputHint>Supported formats: MP4, MOV, WebM (max 20MB)</FileInputHint>
+									</StyledFileInputContainer>
+								)}
+							</FormGroup>
+						</MediaSection>
+
 						<ButtonRow>
 							<Button
 								type='button'
 								variant='secondary'
-								onClick={handleCancelCreate}
+								onClick={handleCancelForm}
 								disabled={formSubmitting}
 							>
 								Cancel
@@ -466,7 +823,9 @@ const Announcements: React.FC = () => {
 								disabled={formSubmitting}
 								isLoading={formSubmitting}
 							>
-								{formSubmitting ? 'Creating...' : 'Create Announcement'}
+								{formSubmitting
+									? editingAnnouncement ? 'Saving...' : 'Creating...'
+									: editingAnnouncement ? 'Save Changes' : 'Create Announcement'}
 							</Button>
 						</ButtonRow>
 					</form>
@@ -516,13 +875,13 @@ const Announcements: React.FC = () => {
 									{announcement.photo_url && (
 										<MediaItem
 											onClick={e => {
-												const element = e.currentTarget
+												const element = e.currentTarget as any; // Use as any for simplicity with vendor prefixes
 												if (element.requestFullscreen) {
-													element.requestFullscreen()
+													element.requestFullscreen();
 												} else if (element.webkitRequestFullscreen) {
-													element.webkitRequestFullscreen()
+													element.webkitRequestFullscreen();
 												} else if (element.msRequestFullscreen) {
-													element.msRequestFullscreen()
+													element.msRequestFullscreen();
 												}
 											}}
 										>
@@ -542,9 +901,14 @@ const Announcements: React.FC = () => {
 								</MetaInfo>
 
 								{canManageAnnouncements && (
-									<DeleteButton onClick={() => handleDeleteClick(announcement.id)}>
-										<FiTrash2 size={16} />
-									</DeleteButton>
+									<ActionButtonsContainer>
+										<DeleteButton onClick={() => handleDeleteClick(announcement.id)}>
+											<FiTrash2 size={16} />
+										</DeleteButton>
+										<EditButton onClick={() => handleEditClick(announcement)}>
+											<FiEdit size={16} />
+										</EditButton>
+									</ActionButtonsContainer>
 								)}
 							</AnnouncementMeta>
 						</AnnouncementItem>
@@ -769,20 +1133,44 @@ const MetaInfo = styled.div`
 	color: ${props => props.theme.colors.text.tertiary};
 `
 
+const ActionButtonsContainer = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+`
+
 const DeleteButton = styled.button`
 	background: none;
 	border: none;
-	color: ${props => props.theme.colors.danger[500]};
+	color: ${props => props.theme.colors.text.secondary};
 	cursor: pointer;
 	padding: 4px;
 	border-radius: 4px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	transition: background-color 0.2s ease;
 
 	&:hover {
-		background-color: ${props => props.theme.colors.danger[50]};
+		background-color: ${props => props.theme.colors.danger[100]};
+		color: ${props => props.theme.colors.danger[600]};
+	}
+`
+
+const EditButton = styled.button`
+	background: none;
+	border: none;
+	color: ${props => props.theme.colors.text.secondary};
+	cursor: pointer;
+	padding: 4px;
+	margin-left: 8px;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	&:hover {
+		background-color: ${props => props.theme.colors.primary[100]};
+		color: ${props => props.theme.colors.primary[600]};
 	}
 `
 
@@ -818,43 +1206,46 @@ const FormCard = styled.div`
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 `
 
+const CardHeader = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 16px;
+`
+
 const CardTitle = styled.h3`
-	margin: 0 0 20px 0;
+	margin: 0;
 	font-size: 18px;
 	font-weight: 600;
 	color: ${props => props.theme.colors.text.primary};
 `
 
-const FormGroup = styled.div`
-	margin-bottom: 16px;
-`
-
-const FormLabel = styled.label`
-	display: block;
-	margin-bottom: 8px;
-	font-size: 14px;
+const EditingBadge = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	background-color: ${props => props.theme.colors.primary[100]};
+	color: ${props => props.theme.colors.primary[700]};
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
 	font-weight: 500;
-	color: ${props => props.theme.colors.text.primary};
 `
 
-const FormInput = styled.input`
-	width: 100%;
-	padding: 10px 12px;
-	font-size: 14px;
-	border: 1px solid ${props => props.theme.colors.border.light};
-	border-radius: 6px;
-	background-color: ${props => props.theme.colors.background.primary};
-	color: ${props => props.theme.colors.text.primary};
+const CloseFormButton = styled.button`
+	background: none;
+	border: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: ${props => props.theme.colors.text.tertiary};
+	cursor: pointer;
+	padding: 2px;
+	border-radius: 50%;
 
-	&:focus {
-		outline: none;
-		border-color: ${props => props.theme.colors.primary[500]};
-		box-shadow: 0 0 0 2px ${props => props.theme.colors.primary[100]};
-	}
-
-	&:disabled {
-		opacity: 0.7;
-		cursor: not-allowed;
+	&:hover {
+		color: ${props => props.theme.colors.text.primary};
+		background-color: ${props => props.theme.colors.background.tertiary};
 	}
 `
 
@@ -881,30 +1272,9 @@ const FormTextarea = styled.textarea`
 	}
 `
 
-const FormSelect = styled.select`
-	width: 100%;
-	padding: 10px 12px;
-	font-size: 14px;
-	border: 1px solid ${props => props.theme.colors.border.light};
-	border-radius: 6px;
-	background-color: ${props => props.theme.colors.background.primary};
-	color: ${props => props.theme.colors.text.primary};
-
-	&:focus {
-		outline: none;
-		border-color: ${props => props.theme.colors.primary[500]};
-		box-shadow: 0 0 0 2px ${props => props.theme.colors.primary[100]};
-	}
-
-	&:disabled {
-		opacity: 0.7;
-		cursor: not-allowed;
-	}
-`
-
-const FormRow = styled.div`
+const FormRow = styled.div<{ gap?: string }>`
 	display: flex;
-	gap: 16px;
+	gap: ${props => props.gap || '16px'};
 	margin-bottom: 16px;
 
 	@media (max-width: ${props => props.theme.breakpoints.sm}) {
@@ -1154,6 +1524,115 @@ const LoadingState = styled.div`
 			transform: rotate(360deg);
 		}
 	}
+`
+
+const MediaPreviewContainer = styled.div`
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 8px;
+	margin-bottom: 8px;
+	border: 1px solid ${props => props.theme.colors.border.light};
+	border-radius: 8px;
+	padding: 12px;
+	background-color: ${props => props.theme.colors.background.primary};
+`
+
+const MediaPreview = styled.div`
+	width: 100%;
+	max-height: 200px;
+	overflow: hidden;
+	border-radius: 8px;
+	margin-bottom: 12px;
+	
+	img, video {
+		width: 100%;
+		max-height: 200px;
+		object-fit: contain;
+		background-color: ${props => props.theme.colors.background.tertiary};
+		border-radius: 4px;
+	}
+`
+
+const MediaActions = styled.div`
+	display: flex;
+	gap: 8px;
+`
+
+const MediaActionButton = styled.button`
+	background: none;
+	border: none;
+	color: ${props => props.theme.colors.text.secondary};
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+
+	&:hover {
+		background-color: ${props => props.theme.colors.background.tertiary};
+	}
+`
+
+const StyledFileInputContainer = styled.div`
+	display: flex;
+	flex-direction: column;
+	align-items: stretch; /* Make label take full width */
+	gap: 8px;
+`
+
+const StyledFileLabel = styled.label`
+	display: flex;
+	align-items: center;
+	justify-content: center; /* Center content */
+	gap: 10px; /* Increased gap */
+	padding: 16px 12px; /* Increased padding */
+	font-size: 14px;
+	font-weight: 500; /* Medium weight */
+	color: ${props => props.theme.colors.text.secondary};
+	background-color: ${props => props.theme.colors.background.primary};
+	border: 2px dashed ${props => props.theme.colors.border.light};
+	border-radius: 8px; /* More rounded */
+	cursor: pointer;
+	transition: all 0.2s ease-in-out;
+
+	svg {
+		color: ${props => props.theme.colors.primary[500]};
+		transition: transform 0.2s ease-in-out;
+	}
+
+	&:hover {
+		border-color: ${props => props.theme.colors.primary[300]};
+		background-color: ${props => props.theme.colors.background.secondary};
+		color: ${props => props.theme.colors.text.primary};
+
+		svg {
+			transform: scale(1.1);
+		}
+	}
+
+	/* Style for when a file is being dragged over */
+	&.drag-over {
+		border-color: ${props => props.theme.colors.primary[500]};
+		background-color: ${props => props.theme.colors.primary[50]};
+	}
+`
+
+const FileInputHint = styled.span`
+	font-size: 12px;
+	color: ${props => props.theme.colors.text.tertiary};
+`
+
+const MediaSection = styled.div`
+	margin-bottom: 24px;
+`
+
+const MediaSectionTitle = styled.h3`
+	margin: 0 0 16px 0;
+	font-size: 18px;
+	font-weight: 600;
+	color: ${props => props.theme.colors.text.primary};
 `
 
 export default Announcements
