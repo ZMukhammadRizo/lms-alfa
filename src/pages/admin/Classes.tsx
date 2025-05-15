@@ -2129,7 +2129,7 @@ export const Classes: React.FC = () => {
           setIsSectionsLoading(false);
           return;
         }
-        
+
         // Process each class into a section format
         const processedSections = await Promise.all(
           (classesData || []).map(async (cls) => {
@@ -2414,10 +2414,10 @@ export const Classes: React.FC = () => {
     // Set the selected grade/level directly from the class name
     // This allows both numeric grades like "10" and named levels like "Middle School"
     setSelectedGradeForSections(cls.classname);
-    setShowSections(true);
-    
-    // Reset section search when navigating to sections view
-    setSectionSearchTerm('');
+      setShowSections(true);
+      
+      // Reset section search when navigating to sections view
+      setSectionSearchTerm('');
   };
 
   const handleStudentStatusFilterChange = (status: string) => {

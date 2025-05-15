@@ -14,6 +14,7 @@ import {
 	FiSettings,
 	FiUser,
 	FiX,
+	FiBell,
 } from 'react-icons/fi'
 import { NavLink, useLocation } from 'react-router-dom'
 import styled, { css } from 'styled-components'
@@ -262,6 +263,13 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 									icon={<FiCalendar />}
 									label='Schedule'
 									to='/teacher/schedule'
+									isCollapsed={isMobile ? false : isCollapsed}
+									onMobileClick={handleNavItemClick}
+								/>
+								<MenuItem
+									icon={<FiBell />}
+									label='Announcements'
+									to='/teacher/announcements'
 									isCollapsed={isMobile ? false : isCollapsed}
 									onMobileClick={handleNavItemClick}
 								/>
