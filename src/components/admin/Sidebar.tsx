@@ -1,31 +1,26 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import {
-	FiBell,
-	FiBook,
-	FiBookOpen,
-	FiCalendar,
-	FiChevronDown,
-	FiChevronLeft,
-	FiChevronRight,
-	FiClipboard,
-	FiFileText,
-	FiHome,
-	FiLayers,
-	FiList,
-	FiMenu,
-	FiPlus,
-	FiSettings,
-	FiShield,
-	FiUser,
-	FiUsers,
-	FiX,
-} from 'react-icons/fi'
+import { FiBell, FiChevronDown, FiChevronLeft, FiChevronRight, FiMenu, FiX } from 'react-icons/fi'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import styled, { css } from 'styled-components'
+import {
+	adminMenu,
+	announcementsSubItems,
+	getManagerMenu,
+	getModuleLeaderMenu,
+	getSystemMenu,
+	teacherMenu,
+} from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
+import {
+	getUserParentRole,
+	getUserRole,
+	hasAnnouncementPermission,
+	hasRole,
+	isModuleLeader,
+	isRoleManager,
+} from '../../utils/authUtils'
 import LogoutButton from '../common/LogoutButton'
-import { moduleLeaderMenu } from '../teacher/TeacherSidebar'
 
 interface SidebarProps {
 	isCollapsed: boolean
@@ -266,108 +261,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 		return user?.fullName || user?.username || 'User'
 	}
 
-	// Get user role from localStorage
-	const getUserRole = () => {
-		const userInfo = localStorage.getItem('lms_user')
-		if (userInfo) {
-			try {
-				const parsedInfo = JSON.parse(userInfo)
-				if (parsedInfo.role && typeof parsedInfo.role === 'object') {
-					if (parsedInfo.role.parent && parsedInfo.role.parent.name) {
-						return parsedInfo.role.parent.name || 'Student'
-					}
-
-					return parsedInfo.role.name || 'Student'
-				}
-
-				if (parsedInfo.role && typeof parsedInfo.role === 'string') {
-					return parsedInfo.role || 'Student'
-				}
-
-				return 'Student'
-			} catch (error) {
-				console.error('Error parsing user info:', error)
-				return 'Student'
-			}
-		}
-		return user?.role || 'Student'
-	}
-
-	// Check if user is a module leader
-	const isModuleLeader = () => {
-		const userInfo = localStorage.getItem('lms_user')
-		if (userInfo) {
-			try {
-				const parsedInfo = JSON.parse(userInfo)
-
-				if (parsedInfo.role && typeof parsedInfo.role === 'object') {
-					return parsedInfo.role.name === 'ModuleLeader' || false
-				}
-
-				if (parsedInfo.role && typeof parsedInfo.role === 'string') {
-					return parsedInfo.role === 'ModuleLeader' || false
-				}
-
-				if (parsedInfo.isModuleLeader) {
-					return parsedInfo.isModuleLeader || false
-				}
-
-				return false
-			} catch (error) {
-				console.error('Error parsing user info:', error)
-				return false
-			}
-		}
-		return user?.isModuleLeader || false
-	}
-
-	const getUserParentRole = () => {
-		const userInfo = localStorage.getItem('lms_user')
-		if (userInfo) {
-			const parsedInfo = JSON.parse(userInfo)
-			if (parsedInfo.role && typeof parsedInfo.role === 'object') {
-				return parsedInfo.role.parent.name || 'Student'
-			}
-
-			return 'Unknown'
-		}
-
-		return 'Unknown'
-	}
+	// The following functions are now imported from authUtils.ts
+	// instead of being defined locally
 
 	const role = getUserRole()
 	const parentRole = getUserParentRole()
 	console.log('Detected user role:', role)
 	console.log('Detected user parent role:', parentRole)
 
-	// Admin menu items
-	const adminMenu = [
-		{ path: '/admin/dashboard', icon: <FiHome />, label: 'Dashboard' },
-		{ path: '/admin/users', icon: <FiUsers />, label: 'User Management' },
-		{ path: '/admin/roles', icon: <FiShield />, label: 'Role Management' },
-		{ path: '/admin/subjects', icon: <FiBook />, label: 'Subjects' },
-		{ path: '/admin/classes', icon: <FiLayers />, label: 'Classes' },
-		{ path: '/admin/assignments', icon: <FiFileText />, label: 'Assignments' },
-		{ path: '/admin/grades', icon: <FiClipboard />, label: 'Grades' },
-		{ path: '/admin/timetables', icon: <FiCalendar />, label: 'Timetables' },
-	]
+	// Get manager menu items based on parent role
+	const managerMenu = getManagerMenu(parentRole, role)
 
-	// Announcements submenu for admin
-	const announcementsSubItems = [
-		{ path: '/admin/announcements', icon: <FiList />, label: 'View All' },
-		{ path: '/admin/announcements/create', icon: <FiPlus />, label: 'Create New' },
-	]
+	// Get system menu items for the current role
+	const systemMenu = getSystemMenu(role.toLowerCase())
 
-	// Teacher menu items
-	const teacherMenu = [
-		{ path: '/teacher/dashboard', icon: <FiHome />, label: 'Dashboard' },
-		{ path: '/teacher/students', icon: <FiUsers />, label: 'Students' },
-		{ path: '/teacher/schedule', icon: <FiCalendar />, label: 'Schedule' },
-	]
-
-	console.log(role);
-	console.log(parentRole);
-
+	// Get module leader menu items based on parent role
+	const moduleLeaderMenu = getModuleLeaderMenu(parentRole, role)
 
 	return (
 		<>
@@ -436,17 +345,52 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 												onMobileClick={handleNavItemClick}
 											/>
 										))}
-
-										<MenuItemWithSubmenu
-											icon={<FiBell />}
-											label='Announcements'
-											isCollapsed={isMobile ? false : isCollapsed}
-											subItems={announcementsSubItems}
-											onMobileClick={handleNavItemClick}
-										/>
 									</>
 								)}
-								{role === 'ModuleLeader' || isModuleLeader() ? (
+								{/* Render Announcements for users with read_announcements permission */}
+								{hasAnnouncementPermission('read') ? (
+									<MenuItemWithSubmenu
+										icon={<FiBell />}
+										label='Announcements'
+										isCollapsed={isMobile ? false : isCollapsed}
+										subItems={announcementsSubItems}
+										onMobileClick={handleNavItemClick}
+									/>
+								) : null}
+								{hasRole('RoleManager') ||
+								isRoleManager() ||
+								hasRole('Admin') ||
+								hasRole('SuperAdmin') ? (
+									<>
+										<AnimatePresence>
+											{(!isCollapsed || isMobile) && (
+												<SectionLabel
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													exit={{ opacity: 0 }}
+													transition={{ delay: 0.2 }}
+												>
+													ROLE MANAGER
+												</SectionLabel>
+											)}
+										</AnimatePresence>
+
+										{managerMenu.map(item => (
+											<MenuItem
+												key={item.path}
+												icon={item.icon}
+												label={item.label}
+												to={item.path}
+												isCollapsed={isMobile ? false : isCollapsed}
+												onMobileClick={handleNavItemClick}
+											/>
+										))}
+									</>
+								) : null}
+								{role === 'ModuleLeader' ||
+								isModuleLeader() ||
+								role === 'Admin' ||
+								role === 'SuperAdmin' ? (
 									<>
 										<AnimatePresence>
 											{(!isCollapsed || isMobile) && (
@@ -488,7 +432,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 										))}
 									</>
 								)}
-								{role}
 							</MenuSection>
 
 							<MenuSection>
@@ -505,20 +448,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 									)}
 								</AnimatePresence>
 
-								<MenuItem
-									icon={<FiUser />}
-									label='Profile'
-									to={`/${role}/profile`}
-									isCollapsed={isMobile ? false : isCollapsed}
-									onMobileClick={handleNavItemClick}
-								/>
-								<MenuItem
-									icon={<FiSettings />}
-									label='Settings'
-									to={`/${role}/settings`}
-									isCollapsed={isMobile ? false : isCollapsed}
-									onMobileClick={handleNavItemClick}
-								/>
+								{systemMenu.map(item => (
+									<MenuItem
+										key={item.path}
+										icon={item.icon}
+										label={item.label}
+										to={item.path}
+										isCollapsed={isMobile ? false : isCollapsed}
+										onMobileClick={handleNavItemClick}
+									/>
+								))}
 							</MenuSection>
 						</MenuContainer>
 

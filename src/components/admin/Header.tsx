@@ -66,23 +66,23 @@ const Header: React.FC = () => {
 				const parsedInfo = JSON.parse(userInfo)
 				if (parsedInfo.role && typeof parsedInfo.role === 'object') {
 					if (parsedInfo.role.parent && parsedInfo.role.parent.name) {
-						return parsedInfo.role.parent.name || 'Student'
+						return parsedInfo.role.parent.name.toLowerCase() || 'student'
 					}
 
-					return parsedInfo.role.name || 'Student'
+					return parsedInfo.role.name.toLowerCase() || 'student'
 				}
 
 				if (parsedInfo.role && typeof parsedInfo.role === 'string') {
-					return parsedInfo.role || 'Student'
+					return parsedInfo.role.toLowerCase() || 'student'
 				}
 
-				return 'Student'
+				return 'student'
 			} catch (error) {
 				console.error('Error parsing user info:', error)
-				return 'Student'
+				return 'student'
 			}
 		}
-		return user?.role || 'Student'
+		return user?.role || 'student'
 	}
 
 	return (

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 import { FiEdit2, FiLock, FiSearch, FiShield, FiTrash2 } from 'react-icons/fi'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
 import PermissionsModal from '../../components/admin/PermissionsModal'
@@ -16,6 +17,10 @@ interface Role {
 	created_at: string | Date
 	description: string
 	role_permissions: Permission[]
+	parent_role?: {
+		id?: string
+		name?: string
+	}
 	[key: string]: any
 }
 
@@ -30,6 +35,8 @@ const Roles: React.FC = () => {
 	const permissionsInStore = usePermissionsStore(store => store.permissions)
 	const fetchPermissions = usePermissionsStore(store => store.fetchPermissions)
 	const { isRoleManager } = useAuth()
+	const navigate = useNavigate()
+
 	// State for search, filters, and selected roles
 	const [searchTerm, setSearchTerm] = useState('')
 	// const [currentPage, setCurrentPage] = useState(1);
@@ -38,6 +45,7 @@ const Roles: React.FC = () => {
 	const [currentRole, setCurrentRole] = useState<Role | null>(null)
 	const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false)
 	const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false)
+	const [isLoadingPermissions, setIsLoadingPermissions] = useState(true)
 
 	const roleManager = JSON.parse(localStorage.getItem('lms_user') || '{}').isRoleManager
 
@@ -45,9 +53,13 @@ const Roles: React.FC = () => {
 	const [roles, setRoles] = useState<Role[]>([])
 	const [permissions, setPermissions] = useState<Permission[]>([])
 
+	const [userPermissions, setUserPermissions] = useState<string[]>([])
+	const [hasManageRoles, setHasManageRoles] = useState(false)
+	const [hasManagePermissions, setHasManagePermissions] = useState(false)
+
 	// Filter roles based on search term
-	const filteredRoles = roles.filter(role =>
-		role.name.toLowerCase().includes(searchTerm.toLowerCase())
+	const filteredRoles = roles.filter(
+		role => role.name.toLowerCase().includes(searchTerm.toLowerCase()) && role.name !== 'SuperAdmin'
 	)
 
 	// Handle search input change
@@ -91,12 +103,38 @@ const Roles: React.FC = () => {
 	}
 
 	// Handle delete role
-	const handleDeleteRole = (roleId: string) => {
-		// In a real application, this would send a delete request to the API
-		// For now, we'll just update our local state
-		setRoles(roles.filter(role => role.id !== roleId))
-		setSelectedRoles(selectedRoles.filter(id => id !== roleId))
-		console.log(`Delete role with ID: ${roleId}`)
+	const handleDeleteRole = async (roleId: string) => {
+		if (
+			window.confirm('Are you sure you want to delete this role? This action cannot be undone.')
+		) {
+			try {
+				// Check if any users are using this role
+				const roleToDelete = roles.find(r => r.id === roleId)
+				if (roleToDelete?.usersCount > 0) {
+					toast.error(
+						`Cannot delete role "${roleToDelete.name}". It is currently assigned to ${roleToDelete.usersCount} users.`
+					)
+					return
+				}
+
+				// Delete the role from the database
+				const { error: deleteError } = await supabase.from('roles').delete().eq('id', roleId)
+
+				if (deleteError) {
+					console.error('Error deleting role:', deleteError)
+					toast.error('Failed to delete role. Please try again.')
+					return
+				}
+
+				// Update local state by removing the deleted role
+				setRoles(roles.filter(role => role.id !== roleId))
+				setSelectedRoles(selectedRoles.filter(id => id !== roleId))
+				toast.success('Role deleted successfully!')
+			} catch (error) {
+				console.error('Error deleting role:', error)
+				toast.error('An unexpected error occurred. Please try again.')
+			}
+		}
 	}
 
 	// Open permissions modal for a role
@@ -119,9 +157,10 @@ const Roles: React.FC = () => {
 						{
 							name: roleData.name,
 							description: roleData.description,
+							parent_role: roleData.parent_role,
 						},
 					])
-					.select('id, name, description, created_at')
+					.select('id, name, description, created_at, parent_role')
 					.single()
 
 				if (createError) {
@@ -130,9 +169,24 @@ const Roles: React.FC = () => {
 					return
 				}
 
+				// If parent role was specified, fetch its details
+				let parentRoleObj = null
+				if (newRole.parent_role) {
+					const { data: parentData, error: parentError } = await supabase
+						.from('roles')
+						.select('id, name')
+						.eq('id', newRole.parent_role)
+						.single()
+
+					if (!parentError && parentData) {
+						parentRoleObj = parentData
+					}
+				}
+
 				// Create an empty role_permissions array for the new role
 				const updatedRole = {
 					...newRole,
+					parent_role: parentRoleObj,
 					role_permissions: [],
 					usersCount: 0,
 				}
@@ -149,6 +203,7 @@ const Roles: React.FC = () => {
 					.update({
 						name: roleData.name,
 						description: roleData.description,
+						parent_role: roleData.parent_role,
 					})
 					.eq('id', currentRole.id)
 
@@ -158,14 +213,29 @@ const Roles: React.FC = () => {
 					return
 				}
 
+				// If parent role was specified, fetch its details
+				let parentRoleObj = null
+				if (roleData.parent_role) {
+					const { data: parentData, error: parentError } = await supabase
+						.from('roles')
+						.select('id, name')
+						.eq('id', roleData.parent_role)
+						.single()
+
+					if (!parentError && parentData) {
+						parentRoleObj = parentData
+					}
+				}
+
 				// Update the local state
-				setRoles(
-					roles.map(role =>
+				setRoles(prevRoles =>
+					prevRoles.map(role =>
 						role.id === currentRole.id
 							? {
 									...role,
 									name: roleData.name,
 									description: roleData.description,
+									parent_role: parentRoleObj,
 							  }
 							: role
 					)
@@ -258,11 +328,55 @@ const Roles: React.FC = () => {
 	}
 
 	// Handle bulk delete of selected roles
-	const handleBulkDelete = () => {
-		setRoles(roles.filter(role => !selectedRoles.includes(role.id)))
-		setSelectedRoles([])
-		setIsActionsMenuOpen(false)
-		console.log('Bulk deleting roles:', selectedRoles)
+	const handleBulkDelete = async () => {
+		if (!selectedRoles.length) {
+			toast.info('No roles selected for deletion.')
+			return
+		}
+
+		if (
+			window.confirm(
+				`Are you sure you want to delete ${selectedRoles.length} roles? This action cannot be undone.`
+			)
+		) {
+			try {
+				// Check if any selected roles have users
+				const rolesWithUsers = roles.filter(
+					role => selectedRoles.includes(role.id) && role.usersCount > 0
+				)
+
+				if (rolesWithUsers.length > 0) {
+					const roleNames = rolesWithUsers.map(r => r.name).join(', ')
+					toast.error(`Cannot delete roles that have users assigned: ${roleNames}`)
+					return
+				}
+
+				// Delete roles one by one to ensure all are processed
+				let hasErrors = false
+				for (const roleId of selectedRoles) {
+					const { error } = await supabase.from('roles').delete().eq('id', roleId)
+
+					if (error) {
+						console.error(`Error deleting role ${roleId}:`, error)
+						hasErrors = true
+					}
+				}
+
+				if (hasErrors) {
+					toast.warning('Some roles could not be deleted. Please refresh and try again.')
+				} else {
+					toast.success(`${selectedRoles.length} roles deleted successfully!`)
+				}
+
+				// Update local state
+				setRoles(roles.filter(role => !selectedRoles.includes(role.id)))
+				setSelectedRoles([])
+				setIsActionsMenuOpen(false)
+			} catch (error) {
+				console.error('Error during bulk delete:', error)
+				toast.error('An unexpected error occurred during deletion.')
+			}
+		}
 	}
 
 	const fetchRolesWithPermissions = async () => {
@@ -272,7 +386,9 @@ const Roles: React.FC = () => {
 				`
       id,
       name,
+      description,
       created_at,
+      parent_role:parent_role (id, name),
       role_permissions (
         permission_id,
         permissions (
@@ -324,10 +440,137 @@ const Roles: React.FC = () => {
 			console.error('Error fetching permissions:', error)
 		}
 	}
+
+	// Check access permissions for the page
+	const checkUserPermissions = async () => {
+		setIsLoadingPermissions(true)
+		try {
+			// Get user from local storage or context
+			const userInfo = localStorage.getItem('lms_user')
+			let userId = null
+			let roleId = null
+
+			if (userInfo) {
+				const parsedInfo = JSON.parse(userInfo)
+				userId = parsedInfo.id
+
+				// Get role ID based on available data
+				if (parsedInfo.role && typeof parsedInfo.role === 'object' && parsedInfo.role.id) {
+					roleId = parsedInfo.role.id
+				} else if (parsedInfo.role && typeof parsedInfo.role === 'string') {
+					// Fetch role ID by name
+					const { data: roleData, error: roleError } = await supabase
+						.from('roles')
+						.select('id')
+						.eq('name', parsedInfo.role)
+						.single()
+
+					if (roleError) {
+						console.error('Error fetching role ID:', roleError)
+					} else if (roleData) {
+						roleId = roleData.id
+					}
+				}
+				// Try to get role ID from user data if not found yet
+				else if (userId) {
+					const { data: userData, error: userError } = await supabase
+						.from('users')
+						.select('role_id')
+						.eq('id', userId)
+						.single()
+
+					if (userError) {
+						console.error('Error fetching user role:', userError)
+					} else if (userData) {
+						roleId = userData.role_id
+					}
+				}
+
+				if (!roleId) {
+					// If we couldn't determine the role, deny access
+					setHasManageRoles(false)
+					setHasManagePermissions(false)
+					setIsLoadingPermissions(false)
+					return
+				}
+
+				// Fetch permissions for this role
+				const { data: rolePermissions, error: permissionsError } = await supabase
+					.from('role_permissions')
+					.select(
+						`
+						permissions (
+							id,
+							name
+						)
+						`
+					)
+					.eq('role_id', roleId)
+
+				if (permissionsError) {
+					console.error('Error fetching permissions:', permissionsError)
+					setHasManageRoles(false)
+					setHasManagePermissions(false)
+				} else if (rolePermissions && rolePermissions.length > 0) {
+					// Extract permission names
+					const permissionNames = rolePermissions
+						.map(
+							//@ts-ignore
+							perm => perm.permissions?.name
+						)
+						.filter(Boolean)
+
+					setUserPermissions(permissionNames)
+					setHasManageRoles(permissionNames.includes('manage_roles'))
+					setHasManagePermissions(permissionNames.includes('manage_permissions'))
+
+					// If user doesn't have manage_roles permission, redirect back
+					if (!permissionNames.includes('manage_roles')) {
+						toast.error('You do not have permission to access the Roles page.')
+						navigate(-1)
+					}
+				} else {
+					// No permissions found
+					setHasManageRoles(false)
+					setHasManagePermissions(false)
+
+					// Redirect back if no manage_roles permission
+					toast.error('You do not have permission to access the Roles page.')
+					navigate(-1)
+				}
+			} else {
+				// No user info found
+				setHasManageRoles(false)
+				setHasManagePermissions(false)
+
+				// Redirect to login
+				navigate('/login')
+			}
+		} catch (error) {
+			console.error('Error checking permissions:', error)
+			setHasManageRoles(false)
+			setHasManagePermissions(false)
+		} finally {
+			setIsLoadingPermissions(false)
+		}
+	}
+
 	useEffect(() => {
-		fetchRolesWithPermissions()
-		fetchAllPermissions()
+		checkUserPermissions().then(() => {
+			fetchRolesWithPermissions()
+			fetchAllPermissions()
+		})
 	}, [])
+
+	if (isLoadingPermissions) {
+		return (
+			<LoadingContainer>
+				<LoadingMessage>Checking permissions...</LoadingMessage>
+			</LoadingContainer>
+		)
+	}
+
+	// If the user doesn't have permissions, they'll be redirected by the checkUserPermissions function
 
 	return (
 		<RolesContainer
@@ -345,7 +588,7 @@ const Roles: React.FC = () => {
 			</PageHeader>
 
 			{/* Create Section */}
-			{roleManager && (
+			{hasManageRoles && (
 				<CreateSection>
 					<SectionTitle>Create New Role</SectionTitle>
 					<AddRoleButton onClick={handleAddRole}>
@@ -375,10 +618,11 @@ const Roles: React.FC = () => {
 					<TableHeader>
 						<HeaderRow>
 							<HeaderCell width='20%'>Role Name</HeaderCell>
-							<HeaderCell width='30%'>Description</HeaderCell>
-							<HeaderCell width='30%'>Users</HeaderCell>
+							<HeaderCell width='20%'>Parent Role</HeaderCell>
+							<HeaderCell width='20%'>Description</HeaderCell>
+							<HeaderCell width='20%'>Users</HeaderCell>
 
-							{roleManager && <HeaderCell width='100%'>Actions</HeaderCell>}
+							{hasManageRoles && <HeaderCell width='20%'>Actions</HeaderCell>}
 						</HeaderRow>
 					</TableHeader>
 					<TableBody>
@@ -388,12 +632,13 @@ const Roles: React.FC = () => {
 									<TableCell width='20%'>
 										<RoleName>{role.name}</RoleName>
 									</TableCell>
-									<TableCell width='30%'>{role.description}</TableCell>
-									<TableCell width='30%'>
+									<TableCell width='20%'>{role.parent_role?.name || '-'}</TableCell>
+									<TableCell width='20%'>{role.description}</TableCell>
+									<TableCell width='20%'>
 										<UsersCount>{role.usersCount} users</UsersCount>
 									</TableCell>
-									{roleManager && (
-										<TableCell width='100%'>
+									{hasManageRoles && (
+										<TableCell width='20%'>
 											<ActionsContainer>
 												<ActionIconButton onClick={() => handleEditRole(role)} title='Edit role'>
 													<FiEdit2 />
@@ -404,12 +649,14 @@ const Roles: React.FC = () => {
 												>
 													<FiTrash2 />
 												</ActionIconButton>
-												<ActionIconButton
-													onClick={() => handleManagePermissions(role)}
-													title='Manage permissions'
-												>
-													<FiLock />
-												</ActionIconButton>
+												{hasManagePermissions && (
+													<ActionIconButton
+														onClick={() => handleManagePermissions(role)}
+														title='Manage permissions'
+													>
+														<FiLock />
+													</ActionIconButton>
+												)}
 											</ActionsContainer>
 										</TableCell>
 									)}
@@ -437,7 +684,7 @@ const Roles: React.FC = () => {
 				formTitle={currentRole ? 'Edit Role' : 'Add New Role'}
 			/>
 
-			{currentRole && (
+			{currentRole && hasManagePermissions && (
 				<PermissionsModal
 					isOpen={isPermissionsModalOpen}
 					onClose={handlePermissionsModalClose}
@@ -881,6 +1128,20 @@ const DeleteButton = styled.button`
 		background-color: ${props => props.theme.colors.danger[300]};
 		cursor: not-allowed;
 	}
+`
+
+const LoadingContainer = styled.div`
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 100vh;
+	font-size: 1.2rem;
+	color: ${props => props.theme.colors.text.secondary};
+`
+
+const LoadingMessage = styled.div`
+	font-size: 1.2rem;
+	color: ${props => props.theme.colors.text.secondary};
 `
 
 export default Roles

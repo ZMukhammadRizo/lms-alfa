@@ -4,6 +4,7 @@ import {
 	FiAlertCircle,
 	FiAlertTriangle,
 	FiCheckCircle,
+	FiEdit2,
 	FiInfo,
 	FiLoader,
 	FiPlus,
@@ -20,6 +21,7 @@ import ConfirmationModal from '../../components/common/ConfirmationModal'
 import supabase from '../../config/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAnnouncements } from '../../stores/useAnnouncementStore'
+import { hasAnnouncementPermission } from '../../utils/authUtils'
 import { showError } from '../../utils/toast'
 
 interface AnnouncementFormData {
@@ -229,7 +231,6 @@ const Announcements: React.FC = () => {
 				showError('Failed to refresh announcements')
 			} else {
 				setAnnouncements(data || [])
-				setSuccessMessage('Announcements refreshed!')
 			}
 		} catch (err) {
 			console.error('Error refreshing announcements:', err)
@@ -247,7 +248,10 @@ const Announcements: React.FC = () => {
 		return role ? `${role.name}s` : target
 	}
 
-	const canManageAnnouncements = user?.role.toLowerCase() === 'admin'
+	const canCreateAnnouncements = hasAnnouncementPermission('create')
+	const canReadAnnouncements = hasAnnouncementPermission('read')
+	const canUpdateAnnouncements = hasAnnouncementPermission('update')
+	const canDeleteAnnouncements = hasAnnouncementPermission('delete')
 
 	useEffect(() => {
 		const fetchRoles = async () => {
@@ -304,7 +308,7 @@ const Announcements: React.FC = () => {
 					<Description>Manage system announcements for all users</Description>
 				</div>
 
-				{canManageAnnouncements && (
+				{canCreateAnnouncements && (
 					<CreateAnnouncementButton
 						onClick={() => navigate('/admin/announcements/create')}
 						startIcon={<FiPlus />}
@@ -541,10 +545,15 @@ const Announcements: React.FC = () => {
 									<span>{format(new Date(announcement.created_at), 'MMM d, yyyy h:mm a')}</span>
 								</MetaInfo>
 
-								{canManageAnnouncements && (
-									<DeleteButton onClick={() => handleDeleteClick(announcement.id)}>
-										<FiTrash2 size={16} />
-									</DeleteButton>
+								{canUpdateAnnouncements && (
+									<IconButton onClick={() => handleEdit(announcement)}>
+										<FiEdit2 />
+									</IconButton>
+								)}
+								{canDeleteAnnouncements && (
+									<IconButton onClick={() => handleDeleteClick(announcement.id)}>
+										<FiTrash2 />
+									</IconButton>
 								)}
 							</AnnouncementMeta>
 						</AnnouncementItem>
@@ -1153,6 +1162,20 @@ const LoadingState = styled.div`
 		100% {
 			transform: rotate(360deg);
 		}
+	}
+`
+
+const IconButton = styled.button`
+	background: none;
+	border: none;
+	color: ${props => props.theme.colors.text.tertiary};
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 50%;
+
+	&:hover {
+		color: ${props => props.theme.colors.text.primary};
+		background-color: ${props => props.theme.colors.background.tertiary};
 	}
 `
 

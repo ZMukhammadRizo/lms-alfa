@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react'
 import { FiAlertCircle, FiImage, FiTrash2, FiX } from 'react-icons/fi'
 import styled from 'styled-components'
 import supabase from '../../config/supabaseClient'
+import { hasAnnouncementPermission } from '../../utils/authUtils'
+import { generateSlug } from '../../utils/generateSlug'
 import { showError, showSuccess } from '../../utils/toast'
 import Button from '../common/Button'
-import { generateSlug } from '../../utils/generateSlug'
 
 const LOCAL_USER_KEY = 'lms_user'
 
@@ -230,19 +231,8 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 				throw new Error('User not authenticated')
 			}
 
-			// Get user's role
-			const { data: userData, error: roleError } = await supabase
-				.from('users')
-				.select('role')
-				.eq('id', user.id)
-				.single()
-
-			if (roleError || !userData) {
-				throw new Error('Failed to verify user permissions')
-			}
-
 			// Check if user has permission to create announcements
-			if (!['admin', 'teacher'].includes(userData.role.toLowerCase())) {
+			if (!hasAnnouncementPermission('create')) {
 				throw new Error('You do not have permission to create announcements')
 			}
 
@@ -300,7 +290,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 				setUploadingImage(false)
 			}
 
-			// Create the announcement with proper permissions
+			// Create the announcement
 			const { data: announcement, error: announcementError } = await supabase
 				.from('announcements')
 				.insert({

@@ -34,22 +34,41 @@ const SubjectsManagePage: React.FC = () => {
 	})
 	const [detectedGrade, setDetectedGrade] = useState<string | null>(null)
 
-	// Check if user is a module leader
+	// Check if user has proper permissions to access this page
 	useEffect(() => {
-		const checkModuleLeader = async () => {
+		const checkAccess = async () => {
 			if (!user) {
 				navigate('/login')
 				return
 			}
 
-			// Check if user is a module leader
-			if (!user.isModuleLeader) {
+			const userRole = getUserRealRole()
+			const parentRole = getUserParentRole()
+
+			// Only Admin, SuperAdmin, and ModuleLeader can access this page
+			const allowedRoles = ['Admin', 'SuperAdmin', 'ModuleLeader']
+
+			if (!allowedRoles.includes(userRole)) {
 				toast.error('You do not have permission to access this page')
-				navigate('/admin/dashboard')
+
+				// Redirect based on role or parent role
+				if (userRole === 'Teacher') {
+					navigate('/teacher/dashboard')
+				} else if (userRole === 'Student') {
+					navigate('/student/dashboard')
+				} else if (userRole === 'Parent') {
+					navigate('/parent/dashboard')
+				} else if (parentRole && parentRole !== 'Unknown') {
+					// If they have a parent role, redirect to that dashboard
+					navigate(`/${parentRole.toLowerCase()}/dashboard`)
+				} else {
+					// Default fallback if no specific dashboard is available
+					navigate('/')
+				}
 			}
 		}
 
-		checkModuleLeader()
+		checkAccess()
 	}, [user, navigate])
 
 	// Fetch subjects
@@ -92,7 +111,7 @@ const SubjectsManagePage: React.FC = () => {
 	) => {
 		const { name, value } = e.target
 		setFormData({ ...formData, [name]: value })
-		
+
 		// Update detected grade when code changes
 		if (name === 'code') {
 			const grade = getGradeFromSubjectCode(value)
@@ -178,217 +197,67 @@ const SubjectsManagePage: React.FC = () => {
 	// Improve the grade extraction function to handle more formats
 	const getGradeFromSubjectCode = (code: string): string | null => {
 		// First check for direct grade at the end (e.g., MATH10, BIO11, CHEM12)
-		const directMatch = code.match(/(\d{1,2})$/);
+		const directMatch = code.match(/(\d{1,2})$/)
 		if (directMatch) {
-			const grade = parseInt(directMatch[1]);
+			const grade = parseInt(directMatch[1])
 			// Validate it's a reasonable grade (1-12)
 			if (grade >= 1 && grade <= 12) {
-				return grade.toString();
+				return grade.toString()
 			}
 		}
-		
+
 		// If no direct match, check for a grade within a longer code (e.g., MATH101)
 		// by looking for common grade numbers (10, 11, 12)
-		if (code.includes('10')) return '10';
-		if (code.includes('11')) return '11';
-		if (code.includes('12')) return '12';
-		
+		if (code.includes('10')) return '10'
+		if (code.includes('11')) return '11'
+		if (code.includes('12')) return '12'
+
 		// For single digit grades, look for them at the end or with a separator
 		for (let i = 1; i <= 9; i++) {
-			const grade = i.toString();
+			const grade = i.toString()
 			// Check for patterns like "MATH5" or "MATH-5" or "MATH_5"
 			if (
-				code.endsWith(grade) || 
-				code.includes(`-${grade}`) || 
+				code.endsWith(grade) ||
+				code.includes(`-${grade}`) ||
 				code.includes(`_${grade}`) ||
 				code.includes(`.${grade}`)
 			) {
-				return grade;
+				return grade
 			}
 		}
-		
-		return null;
-	};
+
+		return null
+	}
 
 	// Update the function to handle an array of subject IDs
-	const assignSubjectToGradeSections = async (grade: string, subjectIds: string[]): Promise<boolean> => {
+	const assignSubjectToGradeSections = async (
+		grade: string,
+		subjectIds: string[]
+	): Promise<boolean> => {
 		try {
 			// Find all class sections for the selected grade
 			// Make sure we're using a proper pattern for matching grade sections
-			const pattern = `${grade}%`; // e.g., "10%" to match "10A", "10B", etc.
-			console.log(`Searching for classes with pattern: ${pattern}`);
-			
+			const pattern = `${grade}%` // e.g., "10%" to match "10A", "10B", etc.
+			console.log(`Searching for classes with pattern: ${pattern}`)
+
 			const { data: sections, error: sectionsError } = await supabase
 				.from('classes')
 				.select('*')
-				.like('classname', pattern);
+				.like('classname', pattern)
 
 			if (sectionsError) {
-				console.error('Error fetching class sections:', sectionsError);
-				toast.error('Failed to fetch class sections');
-				return false;
+				console.error('Error fetching class sections:', sectionsError)
+				toast.error('Failed to fetch class sections')
+				return false
 			}
-
-			if (!sections || sections.length === 0) {
-				toast.error(`No class sections found for Grade ${grade}`);
-				return false;
-			}
-
-			let successCount = 0;
-			let errorCount = 0;
-
-			// Process each subject ID
-			for (const subjectId of subjectIds) {
-				// For each section, create a relationship in classsubjects table
-				const relationships = sections.map(section => ({
-					classid: section.id,
-					subjectid: subjectId,
-				}));
-
-				// Check for existing relationships to avoid duplicates
-				for (const rel of relationships) {
-					const { data: existingData, error: checkError } = await supabase
-						.from('classsubjects')
-						.select('*')
-						.eq('classid', rel.classid)
-						.eq('subjectid', rel.subjectid);
-
-					if (checkError) {
-						console.error('Error checking existing relationship:', checkError);
-						errorCount++;
-						continue;
-					}
-
-					// If there are any existing relationships, skip
-					if (existingData && existingData.length > 0) {
-						continue;
-					}
-
-					// Insert the new relationship
-					const { error: insertError } = await supabase
-						.from('classsubjects')
-						.insert([rel]);
-
-					if (insertError) {
-						console.error('Error inserting relationship:', insertError);
-						errorCount++;
-						continue;
-					}
-					
-					successCount++;
-				}
-			}
-
-			if (errorCount > 0) {
-				toast.warning(`Assigned ${successCount} relationships with ${errorCount} errors`);
-			} else {
-				toast.success(`Successfully assigned ${subjectIds.length} subject(s) to all sections of Grade ${grade}`);
-			}
-			return true;
-		} catch (error) {
-			console.error('Error in assignSubjectToGradeSections:', error);
-			return false;
-		}
-	}
-
-	// Update the handleSubmit function
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-
-		if (!validateForm()) return;
-
-		try {
-			if (currentSubject) {
-				// Update existing subject
-				const { error } = await supabase
-					.from('subjects')
-					.update({
-						subjectname: formData.subjectname,
-						code: formData.code,
-						description: formData.description,
-						status: formData.status,
-					})
-					.eq('id', currentSubject.id);
-
-				if (error) throw error;
-
-				setSubjects(
-					subjects.map(subject =>
-						subject.id === currentSubject.id ? { ...subject, ...formData } : subject
-					)
-				);
-
-				toast.success('Subject updated successfully');
-			} else {
-				// Create new subject
-				const { data, error } = await supabase
-					.from('subjects')
-					.insert([
-						{
-							subjectname: formData.subjectname,
-							code: formData.code,
-							description: formData.description,
-							status: formData.status,
-						},
-					])
-					.select()
-					.single();
-
-				if (error) throw error;
-
-				setSubjects([...subjects, data]);
-				
-				// Extract grade from subject code and auto-assign to grade sections
-				const grade = getGradeFromSubjectCode(formData.code);
-				if (grade) {
-					// Attempt to auto-assign the subject to all sections of this grade
-					const assignSuccess = await assignSubjectToGradeSections(grade, [data.id]);
-					if (assignSuccess) {
-						toast.success(`Subject created and assigned to Grade ${grade} sections`);
-					} else {
-						toast.success('Subject created successfully, but could not assign to grade sections');
-					}
-				} else {
-					toast.success('Subject created successfully');
-				}
-			}
-
-			setShowAddModal(false);
-		} catch (error) {
-			console.error('Error saving subject:', error);
-			toast.error('Failed to save subject');
-		}
-	}
-
-	// Handle assigning subject to grade
-	const handleAssignSubject = () => {
-		setShowAssignModal(true)
-	}
-
-	// Handle the actual assignment process
-	const handleAssignSubjectToGrade = async (grade: string, subjectIds: string[]): Promise<boolean> => {
-		try {
-			if (!subjectIds.length) {
-				toast.error("No subjects selected for assignment");
-				return false;
-			}
-
-			// Find all class sections for the selected grade
-			const { data: sections, error: sectionsError } = await supabase
-				.from('classes')
-				.select('*')
-				.like('classname', `${grade}%`)
-
-			if (sectionsError) throw sectionsError
 
 			if (!sections || sections.length === 0) {
 				toast.error(`No class sections found for Grade ${grade}`)
 				return false
 			}
 
-			let successCount = 0;
-			let errorCount = 0;
-			let alreadyAssignedCount = 0;
+			let successCount = 0
+			let errorCount = 0
 
 			// Process each subject ID
 			for (const subjectId of subjectIds) {
@@ -404,49 +273,207 @@ const SubjectsManagePage: React.FC = () => {
 						.from('classsubjects')
 						.select('*')
 						.eq('classid', rel.classid)
-						.eq('subjectid', rel.subjectid);
+						.eq('subjectid', rel.subjectid)
 
 					if (checkError) {
-						console.error('Error checking existing relationship:', checkError);
-						errorCount++;
-						continue;
+						console.error('Error checking existing relationship:', checkError)
+						errorCount++
+						continue
 					}
 
 					// If there are any existing relationships, skip
 					if (existingData && existingData.length > 0) {
-						alreadyAssignedCount++;
-						continue;
+						continue
 					}
 
 					// Insert the new relationship
-					const { error: insertError } = await supabase
-						.from('classsubjects')
-						.insert([rel]);
+					const { error: insertError } = await supabase.from('classsubjects').insert([rel])
 
 					if (insertError) {
-						console.error('Error inserting relationship:', insertError);
-						errorCount++;
-						continue;
+						console.error('Error inserting relationship:', insertError)
+						errorCount++
+						continue
 					}
-					
-					successCount++;
+
+					successCount++
 				}
 			}
 
-			const totalAttempted = successCount + errorCount + alreadyAssignedCount;
-			
-			if (errorCount > 0 && successCount > 0) {
-				toast.warning(`Assigned ${successCount} new relationships with ${errorCount} errors. ${alreadyAssignedCount} were already assigned.`);
-				return true;
-			} else if (errorCount > 0 && successCount === 0) {
-				toast.error(`Failed to assign subjects. All ${errorCount} assignments failed.`);
-				return false;
-			} else if (alreadyAssignedCount === totalAttempted) {
-				toast.info(`All selected subjects were already assigned to Grade ${grade} sections.`);
-				return true;
+			if (errorCount > 0) {
+				toast.warning(`Assigned ${successCount} relationships with ${errorCount} errors`)
 			} else {
-				toast.success(`Successfully assigned ${subjectIds.length} subject(s) to all sections of Grade ${grade}`);
-				return true;
+				toast.success(
+					`Successfully assigned ${subjectIds.length} subject(s) to all sections of Grade ${grade}`
+				)
+			}
+			return true
+		} catch (error) {
+			console.error('Error in assignSubjectToGradeSections:', error)
+			return false
+		}
+	}
+
+	// Update the handleSubmit function
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault()
+
+		if (!validateForm()) return
+
+		try {
+			if (currentSubject) {
+				// Update existing subject
+				const { error } = await supabase
+					.from('subjects')
+					.update({
+						subjectname: formData.subjectname,
+						code: formData.code,
+						description: formData.description,
+						status: formData.status,
+					})
+					.eq('id', currentSubject.id)
+
+				if (error) throw error
+
+				setSubjects(
+					subjects.map(subject =>
+						subject.id === currentSubject.id ? { ...subject, ...formData } : subject
+					)
+				)
+
+				toast.success('Subject updated successfully')
+			} else {
+				// Create new subject
+				const { data, error } = await supabase
+					.from('subjects')
+					.insert([
+						{
+							subjectname: formData.subjectname,
+							code: formData.code,
+							description: formData.description,
+							status: formData.status,
+						},
+					])
+					.select()
+					.single()
+
+				if (error) throw error
+
+				setSubjects([...subjects, data])
+
+				// Extract grade from subject code and auto-assign to grade sections
+				const grade = getGradeFromSubjectCode(formData.code)
+				if (grade) {
+					// Attempt to auto-assign the subject to all sections of this grade
+					const assignSuccess = await assignSubjectToGradeSections(grade, [data.id])
+					if (assignSuccess) {
+						toast.success(`Subject created and assigned to Grade ${grade} sections`)
+					} else {
+						toast.success('Subject created successfully, but could not assign to grade sections')
+					}
+				} else {
+					toast.success('Subject created successfully')
+				}
+			}
+
+			setShowAddModal(false)
+		} catch (error) {
+			console.error('Error saving subject:', error)
+			toast.error('Failed to save subject')
+		}
+	}
+
+	// Handle assigning subject to grade
+	const handleAssignSubject = () => {
+		setShowAssignModal(true)
+	}
+
+	// Handle the actual assignment process
+	const handleAssignSubjectToGrade = async (
+		grade: string,
+		subjectIds: string[]
+	): Promise<boolean> => {
+		try {
+			if (!subjectIds.length) {
+				toast.error('No subjects selected for assignment')
+				return false
+			}
+
+			// Find all class sections for the selected grade
+			const { data: sections, error: sectionsError } = await supabase
+				.from('classes')
+				.select('*')
+				.like('classname', `${grade}%`)
+
+			if (sectionsError) throw sectionsError
+
+			if (!sections || sections.length === 0) {
+				toast.error(`No class sections found for Grade ${grade}`)
+				return false
+			}
+
+			let successCount = 0
+			let errorCount = 0
+			let alreadyAssignedCount = 0
+
+			// Process each subject ID
+			for (const subjectId of subjectIds) {
+				// For each section, create a relationship in classsubjects table
+				const relationships = sections.map(section => ({
+					classid: section.id,
+					subjectid: subjectId,
+				}))
+
+				// Check for existing relationships to avoid duplicates
+				for (const rel of relationships) {
+					const { data: existingData, error: checkError } = await supabase
+						.from('classsubjects')
+						.select('*')
+						.eq('classid', rel.classid)
+						.eq('subjectid', rel.subjectid)
+
+					if (checkError) {
+						console.error('Error checking existing relationship:', checkError)
+						errorCount++
+						continue
+					}
+
+					// If there are any existing relationships, skip
+					if (existingData && existingData.length > 0) {
+						alreadyAssignedCount++
+						continue
+					}
+
+					// Insert the new relationship
+					const { error: insertError } = await supabase.from('classsubjects').insert([rel])
+
+					if (insertError) {
+						console.error('Error inserting relationship:', insertError)
+						errorCount++
+						continue
+					}
+
+					successCount++
+				}
+			}
+
+			const totalAttempted = successCount + errorCount + alreadyAssignedCount
+
+			if (errorCount > 0 && successCount > 0) {
+				toast.warning(
+					`Assigned ${successCount} new relationships with ${errorCount} errors. ${alreadyAssignedCount} were already assigned.`
+				)
+				return true
+			} else if (errorCount > 0 && successCount === 0) {
+				toast.error(`Failed to assign subjects. All ${errorCount} assignments failed.`)
+				return false
+			} else if (alreadyAssignedCount === totalAttempted) {
+				toast.info(`All selected subjects were already assigned to Grade ${grade} sections.`)
+				return true
+			} else {
+				toast.success(
+					`Successfully assigned ${subjectIds.length} subject(s) to all sections of Grade ${grade}`
+				)
+				return true
 			}
 		} catch (error) {
 			console.error('Error assigning subjects to grade:', error)
@@ -454,6 +481,76 @@ const SubjectsManagePage: React.FC = () => {
 			return false
 		}
 	}
+
+	const getUserRealRole = () => {
+		const userInfo = localStorage.getItem('lms_user')
+		if (userInfo) {
+			try {
+				const parsedInfo = JSON.parse(userInfo)
+				if (parsedInfo.role && typeof parsedInfo.role === 'object') {
+					return parsedInfo.role.name || 'Student'
+				}
+
+				if (parsedInfo.role && typeof parsedInfo.role === 'string') {
+					return parsedInfo.role || 'Student'
+				}
+
+				return 'Student'
+			} catch (error) {
+				console.error('Error parsing user info:', error)
+				return 'Student'
+			}
+		}
+		return user?.role || 'Student'
+	}
+
+	// Check if user is a module leader
+	const isModuleLeader = () => {
+		const userInfo = localStorage.getItem('lms_user')
+		if (userInfo) {
+			try {
+				const parsedInfo = JSON.parse(userInfo)
+
+				if (parsedInfo.role && typeof parsedInfo.role === 'object') {
+					return parsedInfo.role.name === 'ModuleLeader' || false
+				}
+
+				if (parsedInfo.role && typeof parsedInfo.role === 'string') {
+					return parsedInfo.role === 'ModuleLeader' || false
+				}
+
+				if (parsedInfo.isModuleLeader) {
+					return parsedInfo.isModuleLeader || false
+				}
+
+				return false
+			} catch (error) {
+				console.error('Error parsing user info:', error)
+				return false
+			}
+		}
+		return user?.isModuleLeader || false
+	}
+
+	const getUserParentRole = () => {
+		const userInfo = localStorage.getItem('lms_user')
+		if (userInfo) {
+			try {
+				const parsedInfo = JSON.parse(userInfo)
+				if (parsedInfo.role && typeof parsedInfo.role === 'object' && parsedInfo.role.parent) {
+					return parsedInfo.role.parent.name || 'Unknown'
+				}
+				return 'Unknown'
+			} catch (error) {
+				console.error('Error parsing user info:', error)
+				return 'Unknown'
+			}
+		}
+		return 'Unknown'
+	}
+
+	const realRole = getUserRealRole()
+	const parentRole = getUserParentRole()
 
 	if (isLoading) {
 		return (
@@ -475,16 +572,18 @@ const SubjectsManagePage: React.FC = () => {
 					<PageTitle>Subject Management</PageTitle>
 					<PageDescription>Manage subjects and view their details</PageDescription>
 				</div>
-				<ActionButtonsContainer>
-					<AssignButton onClick={handleAssignSubject}>
-						<FiBook />
-						<span>Assign to Grade</span>
-					</AssignButton>
-				<AddButton onClick={handleAddSubject}>
-					<FiPlus />
-					<span>Add Subject</span>
-				</AddButton>
-				</ActionButtonsContainer>
+				{realRole !== 'ModuleLeader' && (
+					<ActionButtonsContainer>
+						<AssignButton onClick={handleAssignSubject}>
+							<FiBook />
+							<span>Assign to Grade</span>
+						</AssignButton>
+						<AddButton onClick={handleAddSubject}>
+							<FiPlus />
+							<span>Add Subject</span>
+						</AddButton>
+					</ActionButtonsContainer>
+				)}
 			</PageHeader>
 
 			<SearchContainer>
@@ -514,7 +613,13 @@ const SubjectsManagePage: React.FC = () => {
 							<SubjectActions>
 								<ActionButton
 									title='View lessons'
-									onClick={() => navigate(`/admin/subjects/${subject.id}/lessons`)}
+									onClick={() => {
+										navigate(
+											`/${
+												parentRole ? parentRole.toLowerCase() : realRole.toLowerCase()
+											}/subjects/${subject.id}/lessons`
+										)
+									}}
 								>
 									<FiBook />
 								</ActionButton>
@@ -557,8 +662,9 @@ const SubjectsManagePage: React.FC = () => {
 								<InfoPanel>
 									<InfoTitle>Automatic Grade Assignment</InfoTitle>
 									<InfoDescription>
-										When you create a new subject with a code ending in a grade number (e.g., MATH10),
-										the subject will be automatically assigned to all sections of that grade (10A, 10B, etc.)
+										When you create a new subject with a code ending in a grade number (e.g.,
+										MATH10), the subject will be automatically assigned to all sections of that
+										grade (10A, 10B, etc.)
 									</InfoDescription>
 								</InfoPanel>
 							)}
@@ -585,11 +691,12 @@ const SubjectsManagePage: React.FC = () => {
 										required
 									/>
 									<CodeHelp>
-										Use a code ending with the grade number for automatic assignment. 
-										Examples: <Example>MATH10</Example> for Grade 10, <Example>BIO11</Example> for Grade 11.
+										Use a code ending with the grade number for automatic assignment. Examples:{' '}
+										<Example>MATH10</Example> for Grade 10, <Example>BIO11</Example> for Grade 11.
 										{detectedGrade && (
 											<div style={{ marginTop: '6px', color: '#059669', fontWeight: '500' }}>
-												✓ Grade {detectedGrade} detected - this subject will be auto-assigned to Grade {detectedGrade} sections
+												✓ Grade {detectedGrade} detected - this subject will be auto-assigned to
+												Grade {detectedGrade} sections
 											</div>
 										)}
 									</CodeHelp>
@@ -632,7 +739,7 @@ const SubjectsManagePage: React.FC = () => {
 			)}
 
 			{/* Assign Subject Modal */}
-			<AssignSubjectModal 
+			<AssignSubjectModal
 				isOpen={showAssignModal}
 				onClose={() => setShowAssignModal(false)}
 				onAssign={handleAssignSubjectToGrade}
@@ -1030,32 +1137,32 @@ const InfoPanel = styled.div`
 	padding: 16px;
 	margin-bottom: 24px;
 	border-left: 4px solid #3b82f6;
-`;
+`
 
 const InfoTitle = styled.p`
 	font-weight: 600;
 	margin: 0 0 8px 0;
 	color: #1f2937;
-`;
+`
 
 const InfoDescription = styled.p`
 	margin: 0;
 	color: #4b5563;
 	font-size: 14px;
 	line-height: 1.5;
-`;
+`
 
 const CodeHelp = styled.div`
 	font-size: 12px;
 	color: #6b7280;
 	margin-top: 6px;
-`;
+`
 
 const Example = styled.span`
 	font-family: monospace;
 	background-color: #f3f4f6;
 	padding: 2px 4px;
 	border-radius: 4px;
-`;
+`
 
 export default SubjectsManagePage
