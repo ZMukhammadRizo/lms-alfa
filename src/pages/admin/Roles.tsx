@@ -110,6 +110,10 @@ const Roles: React.FC = () => {
 			try {
 				// Check if any users are using this role
 				const roleToDelete = roles.find(r => r.id === roleId)
+				if (!roleToDelete) {
+					toast.error('Role not found. Please try again.')
+					return
+				}
 				if (roleToDelete?.usersCount > 0) {
 					toast.error(
 						`Cannot delete role "${roleToDelete.name}". It is currently assigned to ${roleToDelete.usersCount} users.`

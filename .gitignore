@@ -16,6 +16,7 @@ sql
 .env
 .env*
 memory-bank
+.cursor
 
 # Editor directories and files
 .vscode/*

@@ -16,6 +16,7 @@ import {
 } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import EditAnnouncementModal from '../../components/admin/EditAnnouncementModal'
 import Button from '../../components/common/Button'
 import ConfirmationModal from '../../components/common/ConfirmationModal'
 import supabase from '../../config/supabaseClient'
@@ -60,9 +61,11 @@ const Announcements: React.FC = () => {
 	const [formData, setFormData] = useState<AnnouncementFormData>(emptyFormData)
 	const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 	const [selectedAnnouncementId, setSelectedAnnouncementId] = useState<string | null>(null)
+	const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null)
 	const [formSubmitting, setFormSubmitting] = useState(false)
 	const [formError, setFormError] = useState<string | null>(null)
 	const [successMessage, setSuccessMessage] = useState<string | null>(null)
+	const [editModalOpen, setEditModalOpen] = useState(false)
 	const navigate = useNavigate()
 	const [searchTerm, setSearchTerm] = useState('')
 	const [filterChips, setFilterChips] = useState<string[]>([])
@@ -257,7 +260,11 @@ const Announcements: React.FC = () => {
 		const fetchRoles = async () => {
 			setIsLoadingRoles(true)
 			try {
-				const { data } = await supabase.from('roles').select('*').order('name', { ascending: true })
+				const { data } = await supabase
+					.from('roles')
+					.select('*')
+					.eq('isPrimary', true)
+					.order('name', { ascending: true })
 				if (data) {
 					setRoles(data)
 				}
@@ -299,6 +306,26 @@ const Announcements: React.FC = () => {
 
 		fetchAnnouncements()
 	}, [])
+
+	// Handle edit announcement
+	const handleEdit = (announcement: Announcement) => {
+		setSelectedAnnouncement(announcement)
+		setEditModalOpen(true)
+	}
+
+	// Handle save edited announcement
+	const handleSaveEditedAnnouncement = (updatedAnnouncement: Announcement) => {
+		// Update the announcement in the local state
+		setAnnouncements(prevAnnouncements =>
+			prevAnnouncements.map(announcement =>
+				announcement.id === updatedAnnouncement.id ? updatedAnnouncement : announcement
+			)
+		)
+
+		setSuccessMessage('Announcement updated successfully!')
+		setEditModalOpen(false)
+		setSelectedAnnouncement(null)
+	}
 
 	return (
 		<Container>
@@ -426,10 +453,10 @@ const Announcements: React.FC = () => {
 
 						<FormRow>
 							<FormGroup>
-								<FormLabel htmlFor='target'>Target Audience*</FormLabel>
+								<FormLabel htmlFor='targetAudience'>Target Audience*</FormLabel>
 								<FormSelect
-									id='target'
-									name='target'
+									id='targetAudience'
+									name='targetAudience'
 									value={formData.targetAudience}
 									onChange={handleFormChange}
 									disabled={formSubmitting}
@@ -445,7 +472,7 @@ const Announcements: React.FC = () => {
 								<FormCheckboxLabel>
 									<FormCheckbox
 										type='checkbox'
-										name='important'
+										name='isImportant'
 										checked={formData.isImportant}
 										onChange={handleFormChange}
 										disabled={formSubmitting}
@@ -510,7 +537,9 @@ const Announcements: React.FC = () => {
 												disablePictureInPicture
 												controlsList='nodownload'
 												autoPlay={false}
-												onClick={e => e.currentTarget.requestFullscreen()}
+												onClick={(e: React.MouseEvent<HTMLVideoElement>) =>
+													e.currentTarget.requestFullscreen()
+												}
 											>
 												<source src={announcement.video_url} type='video/mp4' />
 												Your browser does not support the video tag.
@@ -519,14 +548,10 @@ const Announcements: React.FC = () => {
 									)}
 									{announcement.photo_url && (
 										<MediaItem
-											onClick={e => {
+											onClick={(e: React.MouseEvent<HTMLDivElement>) => {
 												const element = e.currentTarget
 												if (element.requestFullscreen) {
 													element.requestFullscreen()
-												} else if (element.webkitRequestFullscreen) {
-													element.webkitRequestFullscreen()
-												} else if (element.msRequestFullscreen) {
-													element.msRequestFullscreen()
 												}
 											}}
 										>
@@ -571,6 +596,7 @@ const Announcements: React.FC = () => {
 				)}
 			</AnnouncementsList>
 
+			{/* Modals */}
 			<ConfirmationModal
 				isOpen={deleteConfirmOpen}
 				onCancel={() => setDeleteConfirmOpen(false)}
@@ -580,6 +606,14 @@ const Announcements: React.FC = () => {
 				confirmText='Delete'
 				cancelText='Cancel'
 				isDanger={true}
+			/>
+
+			<EditAnnouncementModal
+				isOpen={editModalOpen}
+				onClose={() => setEditModalOpen(false)}
+				announcement={selectedAnnouncement}
+				onSave={handleSaveEditedAnnouncement}
+				roles={roles}
 			/>
 		</Container>
 	)
@@ -911,62 +945,7 @@ const FormSelect = styled.select`
 	}
 `
 
-const FormRow = styled.div`
-	display: flex;
-	gap: 16px;
-	margin-bottom: 16px;
-
-	@media (max-width: ${props => props.theme.breakpoints.sm}) {
-		flex-direction: column;
-		gap: 8px;
-	}
-`
-
-const FormCheckboxLabel = styled.label`
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 14px;
-	color: ${props => props.theme.colors.text.primary};
-	cursor: pointer;
-	margin-top: 24px;
-`
-
-const FormCheckbox = styled.input`
-	margin: 0;
-`
-
-const ButtonRow = styled.div`
-	display: flex;
-	justify-content: flex-end;
-	gap: 12px;
-	margin-top: 24px;
-`
-
-const FormErrorMessage = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	color: ${props => props.theme.colors.danger[500]};
-	background-color: ${props => props.theme.colors.danger[50]};
-	padding: 12px;
-	border-radius: 6px;
-	margin-bottom: 16px;
-	font-size: 14px;
-`
-
-const ErrorMessage = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	color: ${props => props.theme.colors.danger[600]};
-	background-color: ${props => props.theme.colors.danger[50]};
-	padding: 12px 16px;
-	border-radius: 6px;
-	margin-bottom: 16px;
-	font-size: 14px;
-`
-
+// Add SuccessMessage styled component
 const SuccessMessage = styled.div`
 	display: flex;
 	align-items: center;
@@ -979,6 +958,25 @@ const SuccessMessage = styled.div`
 	font-size: 14px;
 `
 
+// Add ClearButton styled component
+const ClearButton = styled.button`
+	background: none;
+	border: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: ${props => props.theme.colors.text.tertiary};
+	cursor: pointer;
+	padding: 2px;
+	border-radius: 50%;
+
+	&:hover {
+		color: ${props => props.theme.colors.text.primary};
+		background-color: ${props => props.theme.colors.background.tertiary};
+	}
+`
+
+// Add FilterChipsContainer styled component
 const FilterChipsContainer = styled.div`
 	display: flex;
 	flex-wrap: wrap;
@@ -986,6 +984,7 @@ const FilterChipsContainer = styled.div`
 	margin-bottom: 16px;
 `
 
+// Add FilterChip styled component
 interface FilterChipProps {
 	active: boolean
 }
@@ -1020,6 +1019,70 @@ const FilterChip = styled.div<FilterChipProps>`
 	}
 `
 
+// Add ClearFiltersButton styled component
+const ClearFiltersButton = styled.button`
+	background: none;
+	border: none;
+	font-size: 12px;
+	color: ${props => props.theme.colors.primary[600]};
+	cursor: pointer;
+	padding: 4px 8px;
+
+	&:hover {
+		text-decoration: underline;
+	}
+`
+
+// Add FormErrorMessage styled component
+const FormErrorMessage = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: ${props => props.theme.colors.danger[500]};
+	background-color: ${props => props.theme.colors.danger[50]};
+	padding: 12px;
+	border-radius: 6px;
+	margin-bottom: 16px;
+	font-size: 14px;
+`
+
+// Add FormRow styled component
+const FormRow = styled.div`
+	display: flex;
+	gap: 16px;
+	margin-bottom: 16px;
+
+	@media (max-width: ${props => props.theme.breakpoints.sm}) {
+		flex-direction: column;
+		gap: 8px;
+	}
+`
+
+// Add FormCheckboxLabel styled component
+const FormCheckboxLabel = styled.label`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 14px;
+	color: ${props => props.theme.colors.text.primary};
+	cursor: pointer;
+	margin-top: 24px;
+`
+
+// Add FormCheckbox styled component
+const FormCheckbox = styled.input`
+	margin: 0;
+`
+
+// Add ButtonRow styled component
+const ButtonRow = styled.div`
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	margin-top: 24px;
+`
+
+// Add MediaContainer styled component
 const MediaContainer = styled.div`
 	display: flex;
 	gap: 16px;
@@ -1027,6 +1090,7 @@ const MediaContainer = styled.div`
 	width: 100%;
 `
 
+// Add MediaItem styled component
 const MediaItem = styled.div`
 	flex: 1;
 	min-width: 0;
@@ -1051,53 +1115,9 @@ const MediaItem = styled.div`
 			object-fit: contain;
 		}
 	}
-
-	&:-webkit-full-screen {
-		background-color: ${props => props.theme.colors.background.primary};
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 20px;
-
-		img,
-		video {
-			max-height: 100vh;
-			width: auto;
-			object-fit: contain;
-		}
-	}
-
-	&:-moz-full-screen {
-		background-color: ${props => props.theme.colors.background.primary};
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 20px;
-
-		img,
-		video {
-			max-height: 100vh;
-			width: auto;
-			object-fit: contain;
-		}
-	}
-
-	&:-ms-fullscreen {
-		background-color: ${props => props.theme.colors.background.primary};
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 20px;
-
-		img,
-		video {
-			max-height: 100vh;
-			width: auto;
-			object-fit: contain;
-		}
-	}
 `
 
+// Add AnnouncementVideo styled component
 const AnnouncementVideo = styled.video`
 	width: 100%;
 	height: auto;
@@ -1107,6 +1127,7 @@ const AnnouncementVideo = styled.video`
 	border-radius: 8px;
 `
 
+// Add AnnouncementImage styled component
 const AnnouncementImage = styled.img`
 	width: 100%;
 	height: auto;
@@ -1116,36 +1137,7 @@ const AnnouncementImage = styled.img`
 	border-radius: 8px;
 `
 
-const ClearFiltersButton = styled.button`
-	background: none;
-	border: none;
-	font-size: 12px;
-	color: ${props => props.theme.colors.primary[600]};
-	cursor: pointer;
-	padding: 4px 8px;
-
-	&:hover {
-		text-decoration: underline;
-	}
-`
-
-const ClearButton = styled.button`
-	background: none;
-	border: none;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	color: ${props => props.theme.colors.text.tertiary};
-	cursor: pointer;
-	padding: 2px;
-	border-radius: 50%;
-
-	&:hover {
-		color: ${props => props.theme.colors.text.primary};
-		background-color: ${props => props.theme.colors.background.tertiary};
-	}
-`
-
+// Add LoadingState styled component
 const LoadingState = styled.div`
 	display: flex;
 	flex-direction: column;
@@ -1165,6 +1157,7 @@ const LoadingState = styled.div`
 	}
 `
 
+// Add IconButton styled component
 const IconButton = styled.button`
 	background: none;
 	border: none;
@@ -1177,6 +1170,19 @@ const IconButton = styled.button`
 		color: ${props => props.theme.colors.text.primary};
 		background-color: ${props => props.theme.colors.background.tertiary};
 	}
+`
+
+// Add ErrorMessage styled component
+const ErrorMessage = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: ${props => props.theme.colors.danger[600]};
+	background-color: ${props => props.theme.colors.danger[50]};
+	padding: 12px 16px;
+	border-radius: 6px;
+	margin-bottom: 16px;
+	font-size: 14px;
 `
 
 export default Announcements
