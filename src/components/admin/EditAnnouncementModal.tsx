@@ -15,6 +15,7 @@ interface Announcement {
 	created_at: string
 	photo_url?: string | null
 	video_url?: string | null
+	created_by_name?: string
 	[key: string]: any
 }
 

@@ -20,7 +20,7 @@ interface Role {
 	parent_role?: {
 		id?: string
 		name?: string
-	}
+	} | null
 	[key: string]: any
 }
 
@@ -196,7 +196,7 @@ const Roles: React.FC = () => {
 				}
 
 				// Update the local state with the new role
-				setRoles([updatedRole, ...roles])
+				setRoles([updatedRole as Role, ...roles])
 				toast.success('Role created successfully!')
 			}
 			// Case 2: Update an existing role when currentRole is not null
@@ -235,12 +235,12 @@ const Roles: React.FC = () => {
 				setRoles(prevRoles =>
 					prevRoles.map(role =>
 						role.id === currentRole.id
-							? {
+							? ({
 									...role,
 									name: roleData.name,
 									description: roleData.description,
 									parent_role: parentRoleObj,
-							  }
+							  } as Role)
 							: role
 					)
 				)
@@ -302,10 +302,10 @@ const Roles: React.FC = () => {
 			setRoles(
 				roles.map(role =>
 					role.id === roleId
-						? {
+						? ({
 								...role,
 								role_permissions: permissions.filter(p => permissionIds.includes(p.id)),
-						  }
+						  } as Role)
 						: role
 				)
 			)
@@ -684,7 +684,7 @@ const Roles: React.FC = () => {
 				isOpen={isFormOpen}
 				onClose={handleFormClose}
 				onSubmit={handleFormSubmit}
-				initialData={currentRole || undefined}
+				initialData={(currentRole as any) || undefined}
 				formTitle={currentRole ? 'Edit Role' : 'Add New Role'}
 			/>
 
