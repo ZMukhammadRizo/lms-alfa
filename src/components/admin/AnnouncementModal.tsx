@@ -74,16 +74,32 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 
 			setFormData(prev => ({ ...prev, [name]: checked }))
 		} else if (name === 'target') {
+			console.log(`Target audience selected: ${value}`);
+			
+			// Set the value and ensure it's capitalized properly
+			const audienceValue = value.charAt(0).toUpperCase() + value.slice(1) as
+				| 'All'
+				| 'Student'
+				| 'Teacher'
+				| 'Admin'
+				| any;
+				
 			setFormData(prev => ({
 				...prev,
-				// make targetAudience's first letter uppercase
-				targetAudience: (value.charAt(0).toUpperCase() + value.slice(1)) as
-					| 'All'
-					| 'Student'
-					| 'Teacher'
-					| 'Admin'
-					| any,
+				targetAudience: audienceValue,
 			}))
+			
+			// Force update the select element after state is updated
+			setTimeout(() => {
+				const select = document.getElementById('target') as HTMLSelectElement;
+				if (select) {
+					select.value = value;
+					
+					// Simulate a change event to ensure proper UI updates
+					const event = new Event('change', { bubbles: true });
+					select.dispatchEvent(event);
+				}
+			}, 50);
 		} else {
 			setFormData(prev => ({ ...prev, [name]: value }))
 		}
@@ -453,6 +469,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 							value={formData.targetAudience.toLowerCase()}
 							onChange={e => handleFormChange(e)}
 							disabled={formSubmitting}
+							key={`target-select-${formData.targetAudience}`}
 						>
 							<option value='all'>All Users</option>
 							{roles.map(role => (
@@ -631,6 +648,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 								value={formData.targetAudience.toLowerCase()}
 								onChange={e => handleFormChange(e)}
 								disabled={formSubmitting}
+								key={`target-select-${formData.targetAudience}`}
 							>
 								<option value='all'>All Users</option>
 								{roles.map(role => (

@@ -10,7 +10,7 @@ export interface Announcement {
 	title: string
 	content: string
 	isImportant: boolean
-	targetAudience: 'all' | 'student' | 'teacher' | 'admin'
+	targetAudience: string
 	created_at: string
 	created_by:
 		| string
@@ -22,6 +22,19 @@ export interface Announcement {
 	video_url?: string
 	isRead?: boolean
 	[key: string]: any
+}
+
+export interface UpdateAnnouncementData {
+	title?: string
+	content?: string
+	isImportant?: boolean
+	targetAudience?: string
+	photo_url?: string | null | undefined; // Allow null and undefined
+	video_url?: string | null | undefined; // Allow null and undefined
+	photo_file?: File | null 
+	video_file?: File | null 
+	photo_name?: string | null 
+	video_name?: string | null 
 }
 
 // Mock function to simulate announcement creation in Supabase
@@ -53,8 +66,9 @@ interface AnnouncementState {
 	// Actions
 	fetchAnnouncements: (targetAudience: string) => Promise<void>
 	createAnnouncement: (
-		announcement: Omit<Announcement, 'id' | 'createdAt' | 'isRead'>
+		announcement: Omit<Announcement, 'id' | 'createdAt' | 'isRead'> & { photo_file?: File | null, video_file?: File | null }
 	) => Promise<boolean>
+	updateAnnouncement: (id: string, data: UpdateAnnouncementData) => Promise<boolean>
 	deleteAnnouncement: (id: string) => Promise<boolean>
 	markAsRead: (id: string) => void
 	markAllAsRead: () => void
@@ -268,13 +282,145 @@ export const useAnnouncementStore = create<AnnouncementState>()(
 				}
 			},
 
-			createAnnouncement: async announcement => {
+			updateAnnouncement: async (id, updateData) => {
+				set({ isLoading: true, error: null });
+				try {
+					const currentAnnouncement = get().announcements.find(ann => ann.id === id);
+					let photo_url = currentAnnouncement?.photo_url;
+					let video_url = currentAnnouncement?.video_url;
+					let photo_name = currentAnnouncement?.photo_name;
+					let video_name = currentAnnouncement?.video_name;
+
+					// Handle photo upload/removal
+					if (updateData.photo_file) {
+						// If there was an old photo, delete it
+						if (photo_name) {
+							await supabase.storage.from('lms').remove([photo_name]);
+						}
+						const newPhotoName = `announcement_photos/${Date.now()}_${updateData.photo_file.name}`;
+						const { error: photoUploadError } = await supabase.storage
+							.from('lms')
+							.upload(newPhotoName, updateData.photo_file);
+						if (photoUploadError) throw photoUploadError;
+						photo_url = `${supabase.storage.from('lms').getPublicUrl(newPhotoName).data.publicUrl}`;
+						photo_name = newPhotoName;
+					} else if (updateData.photo_url === null && photo_name) {
+                        // If photo_url is explicitly set to null (meaning remove photo) and there was a photo
+                        await supabase.storage.from('lms').remove([photo_name]);
+                        photo_url = null; // Explicitly set to null for database update
+                        photo_name = null; // Explicitly set to null for database update
+                    }
+
+					// Handle video upload/removal
+					if (updateData.video_file) {
+						// If there was an old video, delete it
+						if (video_name) {
+							await supabase.storage.from('lms').remove([video_name]);
+						}
+						const newVideoName = `announcement_videos/${Date.now()}_${updateData.video_file.name}`;
+						const { error: videoUploadError } = await supabase.storage
+							.from('lms')
+							.upload(newVideoName, updateData.video_file);
+						if (videoUploadError) throw videoUploadError;
+						video_url = `${supabase.storage.from('lms').getPublicUrl(newVideoName).data.publicUrl}`;
+						video_name = newVideoName;
+					} else if (updateData.video_url === null && video_name) {
+                        // If video_url is explicitly set to null (meaning remove video) and there was a video
+                        await supabase.storage.from('lms').remove([video_name]);
+                        video_url = null; // Explicitly set to null for database update
+                        video_name = null; // Explicitly set to null for database update
+                    }
+
+					const { title, content, isImportant, targetAudience } = updateData;
+					const updatePayload: any = {
+						title,
+						content,
+						isImportant,
+						targetAudience: targetAudience ? targetAudience.charAt(0).toUpperCase() + targetAudience.slice(1) : undefined,
+						photo_url, // This will be null if removed, or the new URL if updated, or existing if unchanged
+						video_url, // This will be null if removed, or the new URL if updated, or existing if unchanged
+						photo_name, // This will be null if removed, or the new name if updated, or existing if unchanged
+						video_name, // This will be null if removed, or the new name if updated, or existing if unchanged
+					};
+
+					// Remove undefined fields from payload to prevent overwriting with null IF NOT PROVIDED
+                    // but keep nulls if they were explicitly set (e.g. for removal)
+					Object.keys(updatePayload).forEach(key => {
+                        if (updatePayload[key] === undefined) {
+                           delete updatePayload[key];
+                        }
+                    });
+
+					const { data: updatedDbAnnouncement, error: updateError } = await supabase
+						.from('announcements')
+						.update(updatePayload)
+						.eq('id', id)
+						.select()
+						.single();
+
+					if (updateError) throw updateError;
+
+					set(state => ({
+						announcements: state.announcements.map(ann =>
+							ann.id === id ? { ...ann, ...updatedDbAnnouncement, isRead: ann.isRead } : ann // Preserve isRead status
+						),
+					}));
+					showSuccess('Announcement updated successfully!');
+					return true;
+				} catch (error) {
+					const errorMessage =
+						error instanceof Error ? error.message : 'Failed to update announcement';
+					set({ error: errorMessage });
+					console.error('Error updating announcement:', error);
+					showError(errorMessage);
+					return false;
+				} finally {
+					set({ isLoading: false });
+				}
+			},
+
+			createAnnouncement: async (announcementInput) => {
 				set({ isLoading: true, error: null })
 				try {
-					// In a real app, we would call Supabase here
+					let photo_url: string | undefined = undefined;
+					let video_url: string | undefined = undefined;
+					let photo_name: string | undefined = undefined;
+					let video_name: string | undefined = undefined;
+					const { photo_file, video_file, ...restOfAnnouncement } = announcementInput;
+
+					// Handle photo upload
+					if (photo_file) {
+						const newPhotoName = `announcement_photos/${Date.now()}_${photo_file.name}`;
+						const { error: photoUploadError } = await supabase.storage
+							.from('lms')
+							.upload(newPhotoName, photo_file);
+						if (photoUploadError) throw photoUploadError;
+						photo_url = `${supabase.storage.from('lms').getPublicUrl(newPhotoName).data.publicUrl}`;
+						photo_name = newPhotoName;
+					}
+
+					// Handle video upload
+					if (video_file) {
+						const newVideoName = `announcement_videos/${Date.now()}_${video_file.name}`;
+						const { error: videoUploadError } = await supabase.storage
+							.from('lms')
+							.upload(newVideoName, video_file);
+						if (videoUploadError) throw videoUploadError;
+						video_url = `${supabase.storage.from('lms').getPublicUrl(newVideoName).data.publicUrl}`;
+						video_name = newVideoName;
+					}
+
+					const announcementToCreate = {
+						...restOfAnnouncement,
+						photo_url,
+						video_url,
+						photo_name,
+						video_name,
+					};
+
 					const { data: newAnnouncement, error: createError } = await supabase
 						.from('announcements')
-						.insert([announcement])
+						.insert([announcementToCreate])
 						.select()
 						.single()
 
@@ -499,6 +645,7 @@ export const useAnnouncements = () => {
 		error: store.error,
 		unreadCount: store.unreadCount,
 		createAnnouncement: store.createAnnouncement,
+		updateAnnouncement: store.updateAnnouncement,
 		deleteAnnouncement: store.deleteAnnouncement,
 		markAsRead: store.markAsRead,
 		markAllAsRead: store.markAllAsRead,
