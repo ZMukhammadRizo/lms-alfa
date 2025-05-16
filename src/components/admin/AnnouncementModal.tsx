@@ -49,7 +49,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 
 	async function getRoles() {
 		try {
-			const { data, error } = await supabase.from('roles').select('*')
+			const { data, error } = await supabase.from('roles').select('*').eq('isPrimary', true)
 			if (error) {
 				console.error('Error fetching roles:', error)
 			} else {
@@ -450,14 +450,14 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 						<FormSelect
 							id='target'
 							name='target'
-							value={formData.targetAudience}
+							value={formData.targetAudience.toLowerCase()}
 							onChange={e => handleFormChange(e)}
 							disabled={formSubmitting}
 						>
 							<option value='all'>All Users</option>
 							{roles.map(role => (
 								<option key={role.id} value={role.name.toLowerCase()}>
-									{role.name}
+									{role.name}s Only
 								</option>
 							))}
 						</FormSelect>
@@ -472,7 +472,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 								onChange={handleFormChange}
 								disabled={formSubmitting}
 							/>
-							<span>Mark as Important 2</span>
+							<span>Mark as Important</span>
 						</FormCheckboxLabel>
 					</FormGroup>
 				</FormRow>
@@ -628,14 +628,14 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 							<FormSelect
 								id='target'
 								name='target'
-								value={formData.targetAudience}
+								value={formData.targetAudience.toLowerCase()}
 								onChange={e => handleFormChange(e)}
 								disabled={formSubmitting}
 							>
 								<option value='all'>All Users</option>
 								{roles.map(role => (
 									<option key={role.id} value={role.name.toLowerCase()}>
-										{role.name}
+										{role.name}s Only
 									</option>
 								))}
 							</FormSelect>

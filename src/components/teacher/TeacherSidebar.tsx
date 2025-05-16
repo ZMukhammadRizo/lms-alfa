@@ -279,7 +279,7 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 						</MenuContainer>
 
 						<ProfileSection $isCollapsed={isMobile ? false : isCollapsed}>
-							<ProfileAvatar $isCollapsed={isMobile ? false : isCollapsed}>
+							<ProfileAvatar>
 								{getUserInitials()}
 							</ProfileAvatar>
 							<AnimatePresence>
