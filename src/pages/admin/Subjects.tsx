@@ -43,11 +43,11 @@ const fetchLevels = async () => {
   const { data, error } = await supabase
     .from('levels')
     .select('*');
-  
+
   if (error) {
     throw error;
   }
-  
+
   return { data, error };
 };
 
@@ -55,52 +55,52 @@ const fetchSubjects = async () => {
   const { data, error } = await supabase
     .from('subjects')
     .select('*');
-  
+
   if (error) {
     throw error;
   }
-  
+
   return { data, error };
 };
 
 const fetchLessons = async () => {
   console.log("Fetching lessons from Supabase...");
-  
+
   try {
     // First try the nested select approach
     try {
   const { data, error } = await supabase
         .from('lessons')
         .select(`
-          id, 
-          lessonname, 
-          description, 
-          uploadedat, 
-          videourl, 
+          id,
+          lessonname,
+          description,
+          uploadedat,
+          videourl,
           subjectid (id, name)
         `);
-      
+
       console.log("Lessons fetch response (nested select):", { data, error });
-      
+
       if (!error && data && data.length > 0) {
         return { data, error };
       }
     } catch (innerErr) {
       console.warn("Nested select failed, trying simple select:", innerErr);
     }
-    
+
     // If nested select failed, try a simple select
     const { data, error } = await supabase
       .from('lessons')
       .select('id, lessonname, description, uploadedat, videourl, subjectid');
-    
+
     console.log("Lessons fetch response (simple select):", { data, error });
-  
+
   if (error) {
       console.error("Error fetching lessons:", error);
     throw error;
   }
-  
+
     return { data: data || [], error };
   } catch (err) {
     console.error("Exception in fetchLessons:", err);
@@ -113,11 +113,11 @@ const addSubject = async (subject: Omit<Subject, 'id'>) => {
     .from('subjects')
     .insert([subject])
     .select();
-  
+
   if (error) {
     throw error;
   }
-  
+
   return { data, error };
 };
 
@@ -127,11 +127,11 @@ const updateSubject = async (id: string, updates: Partial<Subject>) => {
     .update(updates)
     .eq('id', id)
     .select();
-  
+
   if (error) {
     throw error;
   }
-  
+
   return { data, error };
 };
 
@@ -141,11 +141,11 @@ const addLesson = async (lesson: Omit<Lesson, 'id'>) => {
     .from('lessons')
     .insert([lesson])
     .select();
-  
+
   if (error) {
     throw error;
   }
-  
+
   return { data, error };
 };
 
@@ -160,7 +160,7 @@ const PageHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  
+
   @media (max-width: ${props => props.theme.breakpoints.md}) {
     flex-direction: column;
     align-items: flex-start;
@@ -222,11 +222,11 @@ const AddSubjectButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all ${props => props.theme.transition.fast};
-  
+
   &:hover {
     background-color: ${props => props.theme.colors.primary[700]};
   }
-  
+
   @media (max-width: ${props => props.theme.breakpoints.md}) {
     width: 100%;
     justify-content: center;
@@ -246,7 +246,7 @@ const ClassButtonsContainer = styled.div`
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(240, 240, 250, 0.9);
-  
+
   @media (max-width: ${props => props.theme.breakpoints.md}) {
     gap: 0.75rem;
     justify-content: center;
@@ -261,20 +261,20 @@ const ClassButton = styled.button<{ $isActive?: boolean }>`
   font-weight: 600;
   font-size: 1.05rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background-color: ${props => props.$isActive 
-    ? props.theme.colors.primary[600] 
+  background-color: ${props => props.$isActive
+    ? props.theme.colors.primary[600]
     : 'rgba(250, 250, 255, 0.95)'};
   color: ${props => props.$isActive ? 'white' : 'rgba(55, 65, 81, 1)'};
   border: none;
   cursor: pointer;
-  box-shadow: ${props => props.$isActive 
-    ? '0 4px 14px rgba(79, 70, 229, 0.25)' 
+  box-shadow: ${props => props.$isActive
+    ? '0 4px 14px rgba(79, 70, 229, 0.25)'
     : '0 2px 6px rgba(0, 0, 0, 0.06)'};
   position: relative;
   overflow: hidden;
   letter-spacing: 0.01em;
   min-width: 115px;
-  
+
   &::before {
     content: '';
   position: absolute;
@@ -291,28 +291,28 @@ const ClassButton = styled.button<{ $isActive?: boolean }>`
     opacity: ${props => props.$isActive ? 1 : 0};
     transition: opacity 0.3s ease;
   }
-  
+
   &:hover {
-    background-color: ${props => props.$isActive 
-      ? props.theme.colors.primary[500] 
+    background-color: ${props => props.$isActive
+      ? props.theme.colors.primary[500]
       : 'rgba(245, 245, 255, 1)'};
     transform: translateY(-2px);
-    box-shadow: ${props => props.$isActive 
-      ? '0 6px 20px rgba(79, 70, 229, 0.3)' 
+    box-shadow: ${props => props.$isActive
+      ? '0 6px 20px rgba(79, 70, 229, 0.3)'
       : '0 4px 12px rgba(0, 0, 0, 0.08)'};
   }
 
   &:active {
     transform: translateY(0);
-    box-shadow: ${props => props.$isActive 
-      ? '0 3px 10px rgba(79, 70, 229, 0.2)' 
+    box-shadow: ${props => props.$isActive
+      ? '0 3px 10px rgba(79, 70, 229, 0.2)'
       : '0 1px 4px rgba(0, 0, 0, 0.05)'};
   }
-  
+
   &:focus {
     outline: none;
-    box-shadow: ${props => props.$isActive 
-      ? `0 0 0 2px white, 0 0 0 4px ${props.theme.colors.primary[300]}` 
+    box-shadow: ${props => props.$isActive
+      ? `0 0 0 2px white, 0 0 0 4px ${props.theme.colors.primary[300]}`
       : `0 0 0 2px white, 0 0 0 4px ${props.theme.colors.primary[200]}`};
   }
 
@@ -348,7 +348,7 @@ const SubjectsList = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
-  
+
   @media (max-width: ${props => props.theme.breakpoints.sm}) {
     grid-template-columns: 1fr;
   }
@@ -360,7 +360,7 @@ const SubjectCard = styled.div`
   padding: 1.25rem;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
-  
+
   &:hover {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
     transform: translateY(-2px);
@@ -427,12 +427,12 @@ const EditButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background-color: #e5e7eb;
     transform: translateY(-1px);
   }
-  
+
   &:active {
     transform: translateY(0);
   }
@@ -442,7 +442,7 @@ const DeleteButton = styled(EditButton)`
   background-color: #fee2e2;
   color: #dc2626;
   border: 1px solid #fecaca;
-  
+
   &:hover {
     background-color: #fecaca;
     transform: translateY(-1px);
@@ -499,7 +499,7 @@ const CloseButton = styled.button`
   justify-content: center;
   border-radius: 0.375rem;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background-color: #f3f4f6;
     color: #ef4444;
@@ -526,7 +526,7 @@ const FormInput = styled.input`
   font-size: 0.875rem;
   color: ${props => props.theme.colors.text.primary};
   transition: all 0.2s ease;
-  
+
   &:focus {
     outline: none;
     border-color: ${props => props.theme.colors.primary[400]};
@@ -544,7 +544,7 @@ const FormTextarea = styled.textarea`
   transition: all 0.2s ease;
   min-height: 100px;
   resize: vertical;
-  
+
   &:focus {
     outline: none;
     border-color: ${props => props.theme.colors.primary[400]};
@@ -561,7 +561,7 @@ const FormSelect = styled.select`
   color: ${props => props.theme.colors.text.primary};
   transition: all 0.2s ease;
   background-color: white;
-  
+
   &:focus {
     outline: none;
     border-color: ${props => props.theme.colors.primary[400]};
@@ -579,11 +579,11 @@ const FormButton = styled.button`
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background-color: ${props => props.theme.colors.primary[700]};
   }
-  
+
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -607,7 +607,7 @@ const CancelButton = styled.button`
   border: 1px solid #d1d5db;
   cursor: pointer;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background-color: #f3f4f6;
   }
@@ -665,7 +665,7 @@ const BackButton = styled.button`
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 0.375rem;
-  
+
   &:hover {
     background-color: rgba(79, 70, 229, 0.05);
   }
@@ -687,7 +687,7 @@ const LessonItem = styled.div`
   position: relative;
   display: flex;
   flex-direction: column;
-  
+
   &:hover {
     border-color: ${props => props.theme.colors.primary[300]};
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
@@ -726,7 +726,7 @@ const WatchButton = styled.button<{ $hasVideo?: boolean }>`
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background-color: ${props => props.$hasVideo 
+  background-color: ${props => props.$hasVideo
     ? props.theme.colors.primary[600]
     : '#6366f1'};
   color: white;
@@ -738,18 +738,18 @@ const WatchButton = styled.button<{ $hasVideo?: boolean }>`
   cursor: pointer;
   transition: all 0.2s ease;
   width: fit-content;
-  
+
   &:hover {
-    background-color: ${props => props.$hasVideo 
+    background-color: ${props => props.$hasVideo
       ? props.theme.colors.primary[700]
       : '#4f46e5'};
     transform: translateY(-1px);
   }
-  
+
   &:active {
       transform: translateY(0);
     }
-  
+
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -778,7 +778,7 @@ const AddLessonButton = styled.button`
   cursor: pointer;
   transition: all ${props => props.theme.transition.fast};
   margin-bottom: 1.5rem;
-  
+
   &:hover {
     background-color: ${props => props.theme.colors.primary[700]};
   }
@@ -795,34 +795,34 @@ const loadLessons = async (
   try {
     setLoading(true);
     console.log("Loading lessons...");
-    
+
     const { data, error } = await fetchLessons();
-    
+
     if (error) {
       console.error("Error in loadLessons:", error);
       throw error;
     }
-    
+
     // Log the raw data
     console.log("Raw lessons data:", data);
-    
+
     if (data && data.length > 0) {
       console.log(`Successfully loaded ${data.length} lessons`);
       setLessons(data);
-      
+
       // Filtering if a subject is selected
       if (selectedSubject) {
         console.log("Filtering lessons for selected subject:", selectedSubject.id);
-        
+
         const filtered = data.filter(lesson => {
           // Handle both string and object cases for subjectid
-          const subjectId = typeof lesson.subjectid === 'object' 
-                            ? lesson.subjectid?.id 
+          const subjectId = typeof lesson.subjectid === 'object'
+                            ? lesson.subjectid?.id
                             : lesson.subjectid;
           // console.log("Lesson:", lesson.id, "subjectid raw:", lesson.subjectid, "extracted ID:", subjectId); // More detailed log if needed
           return subjectId === selectedSubject.id;
         });
-        
+
         console.log(`Found ${filtered.length} lessons for subject ${selectedSubject.id}`);
         setFilteredLessons(filtered);
       } else {
@@ -834,7 +834,7 @@ const loadLessons = async (
       setLessons([]);
       setFilteredLessons([]);
     }
-    
+
     setError(null);
   } catch (err: any) {
     console.error("Error loading lessons:", err);
@@ -866,7 +866,7 @@ const Subjects: React.FC = () => {
   });
   const [showAssignModal, setShowAssignModal] = useState(false);
   const navigate = useNavigate();
-  
+
   // Form state
   const [formData, setFormData] = useState<Omit<Subject, 'id'>>({
     subjectname: '',
@@ -896,11 +896,11 @@ const Subjects: React.FC = () => {
       try {
         setLoading(true);
         const { data, error } = await fetchLevels();
-        
+
         if (error) {
           throw error;
         }
-        
+
         if (data && data.length > 0) {
           // Sort levels by name (converted to number for proper sorting)
           const sortedLevels = [...data].sort((a, b) => Number(a.name) - Number(b.name));
@@ -926,24 +926,24 @@ const Subjects: React.FC = () => {
         setLoading(false);
       }
     };
-  
+
     loadLevels();
   }, []); // Empty dependency array ensures this only runs once on mount
-  
+
   // Fetch subjects from Supabase
   useEffect(() => {
     const loadSubjects = async () => {
       try {
         setLoading(true);
         const { data, error } = await fetchSubjects();
-        
+
         if (error) {
           throw error;
         }
-        
+
         if (data) {
           setSubjects(data);
-          
+
           // Initial filtering if a level is already selected
           if (selectedLevel) {
             const classCode = selectedLevel.padStart(2, '0');
@@ -953,7 +953,7 @@ const Subjects: React.FC = () => {
             setFilteredSubjects(data);
           }
         }
-        
+
         setError(null);
       } catch (err: any) {
         console.error("Error fetching subject data:", err);
@@ -964,7 +964,7 @@ const Subjects: React.FC = () => {
         setLoading(false);
       }
     };
-    
+
     loadSubjects();
   }, []); // Empty dependency array ensures this only runs once on mount
 
@@ -985,36 +985,36 @@ const Subjects: React.FC = () => {
       const filtered = subjects.filter(subject => subject.code.endsWith(classCode));
       setFilteredSubjects(filtered);
     }
-    
+
     // Clear subject selection when changing level
     setSelectedSubject(null);
     setFilteredLessons([]);
   };
-  
+
   // Handle subject selection and filter lessons
   const handleSubjectSelect = (subject: Subject) => {
     console.log("Subject selected:", subject.id, subject.subjectname);
     setSelectedSubject(subject);
-    
+
     console.log("Total lessons available:", lessons.length);
-    
+
     // Enhanced filtering with detailed logging
     const filtered = lessons.filter(lesson => {
       // Log each lesson for debugging
       console.log("Checking lesson:", lesson.id, "subjectid:", lesson.subjectid);
-      
+
       // Check different possible formats of subjectid
       if (!lesson.subjectid) {
         console.log(`Lesson ${lesson.id} has no subjectid property`);
         return false;
       }
-      
+
       // Case 1: subjectid is a string (direct ID value)
       if (typeof lesson.subjectid === 'string') {
         console.log(`Lesson ${lesson.id} has subjectid as string:`, lesson.subjectid);
         return lesson.subjectid === subject.id;
       }
-      
+
       // Case 2: subjectid is an object with id property
       if (typeof lesson.subjectid === 'object' && lesson.subjectid !== null) {
         // Check if it has an id property
@@ -1023,7 +1023,7 @@ const Subjects: React.FC = () => {
           console.log(`Lesson ${lesson.id} subject match by id: ${isMatch}`);
           return isMatch;
         }
-        
+
         // Check if the object itself is the ID (sometimes Supabase returns like this)
         if (Object.keys(lesson.subjectid).length === 0) {
           const isMatch = JSON.stringify(lesson.subjectid) === subject.id;
@@ -1031,21 +1031,21 @@ const Subjects: React.FC = () => {
           return isMatch;
         }
       }
-      
+
       console.log(`Lesson ${lesson.id} has unrecognized subjectid format`);
       return false;
     });
-    
+
     console.log(`Found ${filtered.length} lessons for subject ${subject.id}`);
     setFilteredLessons(filtered);
   };
-  
+
   // Handle going back from lessons view to subjects view
   const handleBackToSubjects = () => {
     setSelectedSubject(null);
     setFilteredLessons([]);
   };
-  
+
   // Handle opening the modal for creating a new subject
   const handleAddSubject = () => {
     setCurrentSubject(null);
@@ -1057,7 +1057,7 @@ const Subjects: React.FC = () => {
     });
     setIsModalOpen(true);
   };
-  
+
   // Handle opening the modal for editing an existing subject
   const handleEditSubject = (subject: Subject) => {
     setCurrentSubject(subject);
@@ -1075,7 +1075,7 @@ const Subjects: React.FC = () => {
     setSubjectToDelete(subjectId);
     setShowDeleteSubjectModal(true);
   };
-  
+
   // Function to handle the actual deletion after confirmation
   const confirmDeleteSubject = async () => {
     if (!subjectToDelete) return;
@@ -1176,7 +1176,7 @@ const Subjects: React.FC = () => {
       }
     }
   };
-  
+
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -1185,37 +1185,37 @@ const Subjects: React.FC = () => {
       [name]: value
     }));
   };
-  
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
-      
+
       if (currentSubject) {
         // Update existing subject
         const { data, error } = await updateSubject(currentSubject.id, formData);
-        
+
         if (error) {
           throw error;
         }
-        
+
         // Update local state
         if (data && data[0]) {
           // Create a new updated subject with the returned data
           const updatedSubject = data[0];
-          
+
           // Update both the main subjects array and filtered subjects array
-          setSubjects(prev => 
+          setSubjects(prev =>
             prev.map(subject => subject.id === currentSubject.id ? updatedSubject : subject)
           );
-          
+
           // Update filtered subjects separately to ensure view is updated
-          setFilteredSubjects(prev => 
+          setFilteredSubjects(prev =>
             prev.map(subject => subject.id === currentSubject.id ? updatedSubject : subject)
           );
-          
+
           // If the updated subject is the selected subject, update that too
           if (selectedSubject && selectedSubject.id === currentSubject.id) {
             setSelectedSubject(updatedSubject);
@@ -1224,22 +1224,22 @@ const Subjects: React.FC = () => {
       } else {
         // Add new subject
         const { data, error } = await addSubject(formData);
-        
+
         if (error) {
           throw error;
         }
-        
+
         // Update local state
         if (data && data[0]) {
           const newSubject = data[0];
-          
+
           // Update the main subjects array
           setSubjects(prev => [...prev, newSubject]);
-          
+
           // Update filtered subjects if necessary
           if (selectedLevel) {
             const classCode = selectedLevel.padStart(2, '0');
-            
+
             if (newSubject.code.endsWith(classCode)) {
               setFilteredSubjects(prev => [...prev, newSubject]);
             }
@@ -1249,7 +1249,7 @@ const Subjects: React.FC = () => {
           }
         }
       }
-      
+
       // Close modal
       setIsModalOpen(false);
       setCurrentSubject(null);
@@ -1259,7 +1259,7 @@ const Subjects: React.FC = () => {
         description: '',
         status: 'active'
       });
-      
+
     } catch (err: any) {
       console.error("Error submitting subject:", err);
       setError(err.message || "Failed to save subject");
@@ -1271,10 +1271,10 @@ const Subjects: React.FC = () => {
   // Format date function
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     }).format(date);
   };
 
@@ -1284,55 +1284,55 @@ const Subjects: React.FC = () => {
     console.log("Total lessons:", lessons.length);
     console.log("Selected subject:", selectedSubject);
     console.log("Filtered lessons:", filteredLessons.length);
-    
+
     // Analyze the structure of the data
     if (lessons.length > 0) {
       const firstLesson = lessons[0];
       console.log("First lesson structure:", firstLesson);
       console.log("subjectid type:", typeof firstLesson.subjectid);
-      
+
       if (firstLesson.subjectid && typeof firstLesson.subjectid === 'object') {
         console.log("subjectid keys:", Object.keys(firstLesson.subjectid));
       }
     }
-    
+
     // List all unique subjectid values
     const subjectIdTypes = new Set();
     const subjectIds = new Set();
-    
+
     lessons.forEach(lesson => {
       subjectIdTypes.add(typeof lesson.subjectid);
-      
+
       if (typeof lesson.subjectid === 'string') {
         subjectIds.add(lesson.subjectid);
       } else if (lesson.subjectid && lesson.subjectid.id) {
         subjectIds.add(lesson.subjectid.id);
       }
     });
-    
+
     console.log("All subjectid types:", [...subjectIdTypes]);
     console.log("All unique subject IDs:", [...subjectIds]);
     console.log("--- END DEBUG ---");
-    
+
     // Try to match lessons manually
     if (selectedSubject) {
       console.log("Manually checking for matches with subject ID:", selectedSubject.id);
       const manualMatches = lessons.filter(lesson => {
         let match = false;
-        
+
         if (typeof lesson.subjectid === 'string' && lesson.subjectid === selectedSubject.id) {
           match = true;
         } else if (lesson.subjectid && lesson.subjectid.id === selectedSubject.id) {
           match = true;
         }
-        
+
         if (match) {
           console.log("MATCH FOUND:", lesson);
         }
-        
+
         return match;
       });
-      
+
       console.log(`Manually found ${manualMatches.length} matching lessons`);
     }
   };
@@ -1346,7 +1346,7 @@ const Subjects: React.FC = () => {
     });
     setIsLessonModalOpen(true);
   };
-  
+
   // Handle lesson form input changes
   const handleLessonInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -1355,30 +1355,30 @@ const Subjects: React.FC = () => {
       [name]: value
     }));
   };
-  
+
   // Handle lesson form submission
   const handleLessonSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedSubject) {
       setError("No subject selected. Cannot add lesson.");
       return;
     }
-    
+
     try {
       setLoading(true);
-      
+
       // First, fetch the current user to get a valid teacherid
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      
+
       if (userError) {
         throw userError;
       }
-      
+
       if (!userData || !userData.user || !userData.user.id) {
         throw new Error("Unable to determine current user. Please login again.");
       }
-      
+
       // Prepare the lesson data with the selected subject ID and teacherid
       const newLessonData = {
         ...lessonFormData,
@@ -1386,25 +1386,25 @@ const Subjects: React.FC = () => {
         uploadedat: new Date().toISOString(),
         teacherid: userData.user.id // Set a valid teacherid from the current user
       };
-      
+
       console.log("Adding new lesson:", newLessonData);
-      
+
       // Add the new lesson
       const { data, error } = await addLesson(newLessonData);
-      
+
       if (error) {
         throw error;
       }
-      
+
       console.log("Lesson added successfully:", data);
-      
+
       if (data && data[0]) {
         // Update the lessons list with the new lesson
         const newLesson = data[0];
         setLessons(prev => [...prev, newLesson]);
         setFilteredLessons(prev => [...prev, newLesson]);
       }
-      
+
       // Close the modal
       setIsLessonModalOpen(false);
       setLessonFormData({
@@ -1412,7 +1412,7 @@ const Subjects: React.FC = () => {
         description: '',
         videourl: ''
       });
-      
+
       setError(null);
     } catch (err: any) {
       console.error("Error adding lesson:", err);
@@ -1421,22 +1421,22 @@ const Subjects: React.FC = () => {
       setLoading(false);
     }
   };
-  
+
   // Navigate to the lesson detail page
   const handleWatchVideo = (lesson: Lesson, e: React.MouseEvent) => {
     e.stopPropagation();
     console.log("Navigating to lesson detail:", lesson.id);
     console.log("Lesson data being passed:", lesson);
-    
+
     // Ensure videourl is not empty before navigating
     if (!lesson.videourl) {
       toast.error("This lesson doesn't have a video to watch");
       return;
     }
-    
+
     // Navigate to the detail page with the lesson data
-    navigate(`/admin/lessons/${lesson.id}`, { 
-      state: { 
+    navigate(`/admin/lessons/${lesson.id}`, {
+      state: {
         lesson: {
           ...lesson,
           // Ensure all required fields are included and properly formatted
@@ -1447,7 +1447,7 @@ const Subjects: React.FC = () => {
           uploadedat: lesson.uploadedat || new Date().toISOString(),
           subjectid: typeof lesson.subjectid === 'object' ? lesson.subjectid : { id: lesson.subjectid }
         }
-      } 
+      }
     });
   };
 
@@ -1462,36 +1462,36 @@ const Subjects: React.FC = () => {
   // Add a new function to save the video URL to Supabase
   const handleSaveVideoUrl = async () => {
     if (!currentVideoLesson) return;
-    
+
     try {
       setLoading(true);
-      
+
       // Update the lesson in Supabase
       const { error } = await supabase
         .from('lessons')
         .update({ videourl: videoUrl })
         .eq('id', currentVideoLesson.id);
-      
+
       if (error) throw error;
-      
+
       // Update the lessons in state
-      setLessons(prevLessons => 
-        prevLessons.map(lesson => 
-          lesson.id === currentVideoLesson.id 
-            ? { ...lesson, videourl: videoUrl } 
+      setLessons(prevLessons =>
+        prevLessons.map(lesson =>
+          lesson.id === currentVideoLesson.id
+            ? { ...lesson, videourl: videoUrl }
             : lesson
         )
       );
-      
+
       // Update filtered lessons
-      setFilteredLessons(prevLessons => 
-        prevLessons.map(lesson => 
-          lesson.id === currentVideoLesson.id 
-            ? { ...lesson, videourl: videoUrl } 
+      setFilteredLessons(prevLessons =>
+        prevLessons.map(lesson =>
+          lesson.id === currentVideoLesson.id
+            ? { ...lesson, videourl: videoUrl }
             : lesson
         )
       );
-      
+
       setShowVideoModal(false);
       toast.success('Video URL saved successfully');
     } catch (error) {
@@ -1517,64 +1517,64 @@ const Subjects: React.FC = () => {
   // Handle lesson edit form submission
   const handleLessonEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!currentLesson) {
       setError("No lesson selected for update.");
       return;
     }
-    
+
     try {
       setLoading(true);
-      
+
       // First, fetch the current user to get a valid teacherid
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      
+
       if (userError) {
         throw userError;
       }
-      
+
       if (!userData || !userData.user || !userData.user.id) {
         throw new Error("Unable to determine current user. Please login again.");
       }
-      
+
       // Prepare the lesson data with the updated values - remove updated_at and updated_by fields
       const updatedLessonData = {
         ...lessonFormData,
         teacherid: userData.user.id // Keep teacher ID for tracking
       };
-      
+
       console.log("Updating lesson:", updatedLessonData);
-      
+
       // Update the lesson
       const { data, error } = await supabaseAdmin
         .from('lessons')
         .update(updatedLessonData)
         .eq('id', currentLesson.id)
         .select();
-      
+
       if (error) {
         throw error;
       }
-      
+
       console.log("Lesson updated successfully:", data);
-      
+
       if (data && data[0]) {
         // Update the lessons lists with the updated lesson
         const updatedLesson = data[0];
-        setLessons(prev => 
+        setLessons(prev =>
           prev.map(l => l.id === updatedLesson.id ? updatedLesson : l)
         );
-        setFilteredLessons(prev => 
+        setFilteredLessons(prev =>
           prev.map(l => l.id === updatedLesson.id ? updatedLesson : l)
         );
-        
+
         toast.success("Lesson updated successfully!");
       }
-      
+
       // Close the modal
       setIsLessonEditModalOpen(false);
       setCurrentLesson(null);
-      
+
     } catch (err: any) {
       console.error("Error updating lesson:", err);
       setError(err.message || "Failed to update lesson");
@@ -1594,19 +1594,19 @@ const Subjects: React.FC = () => {
   // Handle lesson deletion
   const handleDeleteLesson = async () => {
     if (!lessonToDelete) return;
-    
+
     setLoading(true);
     try {
       await supabase
         .from('lessons')
         .delete()
         .eq('id', lessonToDelete);
-      
+
       toast.success('Lesson deleted successfully');
-      
+
       // Reload lessons by calling the standalone function
       await loadLessons(setLessons, setFilteredLessons, setError, setLoading, selectedSubject);
-      
+
       // Close the modal
       setShowDeleteConfirmation(false);
       setLessonToDelete(null);
@@ -1622,7 +1622,7 @@ const Subjects: React.FC = () => {
   const handleOpenAssignModal = () => {
     setShowAssignModal(true);
   };
-  
+
   // Handle the actual assignment process
   const handleAssignSubjectToGrade = async (grade: string, subjectIds: string[]): Promise<boolean> => {
     setLoading(true); // Indicate loading start
@@ -1649,8 +1649,8 @@ const Subjects: React.FC = () => {
 
       // 2. Find all class sections for the fetched level ID
       // const pattern = `${grade}%`; // REMOVED incorrect pattern matching
-      // console.log(`Searching for classes with pattern: ${pattern}`); 
-      
+      // console.log(`Searching for classes with pattern: ${pattern}`);
+
       const { data: sections, error: sectionsError } = await supabase
         .from('classes')
         .select('id, classname') // Only select necessary fields
@@ -1666,10 +1666,10 @@ const Subjects: React.FC = () => {
       if (!sections || sections.length === 0) {
         toast.info(`No class sections found for Grade ${grade} (Level ID: ${levelId}). No subjects assigned.`);
         // Consider this a success in the sense that the operation completed without error
-        // return false; 
+        // return false;
         return true; // Or true, depending on desired user feedback
       }
-      
+
       console.log(`Found ${sections.length} sections for level ID ${levelId}:`, sections.map(s => s.classname));
 
       let successCount = 0;
@@ -1684,18 +1684,18 @@ const Subjects: React.FC = () => {
           classid: section.id,
           subjectid: subjectId,
         }));
-        
+
         totalRelationshipsAttempted += relationships.length;
 
         // Upsert relationships for the current subject across all found sections
         // This is more efficient than checking each one individually
         const { error: upsertError, count: upsertCount } = await supabase
           .from('classsubjects')
-          .upsert(relationships, { 
+          .upsert(relationships, {
             onConflict: 'classid,subjectid', // Specify conflict columns
             ignoreDuplicates: true // Important: prevents errors if relationship exists
           });
-          
+
         if (upsertError) {
           console.error(`Error upserting relationships for subject ${subjectId}:`, upsertError);
           errorCount += relationships.length; // Assume all failed for this subject on error
@@ -1708,7 +1708,7 @@ const Subjects: React.FC = () => {
           alreadyAssignedCount += (relationships.length - insertedCount);
           console.log(`Subject ${subjectId}: Inserted ${insertedCount}, Ignored ${relationships.length - insertedCount}`);
         }
-        
+
         // Old logic removed for efficiency:
         // // Check for existing relationships to avoid duplicates
         // for (const rel of relationships) {
@@ -1719,9 +1719,9 @@ const Subjects: React.FC = () => {
       }
 
       // const totalAttempted = successCount + errorCount + alreadyAssignedCount; // Incorrect calculation before
-      
+
       console.log(`Assignment Summary: Total Attempted=${totalRelationshipsAttempted}, Success=${successCount}, Errors=${errorCount}, Already Existed/Ignored=${alreadyAssignedCount}`);
-      
+
       if (errorCount > 0 && successCount > 0) {
         toast.warning(`Assigned ${successCount} new subject relationships with ${errorCount} errors. ${alreadyAssignedCount} were already present.`);
       } else if (errorCount > 0 && successCount === 0) {
@@ -1735,10 +1735,10 @@ const Subjects: React.FC = () => {
         // The specific messages above should cover most scenarios.
         toast.info("Subject assignment process completed.");
       }
-      
+
       // Return true if there were no errors, or if some successes occurred despite errors
-      return errorCount === 0 || successCount > 0; 
-      
+      return errorCount === 0 || successCount > 0;
+
     } catch (error) {
       console.error('Error assigning subjects to grade:', error);
       toast.error('An unexpected error occurred during subject assignment');
@@ -1757,7 +1757,7 @@ const Subjects: React.FC = () => {
     >
       <PageHeader>
         <div>
-          <PageTitle>Subject Management</PageTitle>
+          <PageTitle>Subject Management</PageTitle> 
           <PageDescription>Manage courses, subjects and academic content</PageDescription>
         </div>
 
@@ -1779,7 +1779,7 @@ const Subjects: React.FC = () => {
           <LoadingIndicator>Loading class levels...</LoadingIndicator>
         ) : levels && levels.length > 0 ? (
           levels.map((level) => (
-            <ClassButton 
+            <ClassButton
               key={level.id}
               $isActive={selectedLevel === level.name}
               onClick={() => handleLevelSelect(level.name)}
@@ -1790,7 +1790,7 @@ const Subjects: React.FC = () => {
         ) : (
           // Fallback if levels are empty or there was an error
           Array.from({ length: 11 }, (_, i) => i + 1).map((level) => (
-            <ClassButton 
+            <ClassButton
               key={level}
               $isActive={selectedLevel === String(level)}
               onClick={() => handleLevelSelect(String(level))}
@@ -1807,7 +1807,7 @@ const Subjects: React.FC = () => {
           Error: {error}
         </ErrorMessage>
       )}
-      
+
       {/* Conditional rendering for subjects or lessons */}
       {selectedSubject ? (
         // Show lessons for the selected subject
@@ -1821,13 +1821,13 @@ const Subjects: React.FC = () => {
               </BackButton>
             </div>
           </LessonsHeader>
-          
+
           {/* Add Lesson Button */}
           <AddLessonButton onClick={handleAddLesson}>
             <FiPlus />
             <span>Add Lesson</span>
           </AddLessonButton>
-          
+
           {loading ? (
             <LoadingIndicator>Loading lessons...</LoadingIndicator>
           ) : filteredLessons.length > 0 ? (
@@ -1844,17 +1844,23 @@ const Subjects: React.FC = () => {
                     {lesson.description || 'No description available'}
                   </LessonDescription>
                   <LessonActionsContainer>
-                    <WatchButton 
-                      onClick={(e) => lesson.videourl 
-                        ? handleWatchVideo(lesson, e) 
+                    <WatchButton
+                      onClick={(e) => lesson.videourl
+                        ? handleWatchVideo(lesson, e)
                         : handleUploadVideo(lesson, e)
                       }
                       $hasVideo={!!lesson.videourl}
                     >
-                      <FiEdit2 />
-                      Edit lesson
+                      <FiPlay />
+                      {lesson.videourl ? 'Watch Video' : 'Upload Video'}
                     </WatchButton>
-                    <DeleteButton 
+                    <EditButton
+                      onClick={(e) => handleEditLesson(lesson, e)}
+                    >
+                    <FiEdit2 />
+                      Edit
+                    </EditButton>
+                    <DeleteButton
                       onClick={(e) => handleShowDeleteConfirmation(lesson.id, e)}
                     >
                     <FiTrash2 />
@@ -1884,8 +1890,8 @@ const Subjects: React.FC = () => {
             filteredSubjects.length > 0 ? (
               <SubjectsList>
                 {filteredSubjects.map(subject => (
-                  <SubjectCard 
-                    key={subject.id} 
+                  <SubjectCard
+                    key={subject.id}
                     onClick={() => handleSubjectSelect(subject)}
                     style={{ cursor: 'pointer' }}
                   >
@@ -1897,7 +1903,7 @@ const Subjects: React.FC = () => {
                         {subject.status === 'active' ? 'Active' : 'Inactive'}
                       </SubjectStatus>
                       <SubjectActions>
-                      <EditButton 
+                      <EditButton
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent triggering the card click
                           handleEditSubject(subject);
@@ -1950,7 +1956,7 @@ const Subjects: React.FC = () => {
                 <FiX size={20} />
               </CloseButton>
             </ModalHeader>
-            
+
             <form onSubmit={handleSubmit}>
               <FormGroup>
                 <FormLabel htmlFor="subjectname">Subject Name</FormLabel>
@@ -1963,7 +1969,7 @@ const Subjects: React.FC = () => {
                   required
                 />
               </FormGroup>
-              
+
               <FormGroup>
                 <FormLabel htmlFor="code">Code</FormLabel>
                 <FormInput
@@ -1975,7 +1981,7 @@ const Subjects: React.FC = () => {
                   required
                 />
               </FormGroup>
-              
+
               <FormGroup>
                 <FormLabel htmlFor="description">Description</FormLabel>
                 <FormTextarea
@@ -1986,7 +1992,7 @@ const Subjects: React.FC = () => {
                   placeholder="Enter subject description"
                 />
               </FormGroup>
-              
+
               <FormGroup>
                 <FormLabel htmlFor="status">Status</FormLabel>
                 <FormSelect
@@ -2000,7 +2006,7 @@ const Subjects: React.FC = () => {
                   <option value="inactive">Inactive</option>
                 </FormSelect>
               </FormGroup>
-              
+
               <FormButtonContainer>
                 <CancelButton type="button" onClick={() => setIsModalOpen(false)}>
                   Cancel
@@ -2013,7 +2019,7 @@ const Subjects: React.FC = () => {
           </ModalContent>
         </ModalOverlay>
       )}
-      
+
       {/* Lesson Form Modal for Adding New Lessons */}
       {isLessonModalOpen && (
         <ModalOverlay
@@ -2032,7 +2038,7 @@ const Subjects: React.FC = () => {
                 <FiX size={20} />
               </CloseButton>
             </ModalHeader>
-            
+
             <form onSubmit={handleLessonSubmit}>
               <FormGroup>
                 <FormLabel htmlFor="lessonname">Lesson Name</FormLabel>
@@ -2045,7 +2051,7 @@ const Subjects: React.FC = () => {
                   required
                 />
               </FormGroup>
-              
+
               <FormGroup>
                 <FormLabel htmlFor="description">Description</FormLabel>
                 <FormTextarea
@@ -2057,7 +2063,7 @@ const Subjects: React.FC = () => {
                   required
                 />
               </FormGroup>
-              
+
               <FormGroup>
                 <FormLabel htmlFor="videourl">Video URL (optional)</FormLabel>
                 <FormInput
@@ -2068,7 +2074,7 @@ const Subjects: React.FC = () => {
                   placeholder="Enter video URL (YouTube, Vimeo, etc.)"
                 />
               </FormGroup>
-              
+
               <FormButtonContainer>
                 <CancelButton type="button" onClick={() => setIsLessonModalOpen(false)}>
                   Cancel
@@ -2081,7 +2087,7 @@ const Subjects: React.FC = () => {
           </ModalContent>
         </ModalOverlay>
       )}
-      
+
       {/* Lesson Edit Modal */}
       {isLessonEditModalOpen && (
         <ModalOverlay
@@ -2100,7 +2106,7 @@ const Subjects: React.FC = () => {
                 <FiX size={20} />
               </CloseButton>
             </ModalHeader>
-            
+
             <form onSubmit={handleLessonEditSubmit}>
               <FormGroup>
                 <FormLabel htmlFor="edit-lessonname">Lesson Name</FormLabel>
@@ -2113,7 +2119,7 @@ const Subjects: React.FC = () => {
                   required
                 />
               </FormGroup>
-              
+
               <FormGroup>
                 <FormLabel htmlFor="edit-description">Description</FormLabel>
                 <FormTextarea
@@ -2125,7 +2131,7 @@ const Subjects: React.FC = () => {
                   required
                 />
               </FormGroup>
-              
+
               <FormGroup>
                 <FormLabel htmlFor="edit-videourl">Video URL</FormLabel>
                 <FormInput
@@ -2136,7 +2142,7 @@ const Subjects: React.FC = () => {
                   placeholder="Enter video URL (YouTube, Vimeo, etc.)"
                 />
               </FormGroup>
-              
+
               <FormButtonContainer>
                 <CancelButton type="button" onClick={() => setIsLessonEditModalOpen(false)}>
                   Cancel
@@ -2149,7 +2155,7 @@ const Subjects: React.FC = () => {
           </ModalContent>
         </ModalOverlay>
       )}
-      
+
       {/* Delete Confirmation Modal */}
       {showDeleteConfirmation && (
         <ModalOverlay
@@ -2169,17 +2175,17 @@ const Subjects: React.FC = () => {
                 <FiX size={20} />
               </CloseButton>
             </ModalHeader>
-            
+
             <div style={{ padding: '1rem', textAlign: 'center' }}>
               <p style={{ marginBottom: '1.5rem' }}>
                 Are you sure you want to delete this lesson? This action cannot be undone.
               </p>
-              
+
               <FormButtonContainer>
                 <CancelButton type="button" onClick={() => setShowDeleteConfirmation(false)}>
                   Cancel
                 </CancelButton>
-                <DeleteButton 
+                <DeleteButton
                   onClick={handleDeleteLesson}
                   style={{ width: 'auto' }}
                   disabled={loading}
@@ -2192,7 +2198,7 @@ const Subjects: React.FC = () => {
           </ModalContent>
         </ModalOverlay>
       )}
-      
+
       {/* Video URL Modal */}
       {showVideoModal && (
         <ModalOverlay
@@ -2211,7 +2217,7 @@ const Subjects: React.FC = () => {
                 <FiX size={20} />
               </CloseButton>
             </ModalHeader>
-            
+
             <form onSubmit={(e) => {
               e.preventDefault();
               handleSaveVideoUrl();
@@ -2230,7 +2236,7 @@ const Subjects: React.FC = () => {
                   Supported formats: YouTube, Vimeo, or direct embed URLs
                 </div>
               </FormGroup>
-              
+
               <FormButtonContainer>
                 <CancelButton type="button" onClick={() => setShowVideoModal(false)}>
                   Cancel
@@ -2299,4 +2305,4 @@ const Subjects: React.FC = () => {
   );
 };
 
-export default Subjects; 
+export default Subjects;

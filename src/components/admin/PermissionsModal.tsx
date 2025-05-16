@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { FiCheck, FiSearch, FiShield, FiX } from 'react-icons/fi'
 import styled from 'styled-components'
 import { useAuth } from '../../contexts/AuthContext'
@@ -33,6 +33,11 @@ const extractOperationType = (permissionName: string): string => {
 	return parts[0] || 'other' // Get the first part as operation type
 }
 
+// Helper function to capitalize first letter
+const capitalizeFirstLetter = (string: string): string => {
+	return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase()
+}
+
 const PermissionsModal: React.FC<PermissionsModalProps> = ({
 	isOpen,
 	onClose,
@@ -53,19 +58,45 @@ const PermissionsModal: React.FC<PermissionsModalProps> = ({
 		}
 	}, [role])
 
-	// Group permissions by operation type
-	const groupedPermissions = allPermissions.reduce((groups, permission) => {
-		const operation = extractOperationType(permission.name)
-		if (!groups[operation]) {
-			groups[operation] = []
-		}
-		groups[operation].push(permission)
-		return groups
-	}, {} as Record<string, Permission[]>)
+	// Filter out 'all' permissions and then group by operation type
+	const { groupedPermissions, operations } = useMemo(() => {
+		// Filter out permissions with name 'all'
+		const filteredPermissions = allPermissions.filter(permission => permission.name !== 'all')
 
-	// Define the order of operations
-	const operationOrder = ['create', 'read', 'update', 'delete']
-	const operations = operationOrder.filter(op => groupedPermissions[op]?.length > 0)
+		// Group remaining permissions by operation type
+		const grouped = filteredPermissions.reduce((groups, permission) => {
+			const operation = extractOperationType(permission.name)
+			if (!groups[operation]) {
+				groups[operation] = []
+			}
+			groups[operation].push(permission)
+			return groups
+		}, {} as Record<string, Permission[]>)
+
+		// Extract all unique operation types
+		const uniqueOperations = Object.keys(grouped).sort()
+
+		return {
+			groupedPermissions: grouped,
+			operations: uniqueOperations,
+		}
+	}, [allPermissions])
+
+	// Filter permissions based on search term
+	const filteredOperations = useMemo(() => {
+		if (!searchTerm.trim()) {
+			return operations
+		}
+
+		// Keep only operations that have permissions matching the search term
+		return operations.filter(operation => {
+			return groupedPermissions[operation].some(
+				permission =>
+					(permission.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+					(permission.description?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+			)
+		})
+	}, [operations, groupedPermissions, searchTerm])
 
 	// Helper function to check if a permission is selected
 	const isPermissionSelected = (permissionId: string): boolean => {
@@ -149,54 +180,72 @@ const PermissionsModal: React.FC<PermissionsModalProps> = ({
 				</ModalToolbar>
 
 				<PermissionsList>
-					{operations.map(operation => (
-						<PermissionCategory key={operation}>
-							<CategoryHeader>
-								<CategoryName>
-									<FiShield />
-									{operation.toUpperCase()}
-								</CategoryName>
-								<CategorySelectButton onClick={() => handleSelectOperation(operation)}>
-									{isOperationFullySelected(operation) ? 'Deselect All' : 'Select All'}
-								</CategorySelectButton>
-							</CategoryHeader>
-							<PermissionItems>
-								{groupedPermissions[operation].map(permission => (
-									<PermissionItem key={permission.id}>
-										<PermissionCheckbox>
-											{isRoleManager() &&
-											permission.name === 'read_roles' &&
-											role.name === 'Admin' ? (
-												<Checkbox
-													type='checkbox'
-													checked={true}
-													disabled
-													onChange={() => handlePermissionToggle(permission.id)}
-												/>
-											) : (
-												<Checkbox
-													type='checkbox'
-													checked={isPermissionSelected(permission.id)}
-													onChange={() => handlePermissionToggle(permission.id)}
-												/>
-											)}
-										</PermissionCheckbox>
-										<PermissionInfo>
-											<PermissionName>{permission.name}</PermissionName>
-											<small>
-												{isRoleManager() &&
-												permission.name === 'read_roles' &&
-												role.name === 'Admin'
-													? "You can't change that permission"
-													: ''}
-											</small>
-											<PermissionDescription>{permission.description}</PermissionDescription>
-										</PermissionInfo>
-									</PermissionItem>
-								))}
-							</PermissionItems>
-						</PermissionCategory>
-					))}
+					{filteredOperations.length > 0 ? (
+						filteredOperations.map(operation => (
+							<PermissionCategory key={operation}>
+								<CategoryHeader>
+									<CategoryName>
+										<FiShield />
+										{capitalizeFirstLetter(operation)}
+									</CategoryName>
+									<CategorySelectButton onClick={() => handleSelectOperation(operation)}>
+										{isOperationFullySelected(operation) ? 'Deselect All' : 'Select All'}
+									</CategorySelectButton>
+								</CategoryHeader>
+								<PermissionItems>
+									{groupedPermissions[operation]
+										.filter(
+											permission =>
+												permission.name !== 'all' && // Extra safety check
+												(!searchTerm.trim() ||
+													(permission.name?.toLowerCase() || '').includes(
+														searchTerm.toLowerCase()
+													) ||
+													(permission.description?.toLowerCase() || '').includes(
+														searchTerm.toLowerCase()
+													))
+										)
+										.map(permission => (
+											<PermissionItem key={permission.id}>
+												<PermissionCheckbox>
+													{isRoleManager() &&
+													permission.name === 'read_roles' &&
+													role.name === 'Admin' ? (
+														<Checkbox
+															type='checkbox'
+															checked={true}
+															disabled
+															onChange={() => handlePermissionToggle(permission.id)}
+														/>
+													) : (
+														<Checkbox
+															type='checkbox'
+															checked={isPermissionSelected(permission.id)}
+															onChange={() => handlePermissionToggle(permission.id)}
+														/>
+													)}
+												</PermissionCheckbox>
+												<PermissionInfo>
+													<PermissionName>{permission.name}</PermissionName>
+													<small>
+														{isRoleManager() &&
+														permission.name === 'read_roles' &&
+														role.name === 'Admin'
+															? "You can't change that permission"
+															: ''}
+													</small>
+													<PermissionDescription>{permission.description}</PermissionDescription>
+												</PermissionInfo>
+											</PermissionItem>
+										))}
+								</PermissionItems>
+							</PermissionCategory>
+						))
+					) : (
+						<EmptyState>
+							<EmptyStateText>No permissions match your search criteria.</EmptyStateText>
+						</EmptyState>
+					)}
 				</PermissionsList>
 
 				<ModalFooter>

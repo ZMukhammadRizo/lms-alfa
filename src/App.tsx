@@ -26,7 +26,6 @@ import Roles from './pages/admin/Roles'
 import Settings from './pages/admin/Settings'
 import SubjectGroups from './pages/admin/SubjectGroups'
 import Subjects from './pages/admin/Subjects'
-import SubjectsManagePage from './pages/admin/SubjectsManagePage'
 import Timetables from './pages/admin/Timetables'
 import Users from './pages/admin/Users'
 import WeekendClasses from './pages/admin/WeekendClasses'
@@ -51,18 +50,19 @@ import StudentDashboard from './pages/student/StudentDashboard'
 import StudentSchedule from './pages/student/StudentSchedule'
 import TeacherAnnouncements from './pages/teacher/Announcements'
 import TeacherGradesModule from './pages/teacher/GradesModule'
+import SubjectsManagePage from './pages/teacher/SubjectsManagePage'
 import TeacherAssignmentFiles from './pages/teacher/TeacherAssignmentFiles'
 import TeacherAssignments from './pages/teacher/TeacherAssignments'
 import TeacherClasses from './pages/teacher/TeacherClasses'
 import TeacherDashboard from './pages/teacher/TeacherDashboard'
 import TeacherGrades from './pages/teacher/TeacherGrades'
 import TeacherJournalPage from './pages/teacher/TeacherJournalPage'
+import TeacherLessonDetails from './pages/teacher/TeacherLessonDetails'
 import TeacherSchedule from './pages/teacher/TeacherSchedule'
 import { TeacherSubjectDetails } from './pages/teacher/TeacherSubjectDetails'
-import TeacherLessonDetails from './pages/teacher/TeacherLessonDetails'
+import TeacherSubmissions from './pages/teacher/TeacherSubmissions'
 import GlobalStyle from './styles/globalStyles'
 import { createTheme } from './styles/theme'
-import TeacherSubmissions from './pages/teacher/TeacherSubmissions'
 
 // Create a context for theme settings
 export interface ThemeContextType {
@@ -144,19 +144,26 @@ function AppContent() {
 						<Route path='profile' element={<ProfilePage />} />
 						<Route path='announcements' element={<AdminAnnouncements />} />
 						<Route path='announcements/create' element={<AnnouncementCreate />} />
-						<Route path='new-class' element={<NewClassPage />} />
-						<Route path='subjects' element={<SubjectsManagePage />} />
 						<Route path='subjects/:subjectId/lessons' element={<LessonsManagePage />} />
+						<Route path='subjects' element={<SubjectsManagePage />} />
 						<Route path='lessons/:id' element={<LessonDetail />} />
 					</Route>
 
 					{/* Teacher routes */}
 					<Route path='/teacher' element={<TeacherLayout />}>
+						<Route path='subjects' element={<SubjectsManagePage />} />
+						<Route path='new-class' element={<NewClassPage />} />
 						<Route path='dashboard' element={<TeacherDashboard />} />
 						<Route path='profile' element={<ProfilePage />} />
 						<Route path='classes' element={<TeacherClasses />} />
-						<Route path='classes/:classId/subjects/:subjectId' element={<TeacherSubjectDetails />} />
-						<Route path='classes/:classId/subjects/:subjectId/lessons/:lessonId' element={<TeacherLessonDetails />} />
+						<Route
+							path='classes/:classId/subjects/:subjectId'
+							element={<TeacherSubjectDetails />}
+						/>
+						<Route
+							path='classes/:classId/subjects/:subjectId/lessons/:lessonId'
+							element={<TeacherLessonDetails />}
+						/>
 						<Route path='schedule' element={<TeacherSchedule />} />
 						<Route path='messages' element={<h1>Coming Soon...</h1>} />
 						<Route path='settings' element={<Settings />} />
@@ -166,6 +173,7 @@ function AppContent() {
 						<Route path='submissions' element={<TeacherSubmissions />} />
 						<Route path='assignments' element={<TeacherAssignments />} />
 						<Route path='assignments/files/:id' element={<TeacherAssignmentFiles />} />
+						<Route path='subjects/:subjectId/lessons' element={<LessonsManagePage />} />
 						<Route path='grades' element={<TeacherGrades />} />
 						<Route path='grades/*' element={<TeacherGradesModule />} />
 					</Route>

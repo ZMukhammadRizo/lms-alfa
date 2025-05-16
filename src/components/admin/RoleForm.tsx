@@ -19,6 +19,13 @@ interface Role {
 	name: string
 	description: string
 	permissions?: string[]
+	parent_role?: string
+}
+
+// Primary role interface
+interface PrimaryRole {
+	id: string
+	name: string
 }
 
 // Step types
@@ -34,6 +41,8 @@ interface RoleFormProps {
 	onStepChange?: (step: FormStep) => void // Add step change handler
 }
 
+const PRIMARY_ROLES = ['Admin', 'Teacher', 'Student', 'Parent']
+
 const RoleForm: React.FC<RoleFormProps> = ({
 	isOpen,
 	onClose,
@@ -47,16 +56,51 @@ const RoleForm: React.FC<RoleFormProps> = ({
 	const [searchTerm, setSearchTerm] = useState('')
 	const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+	const [primaryRoles, setPrimaryRoles] = useState<PrimaryRole[]>([])
+	const [isLoading, setIsLoading] = useState(false)
 
 	const [formData, setFormData] = useState({
 		name: '',
 		description: '',
+		parent_role: '',
 	})
 
 	const [errors, setErrors] = useState({
 		name: '',
 		description: '',
+		parent_role: '',
 	})
+
+	// Fetch primary roles
+	useEffect(() => {
+		const fetchPrimaryRoles = async () => {
+			setIsLoading(true)
+			try {
+				const { data, error } = await supabase
+					.from('roles')
+					.select('id, name')
+					.in('name', PRIMARY_ROLES)
+					.order('name')
+
+				if (error) {
+					console.error('Error fetching primary roles:', error)
+					toast.error('Failed to fetch primary roles')
+					return
+				}
+
+				setPrimaryRoles(data || [])
+			} catch (err) {
+				console.error('Unexpected error fetching primary roles:', err)
+				toast.error('Failed to fetch primary roles')
+			} finally {
+				setIsLoading(false)
+			}
+		}
+
+		if (isOpen) {
+			fetchPrimaryRoles()
+		}
+	}, [isOpen])
 
 	// Initialize form data when editing an existing role
 	useEffect(() => {
@@ -64,16 +108,19 @@ const RoleForm: React.FC<RoleFormProps> = ({
 			setFormData({
 				name: initialData.name,
 				description: initialData.description,
+				parent_role: initialData.parent_role || '',
 			})
 		} else {
 			setFormData({
 				name: '',
 				description: '',
+				parent_role: '',
 			})
 		}
 		setErrors({
 			name: '',
 			description: '',
+			parent_role: '',
 		})
 	}, [initialData, isOpen])
 
@@ -85,7 +132,9 @@ const RoleForm: React.FC<RoleFormProps> = ({
 	}, [permissionsInStore, searchTerm])
 
 	// Handle input changes
-	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+	const handleInputChange = (
+		e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+	) => {
 		const { name, value } = e.target
 		setFormData(prev => ({
 			...prev,
@@ -122,6 +171,11 @@ const RoleForm: React.FC<RoleFormProps> = ({
 			isValid = false
 		}
 
+		if (!formData.parent_role && !PRIMARY_ROLES.includes(formData.name)) {
+			newErrors.parent_role = 'Please select a parent role'
+			isValid = false
+		}
+
 		setErrors(newErrors)
 		return isValid
 	}
@@ -141,6 +195,7 @@ const RoleForm: React.FC<RoleFormProps> = ({
 					.update({
 						name: formData.name,
 						description: formData.description,
+						parent_role: formData.parent_role || null,
 					})
 					.eq('id', initialData.id)
 
@@ -151,6 +206,7 @@ const RoleForm: React.FC<RoleFormProps> = ({
 				const roleData = {
 					name: formData.name,
 					description: formData.description,
+					parent_role: formData.parent_role || null,
 				}
 
 				const { data: newRole, error: createError } = await supabase
@@ -199,8 +255,9 @@ const RoleForm: React.FC<RoleFormProps> = ({
 				name: formData.name,
 				description: formData.description,
 				permissions: selectedPermissions,
+				parent_role: formData.parent_role,
 			})
-			setFormData({ name: '', description: '' })
+			setFormData({ name: '', description: '', parent_role: '' })
 			setSelectedPermissions([])
 			onClose()
 		} catch (error) {
@@ -211,41 +268,50 @@ const RoleForm: React.FC<RoleFormProps> = ({
 
 	// Handle step changes
 	const handleNextStep = async () => {
-		const { data: newRole, error: createError } = await supabase
-			.from('roles')
-			.insert([
-				{
-					name: formData.name,
-					description: formData.description,
-				},
-			])
-			.select('id, name, description, created_at')
-			.single()
+		if (!validateForm()) return
 
-		if (createError) {
-			console.error('Error creating role:', createError)
-			toast.error('Failed to create role. Please try again.')
-			return
+		try {
+			const { data: newRole, error: createError } = await supabase
+				.from('roles')
+				.insert([
+					{
+						name: formData.name,
+						description: formData.description,
+						parent_role: formData.parent_role || null,
+					},
+				])
+				.select('id, name, description, created_at, parent_role')
+				.single()
+
+			if (createError) {
+				console.error('Error creating role:', createError)
+				toast.error('Failed to create role. Please try again.')
+				return
+			}
+
+			// Create an empty role_permissions array for the new role
+			const updatedRole = {
+				...newRole,
+				role_permissions: [],
+				usersCount: 0,
+			}
+
+			// Pass the data back to the parent component
+			onSubmit({
+				name: formData.name,
+				description: formData.description,
+				permissions: [],
+				parent_role: formData.parent_role,
+			})
+
+			// Reset form and close modal
+			setFormData({ name: '', description: '', parent_role: '' })
+			onClose()
+			toast.success('Role created successfully!')
+		} catch (error) {
+			console.error('Error creating role:', error)
+			toast.error('An unexpected error occurred. Please try again.')
 		}
-
-		// Create an empty role_permissions array for the new role
-		const updatedRole = {
-			...newRole,
-			role_permissions: [],
-			usersCount: 0,
-		}
-
-		// fetch all roles
-		const { data: roles, error: rolesError } = await supabase.from('roles').select('*')
-		if (rolesError) {
-			console.error('Error fetching roles:', rolesError)
-			toast.error('Failed to fetch roles. Please try again.')
-			return
-		}
-
-		// close modal
-		onClose()
-		toast.success('Role created successfully!')
 	}
 
 	const handlePreviousStep = () => {
@@ -293,6 +359,29 @@ const RoleForm: React.FC<RoleFormProps> = ({
 										placeholder='e.g., Teacher Admin, Content Manager'
 									/>
 									{errors.name && <ErrorMessage>{errors.name}</ErrorMessage>}
+								</FormGroup>
+
+								<FormGroup>
+									<Label htmlFor='parent_role'>Parent Role</Label>
+									<Select
+										id='parent_role'
+										name='parent_role'
+										value={formData.parent_role}
+										onChange={handleInputChange}
+										$hasError={!!errors.parent_role}
+										disabled={isLoading || PRIMARY_ROLES.includes(formData.name)}
+									>
+										<option value=''>Select a parent role</option>
+										{primaryRoles.map(role => (
+											<option key={role.id} value={role.id}>
+												{role.name}
+											</option>
+										))}
+									</Select>
+									{PRIMARY_ROLES.includes(formData.name) && (
+										<HelpText>Primary roles do not need a parent role.</HelpText>
+									)}
+									{errors.parent_role && <ErrorMessage>{errors.parent_role}</ErrorMessage>}
 								</FormGroup>
 
 								<FormGroup>
@@ -364,7 +453,7 @@ const RoleForm: React.FC<RoleFormProps> = ({
 							<FiInfo />
 							<InfoText>
 								{step === 'create'
-									? 'After creating the role, you can assign specific permissions.'
+									? 'All roles except the 4 primary roles (Admin, Teacher, Student, Parent) must have a parent role.'
 									: 'Select the permissions you want to assign to this role.'}
 							</InfoText>
 						</InfoBox>
@@ -727,6 +816,29 @@ const NextButton = styled.button`
 	&:hover {
 		background-color: ${props => props.theme.colors.primary[700]};
 	}
+`
+
+const Select = styled.select<InputProps>`
+	padding: ${props => props.theme.spacing[2]} ${props => props.theme.spacing[3]};
+	border: 1px solid
+		${props => (props.$hasError ? props.theme.colors.danger[500] : props.theme.colors.border.light)};
+	border-radius: ${props => props.theme.borderRadius.md};
+	font-size: 0.9rem;
+	background-color: ${props => (props.$hasError ? props.theme.colors.danger[50] : 'white')};
+
+	&:focus {
+		outline: none;
+		border-color: ${props =>
+			props.$hasError ? props.theme.colors.danger[500] : props.theme.colors.primary[400]};
+		box-shadow: 0 0 0 3px
+			${props => (props.$hasError ? 'rgba(244, 63, 94, 0.1)' : 'rgba(59, 130, 246, 0.1)')};
+	}
+`
+
+const HelpText = styled.div`
+	font-size: 0.8rem;
+	color: ${props => props.theme.colors.text.secondary};
+	margin-top: ${props => props.theme.spacing[1]};
 `
 
 export default RoleForm

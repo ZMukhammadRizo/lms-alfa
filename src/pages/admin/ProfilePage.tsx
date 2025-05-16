@@ -255,6 +255,32 @@ const ProfilePage: React.FC = () => {
 		}
 	}
 
+	const getUserRole = () => {
+		const userInfo = localStorage.getItem('lms_user')
+		if (userInfo) {
+			try {
+				const parsedInfo = JSON.parse(userInfo)
+				if (parsedInfo.role && typeof parsedInfo.role === 'object') {
+					if (parsedInfo.role.parent && parsedInfo.role.parent.name) {
+						return parsedInfo.role.parent.name.toLowerCase() || 'student'
+					}
+
+					return parsedInfo.role.name.toLowerCase() || 'student'
+				}
+
+				if (parsedInfo.role && typeof parsedInfo.role === 'string') {
+					return parsedInfo.role.toLowerCase() || 'student'
+				}
+
+				return 'student'
+			} catch (error) {
+				console.error('Error parsing user info:', error)
+				return 'student'
+			}
+		}
+		return user?.role || 'student'
+	}
+
 	return (
 		<PageContainer>
 			<PageHeader>
@@ -272,7 +298,7 @@ const ProfilePage: React.FC = () => {
 							? user.username.charAt(0).toUpperCase() + user.username.charAt(1).toUpperCase()
 							: 'U'}
 					</ProfileImage>
-					<RoleLabel>{user?.role}</RoleLabel>
+					<RoleLabel>{getUserRole()}</RoleLabel>
 
 					<TabsContainer>
 						<TabButton

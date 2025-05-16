@@ -4,6 +4,7 @@ import styled, { keyframes } from 'styled-components'
 import { useAuth } from '../../contexts/AuthContext'
 import { showSuccess, showError } from '../../utils/toast'
 import { FiEye, FiEyeOff } from 'react-icons/fi'
+import { getDashboardRoute } from '../../contexts/AuthContext'
 
 // Loading animations
 const spin = keyframes`
@@ -225,24 +226,22 @@ const PasswordToggleButton = styled.button`
 const LoginButton = styled.button<{ $isLoading?: boolean }>`
 	width: 100%;
 	padding: ${props => props.theme.spacing[3]};
-	background-color: ${props => props.$isLoading 
-		? props.theme.colors.primary[400] 
-		: props.theme.colors.primary[500]};
+	background-color: ${props =>
+		props.$isLoading ? props.theme.colors.primary[400] : props.theme.colors.primary[500]};
 	color: white;
 	border: none;
 	border-radius: ${props => props.theme.borderRadius.md};
 	font-weight: 600;
-	cursor: ${props => props.$isLoading ? 'not-allowed' : 'pointer'};
+	cursor: ${props => (props.$isLoading ? 'not-allowed' : 'pointer')};
 	transition: all 0.2s ease;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	opacity: ${props => props.$isLoading ? 0.8 : 1};
+	opacity: ${props => (props.$isLoading ? 0.8 : 1)};
 
 	&:hover {
-		background-color: ${props => props.$isLoading 
-			? props.theme.colors.primary[400] 
-			: props.theme.colors.primary[600]};
+		background-color: ${props =>
+			props.$isLoading ? props.theme.colors.primary[400] : props.theme.colors.primary[600]};
 	}
 
 	&:disabled {
@@ -267,14 +266,14 @@ const spinAnimation = keyframes`
 `
 
 const ButtonSpinner = styled.div`
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  margin-right: 8px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: ${spinAnimation} 0.8s linear infinite;
+	display: inline-block;
+	width: 18px;
+	height: 18px;
+	margin-right: 8px;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	border-radius: 50%;
+	border-top-color: white;
+	animation: ${spinAnimation} 0.8s linear infinite;
 `
 
 const RegisterPrompt = styled.div`
@@ -282,7 +281,7 @@ const RegisterPrompt = styled.div`
 	margin-top: ${props => props.theme.spacing[4]};
 	font-size: 0.875rem;
 	color: ${props => props.theme.colors.text.secondary};
-`;
+`
 
 const RegisterLink = styled(Link)`
 	font-size: 0.875rem;
@@ -294,7 +293,7 @@ const RegisterLink = styled(Link)`
 		color: ${props => props.theme.colors.primary[700]};
 		text-decoration: underline;
 	}
-`;
+`
 
 const Login: React.FC = () => {
 	const navigate = useNavigate()
@@ -350,7 +349,7 @@ const Login: React.FC = () => {
 				// Show success notification
 				showSuccess(`Welcome back! You have successfully logged in.`)
 				// Navigate to the appropriate dashboard
-				navigate(`/${loginResult.role}/dashboard`)
+				navigate(getDashboardRoute(loginResult.role as unknown as any))
 			} else {
 				// Show error notification
 				showError(loginResult.msg)
@@ -400,20 +399,16 @@ const Login: React.FC = () => {
 								onChange={e => setPassword(e.target.value)}
 								required
 							/>
-							<PasswordToggleButton 
-								type="button"
+							<PasswordToggleButton
+								type='button'
 								onClick={() => setShowPassword(!showPassword)}
-								aria-label={showPassword ? "Hide password" : "Show password"}
+								aria-label={showPassword ? 'Hide password' : 'Show password'}
 							>
 								{showPassword ? <FiEyeOff /> : <FiEye />}
 							</PasswordToggleButton>
 						</InputWrapper>
 					</FormGroup>
-					<LoginButton 
-						type='submit' 
-						disabled={isLoggingIn} 
-						$isLoading={isLoggingIn}
-					>
+					<LoginButton type='submit' disabled={isLoggingIn} $isLoading={isLoggingIn}>
 						{isLoggingIn ? (
 							<>
 								<ButtonSpinner />

@@ -1,24 +1,15 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import {
-	FiBook,
-	FiCalendar,
-	FiCheckSquare,
-	FiChevronLeft,
-	FiChevronRight,
-	FiClipboard,
-	FiFileText,
-	FiHome,
-	FiMenu,
-	FiMessageSquare,
-	FiSettings,
-	FiUser,
-	FiX,
-	FiBell,
-} from 'react-icons/fi'
+import { FiChevronLeft, FiChevronRight, FiMenu, FiX } from 'react-icons/fi'
 import { NavLink, useLocation } from 'react-router-dom'
 import styled, { css } from 'styled-components'
+import { getSystemMenu, getModuleLeaderMenu,teacherMenu } from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
+import {
+	getUserParentRole,
+	getUserRole as getUserRealRole,
+	isModuleLeader,
+} from '../../utils/authUtils'
 import LogoutButton from '../common/LogoutButton'
 
 interface SidebarProps {
@@ -125,11 +116,6 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 		return user?.fullName || user?.username || 'User'
 	}
 
-	// Get user role display
-	const getUserRole = () => {
-		return user?.role || 'User'
-	}
-
 	// Add scroll lock functionality
 	useEffect(() => {
 		if (isMobile) {
@@ -168,6 +154,12 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 			}
 		}
 	}
+
+	const realRole = getUserRealRole()
+	const parentRole = getUserParentRole()
+
+	// Get system menu items for the current role
+	const systemMenu = getSystemMenu('teacher')
 
 	return (
 		<>
@@ -224,63 +216,40 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 
 						<MenuContainer>
 							<MenuSection>
-								<MenuItem
-									icon={<FiHome />}
-									label='Dashboard'
-									to='/teacher/dashboard'
-									isCollapsed={isMobile ? false : isCollapsed}
-									onMobileClick={handleNavItemClick}
-								/>
-								<MenuItem
-									icon={<FiBook />}
-									label='My Classes'
-									to='/teacher/classes'
-									isCollapsed={isMobile ? false : isCollapsed}
-									onMobileClick={handleNavItemClick}
-								/>
-								<MenuItem
-									icon={<FiClipboard />}
-									label='Assignments'
-									to='/teacher/assignments'
-									isCollapsed={isMobile ? false : isCollapsed}
-									onMobileClick={handleNavItemClick}
-								/>
-								<MenuItem
-									icon={<FiFileText />}
-									label='Submissions'
-									to='/teacher/submissions'
-									isCollapsed={isMobile ? false : isCollapsed}
-									onMobileClick={handleNavItemClick}
-								/>
-								<MenuItem
-									icon={<FiCheckSquare />}
-									label='Grades'
-									to='/teacher/grades'
-									isCollapsed={isMobile ? false : isCollapsed}
-									onMobileClick={handleNavItemClick}
-								/>
-								<MenuItem
-									icon={<FiCalendar />}
-									label='Schedule'
-									to='/teacher/schedule'
-									isCollapsed={isMobile ? false : isCollapsed}
-									onMobileClick={handleNavItemClick}
-								/>
-								<MenuItem
-									icon={<FiBell />}
-									label='Announcements'
-									to='/teacher/announcements'
-									isCollapsed={isMobile ? false : isCollapsed}
-									onMobileClick={handleNavItemClick}
-								/>
-								<MenuItem
-									icon={<FiMessageSquare />}
-									label='Messages'
-									to='/teacher/messages'
-									isCollapsed={isMobile ? false : isCollapsed}
-									onMobileClick={handleNavItemClick}
-								/>
+								{teacherMenu.map(item => (
+									<MenuItem
+										key={item.path}
+										icon={item.icon}
+										label={item.label}
+										to={item.path}
+										isCollapsed={isMobile ? false : isCollapsed}
+										onMobileClick={handleNavItemClick}
+									/>
+								))}
 							</MenuSection>
+
+							{isModuleLeader() && (
+								<MenuSection>
+									<SectionLabel
+										initial={{ opacity: 0 }}
+										animate={{ opacity: 1 }}
+										exit={{ opacity: 0 }}
+										transition={{ delay: 0.2 }}
+									>
+										MODULE LEADER
+									</SectionLabel>
+									{getModuleLeaderMenu(parentRole, realRole).map(item => (
+										<MenuItem
+											key={item.path}
+											icon={item.icon}
+											label={item.label}
+											to={item.path}
+											isCollapsed={isMobile ? false : isCollapsed}
+											onMobileClick={handleNavItemClick}
+										/>
+									))}
+								</MenuSection>
+							)}
 
 							<MenuSection>
 								<AnimatePresence>
@@ -296,39 +265,37 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 									)}
 								</AnimatePresence>
 
-								<MenuItem
-									icon={<FiUser />}
-									label='Profile'
-									to='/teacher/profile'
-									isCollapsed={isMobile ? false : isCollapsed}
-									onMobileClick={handleNavItemClick}
-								/>
-								<MenuItem
-									icon={<FiSettings />}
-									label='Settings'
-									to='/teacher/settings'
-									isCollapsed={isMobile ? false : isCollapsed}
-									onMobileClick={handleNavItemClick}
-								/>
+								{systemMenu.map(item => (
+									<MenuItem
+										key={item.path}
+										icon={item.icon}
+										label={item.label}
+										to={item.path}
+										isCollapsed={isMobile ? false : isCollapsed}
+										onMobileClick={handleNavItemClick}
+									/>
+								))}
 							</MenuSection>
 						</MenuContainer>
 
 						<ProfileSection $isCollapsed={isMobile ? false : isCollapsed}>
-							<ProfileImage>{getUserInitials()}</ProfileImage>
+							<ProfileAvatar $isCollapsed={isMobile ? false : isCollapsed}>
+								{getUserInitials()}
+							</ProfileAvatar>
 							<AnimatePresence>
 								{(!isCollapsed || isMobile) && (
 									<ProfileInfo
 										initial={{ opacity: 0 }}
 										animate={{ opacity: 1 }}
 										exit={{ opacity: 0 }}
-										transition={{ duration: 0.2 }}
+										transition={{ delay: 0.1 }}
 									>
 										<ProfileName>{getFullName()}</ProfileName>
 										<ProfileRole>Teacher</ProfileRole>
 									</ProfileInfo>
 								)}
 							</AnimatePresence>
-							<SidebarLogoutButton variant='secondary' size='small' showText={false} />
+							{(!isCollapsed || isMobile) && <LogoutButton />}
 						</ProfileSection>
 
 						{isMobile && <MobileOverlay onClick={handleMobileToggle} />}
@@ -653,7 +620,7 @@ const ProfileSection = styled.div<CollapsibleProps>`
 		`}
 `
 
-const ProfileImage = styled.div`
+const ProfileAvatar = styled.div`
 	width: 36px;
 	height: 36px;
 	border-radius: 50%;
@@ -685,21 +652,6 @@ const ProfileName = styled.div`
 const ProfileRole = styled.div`
 	font-size: ${props => props.theme.spacing[3]};
 	color: ${props => props.theme.colors.text.tertiary};
-`
-
-const SidebarLogoutButton = styled(LogoutButton)`
-	padding: 0.5rem;
-	background: transparent;
-
-	svg {
-		color: ${props => props.theme.colors.text.secondary};
-	}
-
-	&:hover {
-		svg {
-			color: ${props => props.theme.colors.danger[500]};
-		}
-	}
 `
 
 export default TeacherSidebar
