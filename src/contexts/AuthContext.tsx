@@ -3,14 +3,15 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import supabase from '../config/supabaseClient'
 import { isRoleManager as checkIsRoleManager } from '../utils/authUtils'
 
-type UserRole =
+// Make sure UserRole is exported for use in other components
+export type UserRole =
 	| 'Admin'
 	| 'Teacher'
 	| 'Student'
 	| 'Parent'
 	| {
 			name: string
-			parent: {
+			parent?: {
 				name: string
 			}
 	  }
@@ -76,9 +77,51 @@ interface AuthProviderProps {
 export const getDashboardRoute = (role: UserRole): string => {
 	console.log(`Role in the getDashboardRoute:`, role)
 
-	// Use the effective role (parent if available, otherwise the role itself)
-	const effectiveRole = getEffectiveRoleName(role)
-	return `/${effectiveRole.toLowerCase()}/dashboard`
+	// First, ensure we have a valid string role
+	let roleName: string
+
+	try {
+		// If role is already a string
+		if (typeof role === 'string') {
+			roleName = role.toLowerCase()
+		}
+		// If role is an object with name property
+		else if (role && typeof role === 'object') {
+			// Check for parent role first
+			if (role.parent && typeof role.parent === 'object' && role.parent.name) {
+				roleName = role.parent.name.toLowerCase()
+			}
+			// Then check for role name
+			else if (role.name && typeof role.name === 'string') {
+				roleName = role.name.toLowerCase()
+			}
+			// If we can't determine the role from the object, use a default
+			else {
+				console.warn('Could not determine role name from object:', role)
+				roleName = 'student' // Safe default
+			}
+		}
+		// Fallback for unexpected values
+		else {
+			console.warn('Unexpected role type in getDashboardRoute:', typeof role, role)
+			roleName = 'student' // Safe default
+		}
+
+		// Safe check to ensure role is one of the valid roles
+		if (
+			!['admin', 'superadmin', 'teacher', 'moduleleader', 'student', 'parent'].includes(roleName)
+		) {
+			console.warn(
+				`Invalid role "${roleName}" detected in getDashboardRoute. Defaulting to student.`
+			)
+			roleName = 'student'
+		}
+
+		return `/${roleName}/dashboard`
+	} catch (error) {
+		console.error('Error in getDashboardRoute:', error)
+		return '/student/dashboard' // Safe default if anything goes wrong
+	}
 }
 
 // Helper function to get role name

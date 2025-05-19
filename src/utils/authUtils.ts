@@ -161,42 +161,86 @@ export const getUserRole = (): string => {
 	try {
 		const parsedInfo = JSON.parse(userInfo)
 
+		// Direct string role
 		if (parsedInfo.role && typeof parsedInfo.role === 'string') {
 			return parsedInfo.role
 		}
 
-		if (parsedInfo.role && typeof parsedInfo.role === 'object' && parsedInfo.role.name) {
-			return parsedInfo.role.name
+		// Object with name property
+		if (parsedInfo.role && typeof parsedInfo.role === 'object') {
+			// Check if it has a name property
+			if (parsedInfo.role.name && typeof parsedInfo.role.name === 'string') {
+				return parsedInfo.role.name
+			}
+
+			// If it has a parent role with a name, use that
+			if (
+				parsedInfo.role.parent &&
+				typeof parsedInfo.role.parent === 'object' &&
+				parsedInfo.role.parent.name &&
+				typeof parsedInfo.role.parent.name === 'string'
+			) {
+				return parsedInfo.role.parent.name
+			}
+
+			// If role is an object but doesn't have expected properties
+			console.warn('Role object found but missing name property:', parsedInfo.role)
 		}
 
-		return 'Unknown'
+		// Check if we have roleName as a backup
+		if (parsedInfo.roleName && typeof parsedInfo.roleName === 'string') {
+			return parsedInfo.roleName
+		}
+
+		// Fall back to a default role for safety
+		console.warn('Could not determine user role from:', parsedInfo)
+		return 'Student' // Default to Student as the safest option
 	} catch (error) {
 		console.error('Error parsing user info:', error)
-		return 'Unknown'
+		return 'Student' // Default to Student if there's an error
 	}
 }
 
 /**
  * Get the current user's parent role
  *
- * @returns The user's parent role name or "Unknown" if not found
+ * @returns The user's parent role name or null if not found
  */
-export const getUserParentRole = (): string => {
+export const getUserParentRole = (): string | null => {
 	const userInfo = localStorage.getItem('lms_user')
 	if (!userInfo) {
-		return 'Unknown'
+		return null
 	}
 
 	try {
 		const parsedInfo = JSON.parse(userInfo)
 
-		if (parsedInfo.role && typeof parsedInfo.role === 'object' && parsedInfo.role.parent) {
-			return parsedInfo.role.parent.name || 'Unknown'
+		if (parsedInfo.role && typeof parsedInfo.role === 'object') {
+			// Check if role has a direct parent property that's an object with a name
+			if (
+				parsedInfo.role.parent &&
+				typeof parsedInfo.role.parent === 'object' &&
+				parsedInfo.role.parent.name &&
+				typeof parsedInfo.role.parent.name === 'string'
+			) {
+				return parsedInfo.role.parent.name
+			}
+
+			// Check if role has a parentRole property that's a string
+			if (parsedInfo.role.parentRole && typeof parsedInfo.role.parentRole === 'string') {
+				return parsedInfo.role.parentRole
+			}
 		}
 
-		return 'Unknown'
+		// Check if there's a parentRole at the top level
+		if (parsedInfo.parentRole && typeof parsedInfo.parentRole === 'string') {
+			return parsedInfo.parentRole
+		}
+
+		// No parent role found
+		return null
 	} catch (error) {
 		console.error('Error parsing user info:', error)
-		return 'Unknown'
+		return null
 	}
 }

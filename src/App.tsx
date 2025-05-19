@@ -3,6 +3,8 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-d
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { DefaultTheme, ThemeProvider } from 'styled-components'
+import ProtectedRoute from './components/common/ProtectedRoute'
+import RoleMiddleware from './components/common/RoleMiddleware'
 import { AnnouncementProvider } from './contexts/AnnouncementContext'
 import { AuthProvider } from './contexts/AuthContext'
 import AdminLayout from './layouts/AdminLayout'
@@ -11,12 +13,11 @@ import StudentLayout from './layouts/StudentLayout'
 import TeacherLayout from './layouts/TeacherLayout'
 import AnnouncementCreate from './pages/admin/AnnouncementCreate'
 import AdminAnnouncements from './pages/admin/Announcements'
-import AssignmentFiles from './pages/admin/AssignmentFiles'
 import AdminAssignments from './pages/admin/Assignments'
 import { Classes } from './pages/admin/Classes'
 import Dashboard from './pages/admin/Dashboard'
-import GroupStudents from './pages/admin/GroupStudents'
 import AdminGradesModule from './pages/admin/GradesModule'
+import GroupStudents from './pages/admin/GroupStudents'
 import LessonDetail from './pages/admin/LessonDetail'
 import LessonsManagePage from './pages/admin/LessonsManagePage'
 import MorningClasses from './pages/admin/MorningClasses'
@@ -30,6 +31,7 @@ import Timetables from './pages/admin/Timetables'
 import Users from './pages/admin/Users'
 import Debug from './pages/auth/Debug'
 import Login from './pages/auth/Login'
+import RedirectPage from './pages/auth/RedirectPage'
 import AnnouncementsPage from './pages/parent/AnnouncementsPage'
 import AssignmentsPage from './pages/parent/AssignmentsPage'
 import AttendancePage from './pages/parent/AttendancePage'
@@ -124,93 +126,106 @@ function AppContent() {
 					{/* Auth routes */}
 					<Route path='/login' element={<Login />} />
 					<Route path='/debug' element={<Debug />} />
+					<Route path='/redirect' element={<RedirectPage />} />
+					<Route path='/redirect/:targetPath' element={<RedirectPage />} />
 
-					{/* Admin routes */}
-					<Route path='/admin' element={<AdminLayout />}>
-						<Route index element={<Navigate to='/admin/dashboard' replace />} />
-						<Route path='dashboard' element={<Dashboard />} />
-						<Route path='users' element={<Users />} />
-						<Route path='roles' element={<Roles />} />
-						<Route path='subjects' element={<Subjects />} />
-						<Route path='classes' element={<Classes />} />
-						<Route path='morning-classes' element={<MorningClasses />} />
-						<Route path='morning-classes/:subjectId' element={<SubjectGroups />} />
-						<Route path='morning-classes/:subjectId/groups/:groupId' element={<GroupStudents />} />
-						<Route path='assignments' element={<AdminAssignments />} />
-						<Route path='grades/*' element={<AdminGradesModule />} />
-						<Route path='timetables' element={<Timetables />} />
-						<Route path='settings' element={<Settings />} />
-						<Route path='profile' element={<ProfilePage />} />
-						<Route path='announcements' element={<AdminAnnouncements />} />
-						<Route path='announcements/create' element={<AnnouncementCreate />} />
-						<Route path='subjects/:subjectId/lessons' element={<LessonsManagePage />} />
-						<Route path='subjects' element={<SubjectsManagePage />} />
-						<Route path='lessons/:id' element={<LessonDetail />} />
+					{/* Admin routes - protected for Admin role only */}
+					<Route element={<ProtectedRoute allowedRoles={['Admin', 'SuperAdmin']} />}>
+						<Route path='/admin' element={<AdminLayout />}>
+							<Route index element={<Navigate to='/admin/dashboard' replace />} />
+							<Route path='dashboard' element={<Dashboard />} />
+							<Route path='users' element={<Users />} />
+							<Route path='roles' element={<Roles />} />
+							<Route path='subjects' element={<Subjects />} />
+							<Route path='classes' element={<Classes />} />
+							<Route path='morning-classes' element={<MorningClasses />} />
+							<Route path='morning-classes/:subjectId' element={<SubjectGroups />} />
+							<Route
+								path='morning-classes/:subjectId/groups/:groupId'
+								element={<GroupStudents />}
+							/>
+							<Route path='assignments' element={<AdminAssignments />} />
+							<Route path='grades/*' element={<AdminGradesModule />} />
+							<Route path='timetables' element={<Timetables />} />
+							<Route path='settings' element={<Settings />} />
+							<Route path='profile' element={<ProfilePage />} />
+							<Route path='announcements' element={<AdminAnnouncements />} />
+							<Route path='announcements/create' element={<AnnouncementCreate />} />
+							<Route path='subjects/:subjectId/lessons' element={<LessonsManagePage />} />
+							<Route path='subjects' element={<SubjectsManagePage />} />
+							<Route path='lessons/:id' element={<LessonDetail />} />
+						</Route>
 					</Route>
 
-					{/* Teacher routes */}
-					<Route path='/teacher' element={<TeacherLayout />}>
-						<Route path='subjects' element={<SubjectsManagePage />} />
-						<Route path='new-class' element={<NewClassPage />} />
-						<Route path='dashboard' element={<TeacherDashboard />} />
-						<Route path='profile' element={<ProfilePage />} />
-						<Route path='classes' element={<TeacherClasses />} />
-						<Route
-							path='classes/:classId/subjects/:subjectId'
-							element={<TeacherSubjectDetails />}
-						/>
-						<Route
-							path='classes/:classId/subjects/:subjectId/lessons/:lessonId'
-							element={<TeacherLessonDetails />}
-						/>
-						<Route path='schedule' element={<TeacherSchedule />} />
-						<Route path='messages' element={<h1>Coming Soon...</h1>} />
-						<Route path='settings' element={<Settings />} />
-						<Route path='announcements' element={<TeacherAnnouncements />} />
-						<Route path='journal/:classId' element={<TeacherJournalPage />} />
-						<Route path='journal' element={<TeacherJournalPage />} />
-						<Route path='submissions' element={<TeacherSubmissions />} />
-						<Route path='assignments' element={<TeacherAssignments />} />
-						<Route path='assignments/files/:id' element={<TeacherAssignmentFiles />} />
-						<Route path='subjects/:subjectId/lessons' element={<LessonsManagePage />} />
-						<Route path='grades' element={<TeacherGrades />} />
-						<Route path='grades/*' element={<TeacherGradesModule />} />
+					{/* Teacher routes - protected for Teacher role only */}
+					<Route element={<ProtectedRoute allowedRoles={['Teacher', 'ModuleLeader']} />}>
+						<Route path='/teacher' element={<TeacherLayout />}>
+							<Route path='subjects' element={<SubjectsManagePage />} />
+							<Route path='new-class' element={<NewClassPage />} />
+							<Route path='dashboard' element={<TeacherDashboard />} />
+							<Route path='profile' element={<ProfilePage />} />
+							<Route path='classes' element={<TeacherClasses />} />
+							<Route
+								path='classes/:classId/subjects/:subjectId'
+								element={<TeacherSubjectDetails />}
+							/>
+							<Route
+								path='classes/:classId/subjects/:subjectId/lessons/:lessonId'
+								element={<TeacherLessonDetails />}
+							/>
+							<Route path='schedule' element={<TeacherSchedule />} />
+							<Route path='messages' element={<h1>Coming Soon...</h1>} />
+							<Route path='settings' element={<Settings />} />
+							<Route path='announcements' element={<TeacherAnnouncements />} />
+							<Route path='journal/:classId' element={<TeacherJournalPage />} />
+							<Route path='journal' element={<TeacherJournalPage />} />
+							<Route path='submissions' element={<TeacherSubmissions />} />
+							<Route path='assignments' element={<TeacherAssignments />} />
+							<Route path='assignments/files/:id' element={<TeacherAssignmentFiles />} />
+							<Route path='subjects/:subjectId/lessons' element={<LessonsManagePage />} />
+							<Route path='grades' element={<TeacherGrades />} />
+							<Route path='grades/*' element={<TeacherGradesModule />} />
+						</Route>
 					</Route>
 
-					{/* Student routes */}
-					<Route path='/student' element={<StudentLayout />}>
-						<Route index element={<Navigate to='/student/dashboard' replace />} />
-						<Route path='dashboard' element={<StudentDashboard />} />
-						<Route path='announcements' element={<Announcements />} />
-						<Route path='courses' element={<MyCourses />} />
-						<Route path='course/:courseId' element={<CourseDetail />} />
-						<Route path='lesson/:lessonId' element={<LessonDetail />} />
-						<Route path='assignments' element={<Assignments />} />
-						<Route path='assignments/:assignmentId' element={<SingleAssignment />} />
-						<Route path='schedule' element={<StudentSchedule />} />
-						<Route path='grades' element={<StudentGradesPage />} />
-						{/* Route for viewing grades for a specific subject */}
-						<Route path='grades/:subjectId' element={<GradeDetails />} />
-						<Route path='messages' element={<h1>Coming Soon...</h1>} />
-						<Route path='tests' element={<h1>Coming Soon...</h1>} />
-						<Route path='flashcards' element={<h1>Coming Soon...</h1>} />
-						<Route path='profile' element={<ProfilePage />} />
-						<Route path='settings' element={<Settings />} />
+					{/* Student routes - protected for Student role only */}
+					<Route element={<ProtectedRoute allowedRoles={['Student']} />}>
+						<Route path='/student' element={<StudentLayout />}>
+							<Route index element={<Navigate to='/student/dashboard' replace />} />
+							<Route path='dashboard' element={<StudentDashboard />} />
+							<Route path='announcements' element={<Announcements />} />
+							<Route path='courses' element={<MyCourses />} />
+							<Route path='course/:courseId' element={<CourseDetail />} />
+							<Route path='lesson/:lessonId' element={<LessonDetail />} />
+							<Route path='assignments' element={<Assignments />} />
+							<Route path='assignments/:assignmentId' element={<SingleAssignment />} />
+							<Route path='schedule' element={<StudentSchedule />} />
+							<Route path='grades' element={<StudentGradesPage />} />
+							{/* Route for viewing grades for a specific subject */}
+							<Route path='grades/:subjectId' element={<GradeDetails />} />
+							<Route path='messages' element={<h1>Coming Soon...</h1>} />
+							<Route path='tests' element={<h1>Coming Soon...</h1>} />
+							<Route path='flashcards' element={<h1>Coming Soon...</h1>} />
+							<Route path='profile' element={<ProfilePage />} />
+							<Route path='settings' element={<Settings />} />
+						</Route>
 					</Route>
 
-					{/* Parent routes */}
-					<Route path='/parent' element={<ParentLayout />}>
-						<Route index element={<ParentDashboard />} />
-						<Route path='dashboard' element={<ParentDashboard />} />
-						<Route path='students' element={<StudentsPage />} />
-						<Route path='assignments' element={<AssignmentsPage />} />
-						<Route path='grades' element={<GradesPage />} />
-						<Route path='attendance' element={<AttendancePage />} />
-						<Route path='messages' element={<h1>Coming Soon...</h1>} />
-						<Route path='calendar' element={<ParentCalendar />} />
-						<Route path='announcements' element={<AnnouncementsPage />} />
-						<Route path='settings' element={<SettingsPage />} />
-						<Route path='profile' element={<ProfilePage />} />
+					{/* Parent routes - protected for Parent role only */}
+					<Route element={<ProtectedRoute allowedRoles={['Parent']} />}>
+						<Route path='/parent' element={<ParentLayout />}>
+							<Route index element={<ParentDashboard />} />
+							<Route path='dashboard' element={<ParentDashboard />} />
+							<Route path='students' element={<StudentsPage />} />
+							<Route path='assignments' element={<AssignmentsPage />} />
+							<Route path='grades' element={<GradesPage />} />
+							<Route path='attendance' element={<AttendancePage />} />
+							<Route path='messages' element={<h1>Coming Soon...</h1>} />
+							<Route path='calendar' element={<ParentCalendar />} />
+							<Route path='announcements' element={<AnnouncementsPage />} />
+							<Route path='settings' element={<SettingsPage />} />
+							<Route path='profile' element={<ProfilePage />} />
+						</Route>
 					</Route>
 				</Routes>
 			</ThemeProvider>
@@ -234,7 +249,9 @@ function App() {
 		<Router>
 			<AuthProvider>
 				<AnnouncementProvider>
-					<AppContent />
+					<RoleMiddleware>
+						<AppContent />
+					</RoleMiddleware>
 				</AnnouncementProvider>
 			</AuthProvider>
 		</Router>
