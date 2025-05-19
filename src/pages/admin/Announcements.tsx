@@ -570,16 +570,18 @@ const Announcements: React.FC = () => {
 									<span>{format(new Date(announcement.created_at), 'MMM d, yyyy h:mm a')}</span>
 								</MetaInfo>
 
-								{canUpdateAnnouncements && (
-									<IconButton onClick={() => handleEdit(announcement)}>
-										<FiEdit2 />
-									</IconButton>
-								)}
-								{canDeleteAnnouncements && (
-									<IconButton onClick={() => handleDeleteClick(announcement.id)}>
-										<FiTrash2 />
-									</IconButton>
-								)}
+								<ActionButtons>
+									{canUpdateAnnouncements && (
+										<IconButton onClick={() => handleEdit(announcement)}>
+											<FiEdit2 />
+										</IconButton>
+									)}
+									{canDeleteAnnouncements && (
+										<IconButton onClick={() => handleDeleteClick(announcement.id)}>
+											<FiTrash2 />
+										</IconButton>
+									)}
+								</ActionButtons>
 							</AnnouncementMeta>
 						</AnnouncementItem>
 					))
@@ -810,6 +812,39 @@ const MetaInfo = styled.div`
 	gap: 8px;
 	font-size: 12px;
 	color: ${props => props.theme.colors.text.tertiary};
+`
+
+const ActionButtons = styled.div`
+	display: flex;
+	gap: 8px;
+	align-items: center;
+`
+
+const IconButton = styled.button`
+	background: none;
+	border: none;
+	color: ${props => props.theme.colors.text.secondary};
+	cursor: pointer;
+	padding: 8px;
+	border-radius: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s ease;
+
+	&:hover {
+		background-color: ${props => props.theme.colors.background.hover};
+		color: ${props => props.theme.colors.primary[500]};
+	}
+
+	&:first-child:hover {
+		color: ${props => props.theme.colors.primary[500]};
+	}
+
+	&:last-child:hover {
+		color: ${props => props.theme.colors.danger[500]};
+		background-color: ${props => props.theme.colors.danger[50]};
+	}
 `
 
 const DeleteButton = styled.button`
@@ -1154,21 +1189,6 @@ const LoadingState = styled.div`
 		100% {
 			transform: rotate(360deg);
 		}
-	}
-`
-
-// Add IconButton styled component
-const IconButton = styled.button`
-	background: none;
-	border: none;
-	color: ${props => props.theme.colors.text.tertiary};
-	cursor: pointer;
-	padding: 4px;
-	border-radius: 50%;
-
-	&:hover {
-		color: ${props => props.theme.colors.text.primary};
-		background-color: ${props => props.theme.colors.background.tertiary};
 	}
 `
 

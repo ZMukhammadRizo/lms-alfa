@@ -1,11 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { FiChevronDown, FiPlus, FiSettings, FiUser } from 'react-icons/fi'
 import styled from 'styled-components'
-import { FiSettings, FiUser, FiChevronDown, FiBell, FiPlus } from 'react-icons/fi'
 // import { useThemeContext } from '../../App';
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { Link, useNavigate } from 'react-router-dom'
-import LogoutButton from '../common/LogoutButton'
+import { getUserRole } from '../../utils/authUtils'
 import AnnouncementBell from '../common/AnnouncementBell'
+import LogoutButton from '../common/LogoutButton'
 
 const Header: React.FC = () => {
 	// const { isDarkMode } = useThemeContext();
@@ -13,6 +14,19 @@ const Header: React.FC = () => {
 	const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
 	const userMenuRef = useRef<HTMLDivElement>(null)
 	const navigate = useNavigate()
+	const location = useLocation()
+
+	// Get the current layout based on URL path
+	const getCurrentLayout = () => {
+		const path = location.pathname
+		if (path.startsWith('/admin')) return 'admin'
+		if (path.startsWith('/teacher')) return 'teacher'
+		if (path.startsWith('/student')) return 'student'
+		if (path.startsWith('/parent')) return 'parent'
+		return 'admin' // fallback
+	}
+
+	const currentLayout = getCurrentLayout()
 
 	// Handle clicking outside of user menu to close it
 	useEffect(() => {
@@ -51,38 +65,11 @@ const Header: React.FC = () => {
 
 	const getProfilePath = () => {
 		if (!user) return '/login'
-		return `/${getUserRole()}/profile`
+		return `/${currentLayout}/profile`
 	}
 
 	const handleNewAnnouncement = () => {
 		navigate('/admin/announcements/create')
-	}
-
-	// Get user role from localStorage
-	const getUserRole = () => {
-		const userInfo = localStorage.getItem('lms_user')
-		if (userInfo) {
-			try {
-				const parsedInfo = JSON.parse(userInfo)
-				if (parsedInfo.role && typeof parsedInfo.role === 'object') {
-					if (parsedInfo.role.parent && parsedInfo.role.parent.name) {
-						return parsedInfo.role.parent.name.toLowerCase() || 'student'
-					}
-
-					return parsedInfo.role.name.toLowerCase() || 'student'
-				}
-
-				if (parsedInfo.role && typeof parsedInfo.role === 'string') {
-					return parsedInfo.role.toLowerCase() || 'student'
-				}
-
-				return 'student'
-			} catch (error) {
-				console.error('Error parsing user info:', error)
-				return 'student'
-			}
-		}
-		return user?.role || 'student'
 	}
 
 	return (
@@ -90,7 +77,7 @@ const Header: React.FC = () => {
 			<HeaderActions>
 				<AnnouncementBell />
 
-				{getUserRole() === 'Admin' && (
+				{currentLayout === 'admin' && (
 					<CreateAnnouncementButton onClick={handleNewAnnouncement}>
 						<FiPlus />
 						<ButtonText>New Announcement</ButtonText>
@@ -120,7 +107,7 @@ const Header: React.FC = () => {
 								</MenuUserAvatar>
 								<UserInfo>
 									<UserFullName>{user?.fullName || user?.username || 'User'}</UserFullName>
-									<UserRole>{getUserRole() || 'No role'}</UserRole>
+									<UserRole>{getUserRole()}</UserRole>
 								</UserInfo>
 							</UserMenuHeader>
 
@@ -133,7 +120,11 @@ const Header: React.FC = () => {
 								<span>My Profile</span>
 							</UserMenuItem>
 
-							<UserMenuItem as={Link} to={`/${getUserRole()}/settings`}>
+							<UserMenuItem
+								as={Link}
+								to={`/${currentLayout}/settings`}
+								onClick={handleCloseUserMenu}
+							>
 								<MenuItemIcon>
 									<FiSettings />
 								</MenuItemIcon>

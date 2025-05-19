@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate, Link, Navigate } from 'react-router-dom'
-import styled, { keyframes } from 'styled-components'
-import { useAuth } from '../../contexts/AuthContext'
-import { showSuccess, showError } from '../../utils/toast'
+import React, { useEffect, useState } from 'react'
 import { FiEye, FiEyeOff } from 'react-icons/fi'
-import { getDashboardRoute } from '../../contexts/AuthContext'
+import { Link, useNavigate } from 'react-router-dom'
+import styled, { keyframes } from 'styled-components'
+import type { UserRole } from '../../contexts/AuthContext'
+import { getDashboardRoute, useAuth } from '../../contexts/AuthContext'
+import { showError, showSuccess } from '../../utils/toast'
+import RedirectPage from './RedirectPage'
 
 // Loading animations
 const spin = keyframes`
@@ -305,6 +306,8 @@ const Login: React.FC = () => {
 	const [error, setError] = useState('')
 	const [pageLoading, setPageLoading] = useState(true)
 	const [isLoggingIn, setIsLoggingIn] = useState(false)
+	const [isRedirecting, setIsRedirecting] = useState(false)
+	const [redirectTarget, setRedirectTarget] = useState<string | null>(null)
 
 	// Handle initial page loading animation
 	useEffect(() => {
@@ -315,6 +318,31 @@ const Login: React.FC = () => {
 		return () => clearTimeout(timer)
 	}, [])
 
+	// Handle redirection if already authenticated
+	useEffect(() => {
+		if (isAuthenticated && user && !isRedirecting) {
+			try {
+				const userRole = user?.role || 'student'
+				const dashboardRoute = getDashboardRoute(userRole as UserRole)
+				setRedirectTarget(dashboardRoute)
+				setIsRedirecting(true)
+			} catch (error) {
+				console.error('Error setting up redirection:', error)
+				setRedirectTarget('/student/dashboard')
+				setIsRedirecting(true)
+			}
+		}
+	}, [isAuthenticated, user, isRedirecting])
+
+	// IMPORTANT: Check authentication status first to prevent login form flash
+	// These conditions are in order of priority
+
+	// 1. If we're redirecting after login or initial auth check, show redirect page
+	if (isRedirecting && redirectTarget) {
+		return <RedirectPage targetPath={redirectTarget} message='Redirecting to your dashboard...' />
+	}
+
+	// 2. If we're still loading auth state or initial page load, show loading
 	if (authLoading || pageLoading) {
 		return (
 			<LoadingContainer>
@@ -327,12 +355,6 @@ const Login: React.FC = () => {
 				</LoadingContent>
 			</LoadingContainer>
 		)
-	}
-
-	if (isAuthenticated) {
-		// If already authenticated, redirect to the dashboard
-		const userRole = user?.role || 'student'
-		return <Navigate to={`/${userRole}/dashboard`} replace />
 	}
 
 	// Handle login form submission
@@ -348,8 +370,14 @@ const Login: React.FC = () => {
 			if (loginResult.ok) {
 				// Show success notification
 				showSuccess(`Welcome back! You have successfully logged in.`)
-				// Navigate to the appropriate dashboard
-				navigate(getDashboardRoute(loginResult.role as unknown as any))
+
+				// Set redirecting state to show dedicated redirect page
+				setIsRedirecting(true)
+
+				// Navigate to the appropriate dashboard using our improved function
+				const dashboardRoute = getDashboardRoute(loginResult.role as UserRole)
+				console.log('Login successful, redirecting to:', dashboardRoute)
+				setRedirectTarget(dashboardRoute)
 			} else {
 				// Show error notification
 				showError(loginResult.msg)
@@ -363,6 +391,7 @@ const Login: React.FC = () => {
 		}
 	}
 
+	// 3. Only show login form if not authenticated and not redirecting
 	return (
 		<LoginContainer>
 			<FormSection>
