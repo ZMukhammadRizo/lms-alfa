@@ -70,36 +70,21 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 
 		if (type === 'checkbox') {
 			const checked = (e.target as HTMLInputElement).checked
-			console.log(checked)
-
 			setFormData(prev => ({ ...prev, [name]: checked }))
 		} else if (name === 'target') {
-			console.log(`Target audience selected: ${value}`);
-			
-			// Set the value and ensure it's capitalized properly
-			const audienceValue = value.charAt(0).toUpperCase() + value.slice(1) as
+			// Simplify the target audience selection logic
+			// Format the value appropriately with first letter uppercase
+			const formattedValue = (value.charAt(0).toUpperCase() + value.slice(1)) as
 				| 'All'
 				| 'Student'
 				| 'Teacher'
 				| 'Admin'
-				| any;
-				
+
+			// Just update the state directly without any setTimeout or forced UI updates
 			setFormData(prev => ({
 				...prev,
-				targetAudience: audienceValue,
+				targetAudience: formattedValue,
 			}))
-			
-			// Force update the select element after state is updated
-			setTimeout(() => {
-				const select = document.getElementById('target') as HTMLSelectElement;
-				if (select) {
-					select.value = value;
-					
-					// Simulate a change event to ensure proper UI updates
-					const event = new Event('change', { bubbles: true });
-					select.dispatchEvent(event);
-				}
-			}, 50);
 		} else {
 			setFormData(prev => ({ ...prev, [name]: value }))
 		}
@@ -467,9 +452,8 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 							id='target'
 							name='target'
 							value={formData.targetAudience.toLowerCase()}
-							onChange={e => handleFormChange(e)}
+							onChange={handleFormChange}
 							disabled={formSubmitting}
-							key={`target-select-${formData.targetAudience}`}
 						>
 							<option value='all'>All Users</option>
 							{roles.map(role => (
@@ -646,9 +630,8 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 								id='target'
 								name='target'
 								value={formData.targetAudience.toLowerCase()}
-								onChange={e => handleFormChange(e)}
+								onChange={handleFormChange}
 								disabled={formSubmitting}
-								key={`target-select-${formData.targetAudience}`}
 							>
 								<option value='all'>All Users</option>
 								{roles.map(role => (

@@ -6,18 +6,18 @@ import styled from 'styled-components'
 import { PageTitle } from '../../../components/common'
 import { Card, Container, Input } from '../../../components/ui'
 import { useAuth } from '../../../contexts/AuthContext'
+import { supabase } from '../../../services/supabaseClient'
 import useGradesStore from '../../../store/gradesStore'
 import { CardProps } from '../../../types/grades'
-import { supabase } from '../../../services/supabaseClient'
 
 // Updated interface for grade level with accurate student count
 interface GradeLevel {
-	levelId: string;
-	levelName: string;
-	classCount: number;
-	studentCount: number;
-	subjectCount: number;
-	actualStudentCount?: number;
+	levelId: string
+	levelName: string
+	classCount: number
+	studentCount: number
+	subjectCount: number
+	actualStudentCount?: number
 }
 
 const GradeLevelSelect: React.FC = () => {
@@ -36,96 +36,96 @@ const GradeLevelSelect: React.FC = () => {
 
 	// Get accurate student counts for each grade level
 	const fetchAccurateStudentCounts = async (levels: GradeLevel[]) => {
-		console.log("[GradeLevelSelect] Fetching accurate counts for:", levels);
+		console.log('[GradeLevelSelect] Fetching accurate counts for:', levels)
 		// Ensure levels is an array before mapping
 		if (!Array.isArray(levels)) {
-			console.warn("[GradeLevelSelect] Levels data is not an array, cannot fetch counts.");
-			return [];
+			console.warn('[GradeLevelSelect] Levels data is not an array, cannot fetch counts.')
+			return []
 		}
-		
+
 		const updatedLevels = await Promise.all(
-			levels.map(async (level) => {
+			levels.map(async level => {
 				try {
 					// Get classes for this level
 					const { data: classes, error: classesError } = await supabase
 						.from('classes')
 						.select('id')
-						.eq('level_id', level.levelId);
+						.eq('level_id', level.levelId)
 
-					if (classesError) throw classesError;
-					
-					const classIds = classes.map(c => c.id);
-					
+					if (classesError) throw classesError
+
+					const classIds = classes.map(c => c.id)
+
 					if (classIds.length === 0) {
 						return {
 							...level,
-							actualStudentCount: 0
-						};
+							actualStudentCount: 0,
+						}
 					}
-					
+
 					// Get unique students from these classes
 					const { data: students, error: studentsError } = await supabase
 						.from('classstudents')
 						.select('studentid')
-						.in('classid', classIds);
-						
-					if (studentsError) throw studentsError;
-					
+						.in('classid', classIds)
+
+					if (studentsError) throw studentsError
+
 					// Count unique students
-					const uniqueStudentIds = new Set(students.map(s => s.studentid));
-					const actualCount = uniqueStudentIds.size;
-					
+					const uniqueStudentIds = new Set(students.map(s => s.studentid))
+					const actualCount = uniqueStudentIds.size
+
 					return {
 						...level,
-						actualStudentCount: actualCount
-					};
+						actualStudentCount: actualCount,
+					}
 				} catch (err) {
-					console.error(`Error fetching student count for level ${level.levelId}:`, err);
-					return level;
+					console.error(`Error fetching student count for level ${level.levelId}:`, err)
+					return level
 				}
 			})
-		);
-		
-		return updatedLevels;
-	};
+		)
+
+		return updatedLevels
+	}
 
 	// Effect 1: Fetch initial levels from store on mount
 	useEffect(() => {
-		console.log("[GradeLevelSelect] Initial fetch triggered.");
+		console.log('[GradeLevelSelect] Initial fetch triggered.')
 		fetchTeacherLevels().catch(err => {
-			console.error('Initial fetchTeacherLevels failed:', err);
-			setError('Failed to load initial grade levels.');
-		});
-	}, [fetchTeacherLevels]); // fetchTeacherLevels should be stable
+			console.error('Initial fetchTeacherLevels failed:', err)
+			setError('Failed to load initial grade levels.')
+		})
+	}, [fetchTeacherLevels]) // fetchTeacherLevels should be stable
 
 	// Effect 2: Calculate accurate counts when levels data changes from the store
 	useEffect(() => {
 		const calculateCounts = async () => {
 			// Only run if levels are available from store and not loading
 			if (!isLoadingStoreLevels && gradeLevels && gradeLevels.length > 0) {
-				setLoading(true); // Indicate loading counts
-				setError(null); // Clear previous errors
+				setLoading(true) // Indicate loading counts
+				setError(null) // Clear previous errors
 				try {
-					console.log("[GradeLevelSelect] Store levels updated, calculating accurate counts...");
-					const levelsWithCounts = await fetchAccurateStudentCounts(gradeLevels as GradeLevel[]);
-					setGradeLevelsWithCounts(levelsWithCounts);
+					console.log('[GradeLevelSelect] Store levels updated, calculating accurate counts...')
+					const levelsWithCounts = await fetchAccurateStudentCounts(gradeLevels as GradeLevel[])
+					setGradeLevelsWithCounts(levelsWithCounts)
 				} catch (err) {
-					console.error('Error fetching accurate student counts:', err);
-					setError('Failed to load student counts for levels.');
-					setGradeLevelsWithCounts([]); // Clear potentially stale data
+					console.error('Error fetching accurate student counts:', err)
+					setError('Failed to load student counts for levels.')
+					setGradeLevelsWithCounts([]) // Clear potentially stale data
 				} finally {
-					setLoading(false);
+					setLoading(false)
 				}
 			} else if (!isLoadingStoreLevels && gradeLevels && gradeLevels.length === 0) {
 				// Handle case where fetch completed but returned no levels
-				console.log("[GradeLevelSelect] Store fetch complete, no levels found.");
-				setGradeLevelsWithCounts([]);
-				setLoading(false); // Stop loading if there are no levels
+				console.log('[GradeLevelSelect] Store fetch complete, no levels found.')
+				setGradeLevelsWithCounts([])
+				setLoading(false) // Stop loading if there are no levels
 			}
-		};
+		}
 
-		calculateCounts();
-	}, [gradeLevels, isLoadingStoreLevels]); // Depend on store data and its loading state
+		calculateCounts()
+	}, [gradeLevels, isLoadingStoreLevels]) // Depend on store data and its loading state
 
 	// Filter grade levels based on search term
 	const filteredGradeLevels = gradeLevelsWithCounts.filter(level =>
@@ -160,7 +160,7 @@ const GradeLevelSelect: React.FC = () => {
 				<LoadingMessage>Loading grade levels...</LoadingMessage>
 			</PageContainer>
 		)
-	} 
+	}
 
 	if (loading) {
 		// Show generic loading message if calculating counts (or potentially other loading)
@@ -232,7 +232,11 @@ const GradeLevelSelect: React.FC = () => {
 												<FiUsers />
 											</GradeMetricIcon>
 											<GradeMetricContent>
-												<GradeMetricValue>{level.actualStudentCount !== undefined ? level.actualStudentCount : level.studentCount}</GradeMetricValue>
+												<GradeMetricValue>
+													{level.actualStudentCount !== undefined
+														? level.actualStudentCount
+														: level.studentCount}
+												</GradeMetricValue>
 												<GradeMetricLabel>Students</GradeMetricLabel>
 											</GradeMetricContent>
 										</GradeMetric>
@@ -380,34 +384,39 @@ const CardTop = styled.div<{ $gradelevel: number }>`
 	background: ${props => {
 		const hue = (props.$gradelevel * 20) % 360
 		return `linear-gradient(135deg,
-      ${props.theme.mode === 'dark' ? `hsl(${hue}, 70%, 20%)` : `hsl(${hue}, 70%, 80%)`},
-      ${props.theme.mode === 'dark' ? `hsl(${hue}, 60%, 30%)` : `hsl(${hue}, 60%, 90%)`})`
+      ${props.theme.mode === 'dark' ? `hsl(${hue}, 80%, 25%)` : `hsl(${hue}, 85%, 65%)`},
+      ${props.theme.mode === 'dark' ? `hsl(${hue}, 70%, 35%)` : `hsl(${hue}, 75%, 75%)`})`
 	}};
 	padding: 24px;
 	display: flex;
 	align-items: center;
 	gap: 16px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 `
 
 const GradeLevelIcon = styled.div`
-	background: rgba(255, 255, 255, 0.25);
+	background: rgba(255, 255, 255, 0.3);
 	border-radius: 50%;
 	width: 44px;
 	height: 44px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 1.5rem;
-	color: #fff;
-	backdrop-filter: blur(4px);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+
+	svg {
+		color: white;
+		filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+		font-size: 22px;
+	}
 `
 
 const GradeLevelName = styled.h3`
-	color: #fff;
-	font-size: 1.5rem;
-	font-weight: 600;
-	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+	color: white;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 `
 
 const CardContent = styled.div`
