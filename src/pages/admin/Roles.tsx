@@ -52,10 +52,13 @@ const Roles: React.FC = () => {
 	// State for roles and permissions
 	const [roles, setRoles] = useState<Role[]>([])
 	const [permissions, setPermissions] = useState<Permission[]>([])
-
+	const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
 	const [userPermissions, setUserPermissions] = useState<string[]>([])
 	const [hasManageRoles, setHasManageRoles] = useState(false)
 	const [hasManagePermissions, setHasManagePermissions] = useState(false)
+	const [hasUpdateAdmins, setHasUpdateAdmins] = useState(false)
+	const [hasDeleteAdmins, setHasDeleteAdmins] = useState(false)
+	const [hasCreateAdmins, setHasCreateAdmins] = useState(false)
 
 	// Filter roles based on search term
 	const filteredRoles = roles.filter(
@@ -98,22 +101,47 @@ const Roles: React.FC = () => {
 
 	// Open form to edit an existing role
 	const handleEditRole = (role: Role) => {
+		// Check if user has permission to edit this role
+		if (!canEditRole(role)) {
+			if (role.name === 'Admin') {
+				toast.error('You do not have permission to edit the Admin role.')
+			} else if (role.name === 'RoleManager') {
+				toast.error('You cannot edit your own role as a RoleManager.')
+			} else {
+				toast.error('You do not have permission to edit this role.')
+			}
+			return
+		}
+
 		setCurrentRole(role)
 		setIsFormOpen(true)
 	}
 
 	// Handle delete role
 	const handleDeleteRole = async (roleId: string) => {
+		const roleToDelete = roles.find(r => r.id === roleId)
+		if (!roleToDelete) {
+			toast.error('Role not found. Please try again.')
+			return
+		}
+
+		// Check permissions for RoleManager
+		if (!canDeleteRole(roleToDelete)) {
+			if (roleToDelete.name === 'Admin') {
+				toast.error('You do not have permission to delete the Admin role.')
+			} else if (roleToDelete.name === 'RoleManager') {
+				toast.error('You cannot delete your own role as a RoleManager.')
+			} else {
+				toast.error('You do not have permission to delete this role.')
+			}
+			return
+		}
+
 		if (
 			window.confirm('Are you sure you want to delete this role? This action cannot be undone.')
 		) {
 			try {
 				// Check if any users are using this role
-				const roleToDelete = roles.find(r => r.id === roleId)
-				if (!roleToDelete) {
-					toast.error('Role not found. Please try again.')
-					return
-				}
 				if (roleToDelete?.usersCount > 0) {
 					toast.error(
 						`Cannot delete role "${roleToDelete.name}". It is currently assigned to ${roleToDelete.usersCount} users.`
@@ -143,6 +171,18 @@ const Roles: React.FC = () => {
 
 	// Open permissions modal for a role
 	const handleManagePermissions = (role: Role) => {
+		// Check if user has permission to manage permissions for this role
+		if (!canManagePermissions(role)) {
+			if (role.name === 'Admin') {
+				toast.error('You do not have permission to manage Admin role permissions.')
+			} else if (role.name === 'RoleManager') {
+				toast.error('You cannot manage permissions for your own role as a RoleManager.')
+			} else {
+				toast.error('You do not have permission to manage permissions for this role.')
+			}
+			return
+		}
+
 		setCurrentRole(role)
 		setIsPermissionsModalOpen(true)
 	}
@@ -258,6 +298,25 @@ const Roles: React.FC = () => {
 
 	const handlePermissionsUpdate = async (roleId: string, permissionIds: string[]) => {
 		try {
+			// Prevent updating Admin role without special permission
+			const roleToUpdate = roles.find(r => r.id === roleId)
+			if (!roleToUpdate) {
+				toast.error('Role not found. Please try again.')
+				return
+			}
+
+			// Check if the user is a RoleManager trying to update Admin or RoleManager permissions
+			if (!canManagePermissions(roleToUpdate)) {
+				if (roleToUpdate.name === 'Admin') {
+					toast.error('You do not have permission to update Admin role permissions.')
+				} else if (roleToUpdate.name === 'RoleManager') {
+					toast.error('As a RoleManager, you cannot modify permissions for your own role.')
+				} else {
+					toast.error('You do not have permission to update permissions for this role.')
+				}
+				return
+			}
+
 			// Get the read_roles permission ID
 			const readRolesPermission = permissions.find(p => p.name === 'read_roles')
 
@@ -335,6 +394,28 @@ const Roles: React.FC = () => {
 	const handleBulkDelete = async () => {
 		if (!selectedRoles.length) {
 			toast.info('No roles selected for deletion.')
+			return
+		}
+
+		// Check for restricted roles (Admin or RoleManager)
+		const restrictedRoles = roles.filter(role => {
+			// If role is in selected roles and:
+			if (selectedRoles.includes(role.id)) {
+				// Is Admin and user doesn't have delete_admins permission
+				if (role.name === 'Admin' && roleManager && !hasDeleteAdmins) {
+					return true
+				}
+				// Is RoleManager and user is a RoleManager
+				if (role.name === 'RoleManager' && roleManager) {
+					return true
+				}
+			}
+			return false
+		})
+
+		if (restrictedRoles.length > 0) {
+			const restrictedNames = restrictedRoles.map(r => r.name).join(', ')
+			toast.error(`You don't have permission to delete the following roles: ${restrictedNames}`)
 			return
 		}
 
@@ -453,10 +534,20 @@ const Roles: React.FC = () => {
 			const userInfo = localStorage.getItem('lms_user')
 			let userId = null
 			let roleId = null
+			let userRoleName = null
 
 			if (userInfo) {
 				const parsedInfo = JSON.parse(userInfo)
 				userId = parsedInfo.id
+
+				// Store the current user's role name
+				if (parsedInfo.role && typeof parsedInfo.role === 'string') {
+					userRoleName = parsedInfo.role
+					setCurrentUserRole(userRoleName)
+				} else if (parsedInfo.role && typeof parsedInfo.role === 'object' && parsedInfo.role.name) {
+					userRoleName = parsedInfo.role.name
+					setCurrentUserRole(userRoleName)
+				}
 
 				// Get role ID based on available data
 				if (parsedInfo.role && typeof parsedInfo.role === 'object' && parsedInfo.role.id) {
@@ -528,6 +619,11 @@ const Roles: React.FC = () => {
 					setHasManageRoles(permissionNames.includes('manage_roles'))
 					setHasManagePermissions(permissionNames.includes('manage_permissions'))
 
+					// Check for special admin management permissions
+					setHasUpdateAdmins(permissionNames.includes('update_admins'))
+					setHasDeleteAdmins(permissionNames.includes('delete_admins'))
+					setHasCreateAdmins(permissionNames.includes('create_admins'))
+
 					// If user doesn't have manage_roles permission, redirect back
 					if (!permissionNames.includes('manage_roles')) {
 						toast.error('You do not have permission to access the Roles page.')
@@ -557,6 +653,51 @@ const Roles: React.FC = () => {
 		} finally {
 			setIsLoadingPermissions(false)
 		}
+	}
+
+	// Helper function to check if user can edit a specific role
+	const canEditRole = (role: Role): boolean => {
+		// RoleManager cannot edit Admin role without specific permission
+		if (roleManager && role.name === 'Admin' && !hasUpdateAdmins) {
+			return false
+		}
+
+		// RoleManager cannot edit their own role
+		if (roleManager && role.name === 'RoleManager') {
+			return false
+		}
+
+		return hasManageRoles
+	}
+
+	// Helper function to check if user can delete a specific role
+	const canDeleteRole = (role: Role): boolean => {
+		// RoleManager cannot delete Admin role without specific permission
+		if (roleManager && role.name === 'Admin' && !hasDeleteAdmins) {
+			return false
+		}
+
+		// RoleManager cannot delete their own role
+		if (roleManager && role.name === 'RoleManager') {
+			return false
+		}
+
+		return hasManageRoles
+	}
+
+	// Helper function to check if user can manage permissions for a specific role
+	const canManagePermissions = (role: Role): boolean => {
+		// RoleManager cannot manage Admin permissions without specific permission
+		if (roleManager && role.name === 'Admin' && !hasUpdateAdmins) {
+			return false
+		}
+
+		// RoleManager cannot manage their own permissions
+		if (roleManager && role.name === 'RoleManager') {
+			return false
+		}
+
+		return hasManagePermissions
 	}
 
 	useEffect(() => {
@@ -644,16 +785,20 @@ const Roles: React.FC = () => {
 									{hasManageRoles && (
 										<TableCell width='20%'>
 											<ActionsContainer>
-												<ActionIconButton onClick={() => handleEditRole(role)} title='Edit role'>
-													<FiEdit2 />
-												</ActionIconButton>
-												<ActionIconButton
-													onClick={() => handleDeleteRole(role.id)}
-													title='Delete role'
-												>
-													<FiTrash2 />
-												</ActionIconButton>
-												{hasManagePermissions && (
+												{canEditRole(role) && (
+													<ActionIconButton onClick={() => handleEditRole(role)} title='Edit role'>
+														<FiEdit2 />
+													</ActionIconButton>
+												)}
+												{canDeleteRole(role) && (
+													<ActionIconButton
+														onClick={() => handleDeleteRole(role.id)}
+														title='Delete role'
+													>
+														<FiTrash2 />
+													</ActionIconButton>
+												)}
+												{hasManagePermissions && canManagePermissions(role) && (
 													<ActionIconButton
 														onClick={() => handleManagePermissions(role)}
 														title='Manage permissions'

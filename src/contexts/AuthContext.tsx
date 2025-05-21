@@ -2,6 +2,7 @@ import React, { createContext, ReactNode, useContext, useEffect, useState } from
 import { useLocation, useNavigate } from 'react-router-dom'
 import supabase from '../config/supabaseClient'
 import { isRoleManager as checkIsRoleManager } from '../utils/authUtils'
+import { syncUserPermissions } from '../utils/permissionUtils'
 
 // Make sure UserRole is exported for use in other components
 export type UserRole =
@@ -19,6 +20,7 @@ export type UserRole =
 export interface User {
 	id: string
 	role: UserRole
+	role_id?: string
 	username?: string
 	fullName?: string
 	firstName?: string
@@ -26,6 +28,7 @@ export interface User {
 	email?: string
 	isRoleManager?: boolean
 	isModuleLeader?: boolean
+	permissions?: string[]
 	[key: string]: any
 }
 
@@ -255,92 +258,69 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 					.eq('id', refreshedSession.session.user.id)
 					.single()
 				if (userData && mounted) {
-					const savedUser = localStorage.getItem(LOCAL_USER_KEY)
-					if (savedUser) {
-						const userWithRole = {
-							...userData,
-							username: userData.email?.split('@')[0] ?? '',
-							fullName: `${userData.firstName} ${userData.lastName}`,
-							role: userData.role,
-							isRoleManager: userData.is_role_manager,
-							isModuleLeader: userData.is_module_leader,
-						}
+					// Get role_id from user_roles table
+					const { data: userRoleData } = await supabase
+						.from('user_roles')
+						.select('role_id')
+						.eq('user_id', refreshedSession.session.user.id)
+						.single()
 
-						setUser(userWithRole)
-						setIsAuthenticated(true)
+					const roleId = userRoleData?.role_id || null
 
-						console.log('User role:', userData.role)
-						console.log('Role name:', getRoleName(userData.role))
-						console.log('Parent role name:', getParentRoleName(userData.role))
-						console.log('Effective role name:', getEffectiveRoleName(userData.role))
+					const userWithRole = {
+						...userData,
+						username: userData.email?.split('@')[0] ?? '',
+						fullName: `${userData.firstName} ${userData.lastName}`,
+						role: userData.role,
+						role_id: roleId, // Add role_id for permission inheritance
+						isRoleManager: userData.is_role_manager,
+						isModuleLeader: userData.is_module_leader,
+					}
 
-						// Fetch permissions for this role
-						try {
-							const role = userData.role
-							if (typeof role === 'object' && role.name) {
-								// Get the role ID
-								const { data: roleData, error: roleIdError } = await supabase
-									.from('roles')
-									.select('id')
-									.eq('name', role.name)
-									.single()
+					// Store user first (without permissions)
+					setUser(userWithRole)
+					setIsAuthenticated(true)
+					localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(userWithRole))
 
-								if (!roleIdError && roleData?.id) {
-									// Fetch permissions for this role
-									const { data: permissionsData, error: permissionsError } = await supabase
-										.from('role_permissions')
-										.select('permissions(name)')
-										.eq('role_id', roleData.id)
+					console.log('User role:', userData.role)
+					console.log('Role name:', getRoleName(userData.role))
+					console.log('Parent role name:', getParentRoleName(userData.role))
+					console.log('Effective role name:', getEffectiveRoleName(userData.role))
 
-									if (!permissionsError && permissionsData && permissionsData.length > 0) {
-										// Extract permission names - handle with proper type safety
-										const permissions: string[] = []
+					// Synchronize permissions using the role hierarchy
+					try {
+						// This function properly traverses the role hierarchy
+						const permissions = await syncUserPermissions()
 
-										permissionsData.forEach(item => {
-											if (
-												item.permissions &&
-												typeof item.permissions === 'object' &&
-												'name' in item.permissions
-											) {
-												const permName = item.permissions.name
-												if (permName && typeof permName === 'string') {
-													permissions.push(permName)
-												}
-											}
-										})
-
-										console.log('User role permissions:', permissions)
-
-										// Update user in state and localStorage with permissions
-										const updatedUserWithPermissions = {
-											...userWithRole,
-											permissions,
-										}
-
-										// Store in localStorage for persistence
-										localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(updatedUserWithPermissions))
-
-										// Update state
-										setUser(updatedUserWithPermissions)
-									}
-								}
+						// If we got permissions, update the user object
+						if (permissions.length > 0) {
+							// Update user in state and localStorage with permissions
+							const updatedUserWithPermissions = {
+								...userWithRole,
+								permissions,
 							}
-						} catch (error) {
-							console.error('Error fetching permissions during session refresh:', error)
+
+							// Store in localStorage for persistence
+							localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(updatedUserWithPermissions))
+
+							// Update state
+							setUser(updatedUserWithPermissions)
 						}
+					} catch (error) {
+						console.error('Error fetching permissions during session refresh:', error)
+					}
 
-						// Optional auto-redirect to dashboard
-						const currentPath = location.pathname
-						const isUnauthenticatedRoute =
-							currentPath === '/' || currentPath === '/login' || currentPath === '/register'
+					// Optional auto-redirect to dashboard
+					const currentPath = location.pathname
+					const isUnauthenticatedRoute =
+						currentPath === '/' || currentPath === '/login' || currentPath === '/register'
 
-						if (isUnauthenticatedRoute) {
-							// Use the helper function to determine the dashboard route
-							const dashboardRoute = getDashboardRoute(userData.role)
-							console.log(`Dashboard route: ${dashboardRoute}`)
+					if (isUnauthenticatedRoute) {
+						// Use the helper function to determine the dashboard route
+						const dashboardRoute = getDashboardRoute(userData.role)
+						console.log(`Dashboard route: ${dashboardRoute}`)
 
-							navigate(dashboardRoute, { replace: true })
-						}
+						navigate(dashboardRoute, { replace: true })
 					}
 				}
 			} catch (err) {
@@ -429,63 +409,63 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		console.log('Parent role name:', getParentRoleName(role))
 		console.log('Effective role name:', getEffectiveRoleName(role))
 
-		// Fetch permissions for this role
-		let permissions: string[] = []
+		// Get role_id first for permission inheritance
+		let roleId: string | null = null
 		if (typeof role === 'object' && role.name) {
-			try {
-				// Get the role ID
+			// First try to get role_id from user_roles table
+			const { data: userRoleData, error: userRoleError } = await supabase
+				.from('user_roles')
+				.select('role_id')
+				.eq('user_id', supabaseUser.id)
+				.single()
+
+			if (!userRoleError && userRoleData) {
+				roleId = userRoleData.role_id
+			} else {
+				// Fallback: try to get role_id from roles table by name
 				const { data: roleData, error: roleIdError } = await supabase
 					.from('roles')
 					.select('id')
 					.eq('name', role.name)
 					.single()
 
-				if (roleIdError) {
-					console.error('Error fetching role ID:', roleIdError)
-				} else if (roleData && roleData.id) {
-					// Fetch permissions for this role
-					const { data: permissionsData, error: permissionsError } = await supabase
-						.from('role_permissions')
-						.select('permissions(name)')
-						.eq('role_id', roleData.id)
-
-					if (permissionsError) {
-						console.error('Error fetching role permissions:', permissionsError)
-					} else if (permissionsData && permissionsData.length > 0) {
-						// Extract permission names with proper type safety
-						permissionsData.forEach(item => {
-							if (
-								item.permissions &&
-								typeof item.permissions === 'object' &&
-								'name' in item.permissions
-							) {
-								const permName = item.permissions.name
-								if (permName && typeof permName === 'string') {
-									permissions.push(permName)
-								}
-							}
-						})
-
-						console.log('User role permissions:', permissions)
-					}
+				if (!roleIdError && roleData) {
+					roleId = roleData.id
 				}
-			} catch (error) {
-				console.error('Error processing role permissions:', error)
 			}
 		}
 
-		// Create user object with permissions
+		// Create user object with role_id
 		const newUser: User = {
 			fullName: `${userNames.firstName} ${userNames.lastName}`,
 			id: supabaseUser.id,
 			firstName: userNames.firstName,
 			lastName: userNames.lastName,
 			email: supabaseUser.email,
-			role: role, // Keep the original role type to satisfy TypeScript
+			role: role,
+			role_id: roleId, // Include role_id for permission inheritance
 			username: supabaseUser.email?.split('@')[0] ?? '',
 			isRoleManager: userNames.is_role_manager,
 			isModuleLeader: userNames.is_module_leader,
-			permissions, // Add permissions as a separate property
+		}
+
+		// Now fetch permissions using the syncUserPermissions function
+		// This will properly traverse role hierarchy
+		if (roleId) {
+			try {
+				// Store user first (without permissions) so syncUserPermissions can use it
+				localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(newUser))
+
+				// Get permissions including inherited ones
+				const permissions = await syncUserPermissions()
+
+				// Update user with permissions
+				if (permissions.length > 0) {
+					newUser.permissions = permissions
+				}
+			} catch (error) {
+				console.error('Error fetching permissions during login:', error)
+			}
 		}
 
 		// Save to state and localStorage
