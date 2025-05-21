@@ -63,15 +63,15 @@ const ColorOption = styled.button<{ color: string; isSelected: boolean }>`
   height: 2rem;
   border-radius: 50%;
   background-color: ${props => props.color};
-  border: 2px solid ${props => props.isSelected 
-    ? props.theme.colors.primary[500] 
+  border: 2px solid ${props => props.isSelected
+    ? props.theme.colors.primary[500]
     : 'transparent'};
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: ${props => props.isSelected 
-    ? `0 0 0 2px ${props.theme.colors.primary[500]}40` 
+  box-shadow: ${props => props.isSelected
+    ? `0 0 0 2px ${props.theme.colors.primary[500]}40`
     : 'none'};
-  
+
   &:hover {
     transform: scale(1.1);
   }
@@ -87,8 +87,8 @@ const ThemeIcon = styled.div<{ active: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.active 
-    ? props.theme.colors.primary[500] 
+  color: ${props => props.active
+    ? props.theme.colors.primary[500]
     : props.theme.colors.text.secondary};
   font-size: 1.25rem;
   transition: all 0.2s ease;
@@ -112,12 +112,12 @@ const AppearanceSettings: React.FC = () => {
   return (
     <Container>
       <Header>Appearance</Header>
-      
+
       <Section>
         <SectionTitle>
           <FiSun /> / <FiMoon /> Theme
         </SectionTitle>
-        
+
         <OptionContainer>
           <div>
             <OptionLabel>Dark Mode</OptionLabel>
@@ -125,35 +125,35 @@ const AppearanceSettings: React.FC = () => {
               Switch between light and dark theme
             </OptionDescription>
           </div>
-          
+
           <ThemeToggleContainer>
             <ThemeIcon active={!isDarkMode}>
               <FiSun />
             </ThemeIcon>
-            
+
             <Switch>
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={isDarkMode}
                 onChange={toggleTheme}
               />
               <span />
             </Switch>
-            
+
             <ThemeIcon active={isDarkMode}>
               <FiMoon />
             </ThemeIcon>
           </ThemeToggleContainer>
         </OptionContainer>
       </Section>
-      
+
       <Divider />
-      
+
       <Section>
         <SectionTitle>
           <IoMdColorPalette /> Theme Color
         </SectionTitle>
-        
+
         <OptionContainer>
           <div>
             <OptionLabel>Accent Color</OptionLabel>
@@ -162,10 +162,10 @@ const AppearanceSettings: React.FC = () => {
             </OptionDescription>
           </div>
         </OptionContainer>
-        
+
         <ColorOptions>
           {themeColors.map(color => (
-            <ColorOption 
+            <ColorOption
               key={color.name}
               color={color.color}
               isSelected={primaryColor === color.color}
@@ -179,4 +179,4 @@ const AppearanceSettings: React.FC = () => {
   );
 };
 
-export default AppearanceSettings; 
+export default AppearanceSettings;

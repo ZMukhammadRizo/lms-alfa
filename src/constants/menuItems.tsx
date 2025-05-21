@@ -63,7 +63,11 @@ export const getModuleLeaderMenu = (
 ): MenuItem[] => [
 	{
 		path: `/${
-			parentRole !== 'Unknown' ? parentRole?.toLowerCase() : fallbackRole.toLowerCase()
+			parentRole && parentRole !== 'Unknown'
+				? parentRole.toLowerCase()
+				: typeof fallbackRole === 'string'
+				? fallbackRole.toLowerCase()
+				: 'teacher'
 		}/subjects`,
 		icon: <FiBookOpen />,
 		label: 'Manage Subjects',
@@ -99,7 +103,11 @@ export const parentMenu: MenuItem[] = [
 export const getManagerMenu = (parentRole: string | null, fallbackRole: string): MenuItem[] => [
 	{
 		path: `/${
-			parentRole !== 'Unknown' ? parentRole?.toLowerCase() : fallbackRole.toLowerCase()
+			parentRole && parentRole !== 'Unknown'
+				? parentRole.toLowerCase()
+				: typeof fallbackRole === 'string'
+				? fallbackRole.toLowerCase()
+				: 'admin'
 		}/roles`,
 		icon: <FiShield />,
 		label: 'Role Management',

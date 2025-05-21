@@ -5,7 +5,6 @@ import styled, { keyframes } from 'styled-components'
 import type { UserRole } from '../../contexts/AuthContext'
 import { getDashboardRoute, useAuth } from '../../contexts/AuthContext'
 import { showError, showSuccess } from '../../utils/toast'
-import RedirectPage from './RedirectPage'
 
 // Loading animations
 const spin = keyframes`
@@ -308,6 +307,7 @@ const Login: React.FC = () => {
 	const [isLoggingIn, setIsLoggingIn] = useState(false)
 	const [isRedirecting, setIsRedirecting] = useState(false)
 	const [redirectTarget, setRedirectTarget] = useState<string | null>(null)
+	const [redirectMessage, setRedirectMessage] = useState('Redirecting to your dashboard...')
 
 	// Handle initial page loading animation
 	useEffect(() => {
@@ -325,25 +325,37 @@ const Login: React.FC = () => {
 				const userRole = user?.role || 'student'
 				const dashboardRoute = getDashboardRoute(userRole as UserRole)
 				setRedirectTarget(dashboardRoute)
+				setRedirectMessage(
+					`Redirecting to your ${
+						typeof userRole === 'string' ? userRole.toLowerCase() : 'dashboard'
+					}...`
+				)
 				setIsRedirecting(true)
+
+				// Directly navigate after a short delay
+				const timer = setTimeout(() => {
+					navigate(dashboardRoute, { replace: true })
+				}, 1500)
+
+				return () => clearTimeout(timer)
 			} catch (error) {
 				console.error('Error setting up redirection:', error)
 				setRedirectTarget('/student/dashboard')
+				setRedirectMessage('Redirecting to dashboard...')
 				setIsRedirecting(true)
+
+				// Fallback navigation
+				const timer = setTimeout(() => {
+					navigate('/student/dashboard', { replace: true })
+				}, 1500)
+
+				return () => clearTimeout(timer)
 			}
 		}
-	}, [isAuthenticated, user, isRedirecting])
+	}, [isAuthenticated, user, isRedirecting, navigate])
 
-	// IMPORTANT: Check authentication status first to prevent login form flash
-	// These conditions are in order of priority
-
-	// 1. If we're redirecting after login or initial auth check, show redirect page
-	if (isRedirecting && redirectTarget) {
-		return <RedirectPage targetPath={redirectTarget} message='Redirecting to your dashboard...' />
-	}
-
-	// 2. If we're still loading auth state or initial page load, show loading
-	if (authLoading || pageLoading) {
+	// If we're still loading auth state or initial page load, or redirecting, show loading
+	if (authLoading || pageLoading || (isRedirecting && redirectTarget)) {
 		return (
 			<LoadingContainer>
 				<LoadingContent>
@@ -351,7 +363,7 @@ const Login: React.FC = () => {
 					<SpinnerContainer>
 						<Spinner />
 					</SpinnerContainer>
-					<LoadingText>Loading</LoadingText>
+					<LoadingText>{isRedirecting ? redirectMessage : 'Loading'}</LoadingText>
 				</LoadingContent>
 			</LoadingContainer>
 		)
@@ -371,13 +383,25 @@ const Login: React.FC = () => {
 				// Show success notification
 				showSuccess(`Welcome back! You have successfully logged in.`)
 
-				// Set redirecting state to show dedicated redirect page
+				// Show redirection screen
 				setIsRedirecting(true)
 
-				// Navigate to the appropriate dashboard using our improved function
-				const dashboardRoute = getDashboardRoute(loginResult.role as UserRole)
+				// Get appropriate dashboard route
+				const userRole = loginResult.role || 'student'
+				const dashboardRoute = getDashboardRoute(userRole as UserRole)
 				console.log('Login successful, redirecting to:', dashboardRoute)
+
 				setRedirectTarget(dashboardRoute)
+				setRedirectMessage(
+					`Welcome! Redirecting to your ${
+						typeof userRole === 'string' ? userRole.toLowerCase() : 'dashboard'
+					}...`
+				)
+
+				// Navigate after a short delay
+				setTimeout(() => {
+					navigate(dashboardRoute, { replace: true })
+				}, 1500)
 			} else {
 				// Show error notification
 				showError(loginResult.msg)
@@ -391,7 +415,7 @@ const Login: React.FC = () => {
 		}
 	}
 
-	// 3. Only show login form if not authenticated and not redirecting
+	// Only show login form if not authenticated and not redirecting
 	return (
 		<LoginContainer>
 			<FormSection>

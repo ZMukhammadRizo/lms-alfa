@@ -74,4 +74,4 @@ declare module 'styled-components' {
       '2xl': string;
     };
   }
-} 
+}

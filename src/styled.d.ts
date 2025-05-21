@@ -90,4 +90,4 @@ declare module 'styled-components' {
       tooltip: number;
     };
   }
-} 
+}

@@ -81,6 +81,30 @@ export const getDashboardRoute = (role: UserRole): string => {
 	let roleName: string
 
 	try {
+		// Check if the role indicates a RoleManager with Admin parent
+		if (typeof role === 'object' && role !== null) {
+			// If it has a parent property and the parent is Admin
+			if (
+				role.parent &&
+				typeof role.parent === 'object' &&
+				role.parent.name &&
+				role.parent.name.toLowerCase() === 'admin'
+			) {
+				return '/admin/dashboard'
+			}
+
+			// If it's a RoleManager and we have a parent role
+			if (
+				role.name &&
+				role.name.toLowerCase() === 'rolemanager' &&
+				role.parent &&
+				typeof role.parent === 'object' &&
+				role.parent.name
+			) {
+				return `/${role.parent.name.toLowerCase()}/dashboard`
+			}
+		}
+
 		// If role is already a string
 		if (typeof role === 'string') {
 			roleName = role.toLowerCase()
@@ -109,12 +133,25 @@ export const getDashboardRoute = (role: UserRole): string => {
 
 		// Safe check to ensure role is one of the valid roles
 		if (
-			!['admin', 'superadmin', 'teacher', 'moduleleader', 'student', 'parent'].includes(roleName)
+			![
+				'admin',
+				'superadmin',
+				'teacher',
+				'moduleleader',
+				'student',
+				'parent',
+				'rolemanager',
+			].includes(roleName)
 		) {
 			console.warn(
 				`Invalid role "${roleName}" detected in getDashboardRoute. Defaulting to student.`
 			)
 			roleName = 'student'
+		}
+
+		// Special handling for 'rolemanager' - use admin as the parent role by default
+		if (roleName === 'rolemanager') {
+			return '/admin/dashboard'
 		}
 
 		return `/${roleName}/dashboard`

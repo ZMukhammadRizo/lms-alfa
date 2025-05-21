@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import RedirectPage from '../../pages/auth/RedirectPage'
-import { getUserRole } from '../../utils/authUtils'
+import { getUserParentRole, getUserRole, isRoleManager } from '../../utils/authUtils'
 
 interface RoleMiddlewareProps {
 	children: React.ReactNode
@@ -43,6 +43,9 @@ const RoleMiddleware: React.FC<RoleMiddlewareProps> = ({ children }) => {
 
 		// Get the user role as a string
 		const userRoleValue = getUserRole()
+		// Get the parent role for users with nested roles
+		const parentRoleValue = getUserParentRole()
+
 		// Ensure the role is a string, not an object
 		const userRole =
 			typeof userRoleValue === 'string'
@@ -51,11 +54,24 @@ const RoleMiddleware: React.FC<RoleMiddlewareProps> = ({ children }) => {
 				? String(userRoleValue.name).toLowerCase()
 				: 'unknown'
 
+		// For RoleManager, use their parent role for routing
+		const isUserRoleManager = isRoleManager()
+		const effectiveRole =
+			isUserRoleManager && parentRoleValue ? parentRoleValue.toLowerCase() : userRole
+
 		// Safety check to ensure we have a valid role
 		if (
-			!['admin', 'superadmin', 'teacher', 'moduleleader', 'student', 'parent'].includes(userRole)
+			![
+				'admin',
+				'superadmin',
+				'teacher',
+				'moduleleader',
+				'student',
+				'parent',
+				'rolemanager',
+			].includes(effectiveRole)
 		) {
-			console.error(`Invalid role detected: "${userRole}". Defaulting to student.`)
+			console.error(`Invalid role detected: "${effectiveRole}". Defaulting to student.`)
 			setRedirectMessage(`Redirecting you to the student dashboard...`)
 			setRedirectPath('/student/dashboard')
 			setIsRedirecting(true)
@@ -71,21 +87,37 @@ const RoleMiddleware: React.FC<RoleMiddlewareProps> = ({ children }) => {
 		const isAccessingParent = path.startsWith('/parent')
 
 		let shouldRedirect = false
-		let redirectTarget = `/${userRole}/dashboard`
+		let redirectTarget = `/${effectiveRole}/dashboard`
 
-		// Only allow access to the path matching the user's role
-		if (isAccessingAdmin && userRole !== 'admin' && userRole !== 'superadmin') {
-			shouldRedirect = true
-		} else if (isAccessingTeacher && userRole !== 'teacher' && userRole !== 'moduleleader') {
-			shouldRedirect = true
-		} else if (isAccessingStudent && userRole !== 'student') {
-			shouldRedirect = true
-		} else if (isAccessingParent && userRole !== 'parent') {
-			shouldRedirect = true
+		// Special case for RoleManager with Admin parent role
+		if (isUserRoleManager && parentRoleValue === 'Admin') {
+			redirectTarget = '/admin/dashboard'
+
+			// If trying to access another role's dashboard when should be on Admin, redirect
+			if (!isAccessingAdmin) {
+				shouldRedirect = true
+			}
+		}
+		// Standard role checks
+		else {
+			// Only allow access to the path matching the user's role
+			if (isAccessingAdmin && effectiveRole !== 'admin' && effectiveRole !== 'superadmin') {
+				shouldRedirect = true
+			} else if (
+				isAccessingTeacher &&
+				effectiveRole !== 'teacher' &&
+				effectiveRole !== 'moduleleader'
+			) {
+				shouldRedirect = true
+			} else if (isAccessingStudent && effectiveRole !== 'student') {
+				shouldRedirect = true
+			} else if (isAccessingParent && effectiveRole !== 'parent') {
+				shouldRedirect = true
+			}
 		}
 
 		if (shouldRedirect) {
-			console.log(`Unauthorized access attempt: ${userRole} trying to access ${path}`)
+			console.log(`Unauthorized access attempt: ${effectiveRole} trying to access ${path}`)
 			console.log(`Redirecting to: ${redirectTarget}`)
 			setRedirectMessage(`You don't have access to that area. Redirecting you to your dashboard...`)
 			setRedirectPath(redirectTarget)

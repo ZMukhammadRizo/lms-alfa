@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import RedirectPage from '../../pages/auth/RedirectPage'
-import { getUserParentRole, getUserRole } from '../../utils/authUtils'
+import { getUserParentRole, getUserRole, isRoleManager } from '../../utils/authUtils'
 
 interface ProtectedRouteProps {
 	allowedRoles: string[]
@@ -29,13 +29,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 		// Log access attempt
 		if (isAuthenticated && user) {
 			const userRole = getUserRole()
+			const parentRole = getUserParentRole()
+			const isUserRoleManager = isRoleManager()
+
+			// For RoleManager, prioritize parent role for permissions
+			const effectiveRoleForPermission = isUserRoleManager && parentRole ? parentRole : userRole
+
 			const hasAllowedRole = allowedRoles.some(
-				role => role.toLowerCase() === userRole.toLowerCase()
+				role => role.toLowerCase() === effectiveRoleForPermission.toLowerCase()
 			)
 
 			if (!hasAllowedRole) {
 				console.log(
-					`Access denied: User with role "${userRole}" attempted to access a route restricted to ${allowedRoles.join(
+					`Access denied: User with role "${effectiveRoleForPermission}" attempted to access a route restricted to ${allowedRoles.join(
 						', '
 					)}`
 				)
@@ -62,21 +68,28 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 	// Get user's role and parent role (if any)
 	const userRole = getUserRole()
 	const parentRole = getUserParentRole()
+	const isUserRoleManager = isRoleManager()
 
-	// Check if user's role or parent role is allowed
+	// For RoleManager users, parent role should be checked first for permissions
+	let effectiveRoleForAccess = userRole
+	if (isUserRoleManager && parentRole) {
+		effectiveRoleForAccess = parentRole
+	}
+
+	// Check if user's effective role (prioritizing parent role for RoleManager) is allowed
 	const hasAllowedRole = allowedRoles.some(
-		role =>
-			role.toLowerCase() === userRole.toLowerCase() ||
-			(parentRole && role.toLowerCase() === parentRole.toLowerCase())
+		role => role.toLowerCase() === effectiveRoleForAccess.toLowerCase()
 	)
 
 	if (!hasAllowedRole) {
-		// Ensure userRole is a string and not an object
+		// Ensure effectiveRoleForAccess is a string and not an object
 		const roleName =
-			typeof userRole === 'string'
-				? userRole.toLowerCase()
-				: typeof userRole === 'object' && userRole !== null && 'name' in userRole
-				? String(userRole.name).toLowerCase()
+			typeof effectiveRoleForAccess === 'string'
+				? effectiveRoleForAccess.toLowerCase()
+				: typeof effectiveRoleForAccess === 'object' &&
+				  effectiveRoleForAccess !== null &&
+				  'name' in effectiveRoleForAccess
+				? String(effectiveRoleForAccess.name).toLowerCase()
 				: 'unknown'
 
 		// Safe fallback if we can't determine the role
