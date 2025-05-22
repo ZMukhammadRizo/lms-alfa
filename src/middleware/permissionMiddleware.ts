@@ -1,156 +1,142 @@
-import { NextFunction, Request, Response } from 'express'
-import { getRolePermissionsWithInheritance, getUserRoleId } from '../utils/permissionUtils'
-
-interface AuthenticatedRequest extends Request {
-	user?: {
-		id: string
-		role?: string | { name: string }
-	}
-}
-
 /**
- * Middleware to check if the requesting user has the required permission
+ * React router middleware to protect routes based on permissions
+ * Use with react-router-dom components
  *
- * @param requiredPermission The permission to check for
- * @returns Express middleware function
+ * @param requiredPermission Permission needed to access the route
+ * @returns Boolean indicating if access is allowed
  */
-export const requirePermission = (requiredPermission: string) => {
-	return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-		try {
-			const user = req.user
+export const usePermissionGuard = (requiredPermission: string): boolean => {
+	// Get current user from localStorage
+	const userInfo = localStorage.getItem('lms_user')
+	if (!userInfo) return false
 
-			if (!user || !user.id) {
-				return res.status(401).json({ error: 'Unauthorized - Not authenticated' })
-			}
+	try {
+		const user = JSON.parse(userInfo)
 
-			// SuperAdmin bypass
-			if (
-				user.role === 'SuperAdmin' ||
-				(typeof user.role === 'object' && user.role.name === 'SuperAdmin')
-			) {
-				return next()
-			}
-
-			// Get user's role ID
-			const roleId = await getUserRoleId(user.id)
-			if (!roleId) {
-				return res.status(403).json({ error: 'Forbidden - No role assigned' })
-			}
-
-			// Get permissions including inherited ones
-			const permissions = await getRolePermissionsWithInheritance(roleId)
-
-			// Check if user has the required permission
-			if (permissions.includes(requiredPermission)) {
-				return next()
-			}
-
-			// Permission check failed
-			return res.status(403).json({
-				error: 'Forbidden - Insufficient permissions',
-				required: requiredPermission,
-			})
-		} catch (error) {
-			console.error('Error in permission middleware:', error)
-			return res.status(500).json({ error: 'Internal server error' })
+		// SuperAdmin bypass
+		if (
+			user.role === 'SuperAdmin' ||
+			(typeof user.role === 'object' && user.role.name === 'SuperAdmin')
+		) {
+			return true
 		}
+
+		// Check cached permissions first (faster)
+		if (user.permissions && Array.isArray(user.permissions)) {
+			return user.permissions.includes(requiredPermission)
+		}
+
+		// Fallback: if permissions aren't cached, return false
+		// The app should call syncUserPermissions() on login/refresh
+		return false
+	} catch (error) {
+		console.error('Error in permission guard:', error)
+		return false
 	}
 }
 
 /**
- * Middleware to check if user has any of the specified permissions
+ * React router middleware to check if user has any of the specified permissions
  *
  * @param permissions Array of permissions (any one is sufficient)
- * @returns Express middleware function
+ * @returns Boolean indicating if access is allowed
  */
-export const requireAnyPermission = (permissions: string[]) => {
-	return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-		try {
-			const user = req.user
+export const useAnyPermissionGuard = (permissions: string[]): boolean => {
+	// Get current user from localStorage
+	const userInfo = localStorage.getItem('lms_user')
+	if (!userInfo) return false
 
-			if (!user || !user.id) {
-				return res.status(401).json({ error: 'Unauthorized - Not authenticated' })
-			}
+	try {
+		const user = JSON.parse(userInfo)
 
-			// SuperAdmin bypass
-			if (
-				user.role === 'SuperAdmin' ||
-				(typeof user.role === 'object' && user.role.name === 'SuperAdmin')
-			) {
-				return next()
-			}
-
-			// Get user's role ID
-			const roleId = await getUserRoleId(user.id)
-			if (!roleId) {
-				return res.status(403).json({ error: 'Forbidden - No role assigned' })
-			}
-
-			// Get permissions including inherited ones
-			const userPermissions = await getRolePermissionsWithInheritance(roleId)
-
-			// Check if user has any of the required permissions
-			if (permissions.some(perm => userPermissions.includes(perm))) {
-				return next()
-			}
-
-			// Permission check failed
-			return res.status(403).json({
-				error: 'Forbidden - Insufficient permissions',
-				required: `One of: ${permissions.join(', ')}`,
-			})
-		} catch (error) {
-			console.error('Error in permission middleware:', error)
-			return res.status(500).json({ error: 'Internal server error' })
+		// SuperAdmin bypass
+		if (
+			user.role === 'SuperAdmin' ||
+			(typeof user.role === 'object' && user.role.name === 'SuperAdmin')
+		) {
+			return true
 		}
+
+		// Check cached permissions first (faster)
+		if (user.permissions && Array.isArray(user.permissions)) {
+			return permissions.some(perm => user.permissions.includes(perm))
+		}
+
+		// Fallback: if permissions aren't cached, return false
+		return false
+	} catch (error) {
+		console.error('Error in permission guard:', error)
+		return false
 	}
 }
 
 /**
- * Middleware to check if user has all specified permissions
+ * React router middleware to check if user has all specified permissions
  *
  * @param permissions Array of permissions (all are required)
- * @returns Express middleware function
+ * @returns Boolean indicating if access is allowed
  */
-export const requireAllPermissions = (permissions: string[]) => {
-	return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-		try {
-			const user = req.user
+export const useAllPermissionsGuard = (permissions: string[]): boolean => {
+	// Get current user from localStorage
+	const userInfo = localStorage.getItem('lms_user')
+	if (!userInfo) return false
 
-			if (!user || !user.id) {
-				return res.status(401).json({ error: 'Unauthorized - Not authenticated' })
-			}
+	try {
+		const user = JSON.parse(userInfo)
 
-			// SuperAdmin bypass
-			if (
-				user.role === 'SuperAdmin' ||
-				(typeof user.role === 'object' && user.role.name === 'SuperAdmin')
-			) {
-				return next()
-			}
-
-			// Get user's role ID
-			const roleId = await getUserRoleId(user.id)
-			if (!roleId) {
-				return res.status(403).json({ error: 'Forbidden - No role assigned' })
-			}
-
-			// Get permissions including inherited ones
-			const userPermissions = await getRolePermissionsWithInheritance(roleId)
-
-			// Check if user has all required permissions
-			if (permissions.every(perm => userPermissions.includes(perm))) {
-				return next()
-			}
-
-			// Permission check failed
-			return res.status(403).json({
-				error: 'Forbidden - Insufficient permissions',
-				required: `All of: ${permissions.join(', ')}`,
-			})
-		} catch (error) {
-			console.error('Error in permission middleware:', error)
-			return res.status(500).json({ error: 'Internal server error' })
+		// SuperAdmin bypass
+		if (
+			user.role === 'SuperAdmin' ||
+			(typeof user.role === 'object' && user.role.name === 'SuperAdmin')
+		) {
+			return true
 		}
+
+		// Check cached permissions first (faster)
+		if (user.permissions && Array.isArray(user.permissions)) {
+			return permissions.every(perm => user.permissions.includes(perm))
+		}
+
+		// Fallback: if permissions aren't cached, return false
+		return false
+	} catch (error) {
+		console.error('Error in permission guard:', error)
+		return false
 	}
+}
+
+/**
+ * Function to check permission before making API calls or performing protected operations
+ * This is for synchronous, non-component code
+ *
+ * @param requiredPermission Permission needed for the operation
+ * @returns Boolean indicating if operation is allowed
+ */
+export const checkPermissionSync = (requiredPermission: string): boolean => {
+	// Reuse the usePermissionGuard logic
+	return usePermissionGuard(requiredPermission)
+}
+
+/**
+ * Function to check if user has any of the permissions before making API calls
+ * This is for synchronous, non-component code
+ *
+ * @param permissions Array of permissions (any one is sufficient)
+ * @returns Boolean indicating if operation is allowed
+ */
+export const checkAnyPermissionSync = (permissions: string[]): boolean => {
+	// Reuse the useAnyPermissionGuard logic
+	return useAnyPermissionGuard(permissions)
+}
+
+/**
+ * Function to check if user has all permissions before making API calls
+ * This is for synchronous, non-component code
+ *
+ * @param permissions Array of permissions (all are required)
+ * @returns Boolean indicating if operation is allowed
+ */
+export const checkAllPermissionsSync = (permissions: string[]): boolean => {
+	// Reuse the useAllPermissionsGuard logic
+	return useAllPermissionsGuard(permissions)
 }

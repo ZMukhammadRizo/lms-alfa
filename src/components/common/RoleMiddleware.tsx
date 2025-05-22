@@ -21,6 +21,7 @@ const RoleMiddleware: React.FC<RoleMiddlewareProps> = ({ children }) => {
 	const [isRedirecting, setIsRedirecting] = useState(false)
 	const [redirectPath, setRedirectPath] = useState<string | null>(null)
 	const [redirectMessage, setRedirectMessage] = useState('')
+	const [initialCheckDone, setInitialCheckDone] = useState(false)
 
 	useEffect(() => {
 		// Reset redirecting state on location change
@@ -38,6 +39,7 @@ const RoleMiddleware: React.FC<RoleMiddlewareProps> = ({ children }) => {
 			location.pathname === '/' ||
 			location.pathname.startsWith('/redirect')
 		) {
+			setInitialCheckDone(true)
 			return
 		}
 
@@ -75,6 +77,7 @@ const RoleMiddleware: React.FC<RoleMiddlewareProps> = ({ children }) => {
 			setRedirectMessage(`Redirecting you to the student dashboard...`)
 			setRedirectPath('/student/dashboard')
 			setIsRedirecting(true)
+			setInitialCheckDone(true)
 			return
 		}
 
@@ -116,6 +119,9 @@ const RoleMiddleware: React.FC<RoleMiddlewareProps> = ({ children }) => {
 			}
 		}
 
+		// Track that we've done the initial check
+		setInitialCheckDone(true)
+
 		if (shouldRedirect) {
 			console.log(`Unauthorized access attempt: ${effectiveRole} trying to access ${path}`)
 			console.log(`Redirecting to: ${redirectTarget}`)
@@ -124,6 +130,11 @@ const RoleMiddleware: React.FC<RoleMiddlewareProps> = ({ children }) => {
 			setIsRedirecting(true)
 		}
 	}, [location.pathname, isAuthenticated, user, navigate])
+
+	// Show nothing until the initial check is complete to prevent flicker
+	if (!initialCheckDone) {
+		return null
+	}
 
 	// If we're in the process of redirecting, show the redirect page
 	if (isRedirecting && redirectPath) {

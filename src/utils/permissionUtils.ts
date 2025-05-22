@@ -115,20 +115,27 @@ export const getUserRoleId = async (userId: string): Promise<string | null> => {
 			.eq('roles.isPrimary', true)
 			.single()
 
-		if (error || !data) {
-			// If no primary role, get any role
-			const { data: anyRole, error: anyRoleError } = await supabase
-				.from('user_roles')
-				.select('role_id')
-				.eq('user_id', userId)
-				.single()
+		if (error) {
+			// Handle the specific "no rows" error gracefully
+			if (error.code === 'PGRST116') {
+				console.log(`No primary role found for user ${userId}, checking for any role`)
+				// If no primary role, get any role
+				const { data: anyRole, error: anyRoleError } = await supabase
+					.from('user_roles')
+					.select('role_id')
+					.eq('user_id', userId)
+					.maybeSingle() // Use maybeSingle instead of single to avoid errors when no rows exist
 
-			if (anyRoleError || !anyRole) {
-				console.error('Error fetching user role:', anyRoleError || 'No roles found')
-				return null
+				if (anyRoleError) {
+					console.error('Error fetching any user role:', anyRoleError)
+					return null
+				}
+
+				return anyRole?.role_id || null
 			}
 
-			return anyRole.role_id
+			console.error('Error fetching user role:', error)
+			return null
 		}
 
 		return data.role_id
@@ -415,4 +422,32 @@ export const withAllPermissionsCheck = async <T>(
 		console.error('Error in permission check:', error)
 		throw error
 	}
+}
+
+/**
+ * Checks if a user has the required permission based on their role and permissions list
+ *
+ * @param currentUserRole The role of the current user
+ * @param currentUserPermissions Array of permissions the current user has
+ * @param requiredPermission The permission to check for
+ * @returns Boolean indicating if the user has permission
+ */
+export function hasPermission({
+	currentUserRole,
+	currentUserPermissions,
+	requiredPermission,
+}: {
+	currentUserRole: string
+	currentUserPermissions: string[]
+	requiredPermission: string
+}): boolean {
+	// Always allow Admin and SuperAdmin roles full access
+	const fullAccessRoles = ['Admin', 'SuperAdmin']
+
+	if (fullAccessRoles.includes(currentUserRole)) {
+		return true
+	}
+
+	// Otherwise, check if the user has the specific permission
+	return currentUserPermissions.includes(requiredPermission)
 }

@@ -263,7 +263,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 						.from('user_roles')
 						.select('role_id')
 						.eq('user_id', refreshedSession.session.user.id)
-						.single()
+						.maybeSingle()
 
 					const roleId = userRoleData?.role_id || null
 
@@ -310,7 +310,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 						console.error('Error fetching permissions during session refresh:', error)
 					}
 
-					// Optional auto-redirect to dashboard
+					// Only redirect if we're on an unauthenticated route (login, register, root)
 					const currentPath = location.pathname
 					const isUnauthenticatedRoute =
 						currentPath === '/' || currentPath === '/login' || currentPath === '/register'
@@ -318,9 +318,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 					if (isUnauthenticatedRoute) {
 						// Use the helper function to determine the dashboard route
 						const dashboardRoute = getDashboardRoute(userData.role)
-						console.log(`Dashboard route: ${dashboardRoute}`)
-
+						console.log(`Redirecting to dashboard: ${dashboardRoute}`)
 						navigate(dashboardRoute, { replace: true })
+					} else {
+						console.log(`Staying on current page: ${currentPath}`)
 					}
 				}
 			} catch (err) {
@@ -417,7 +418,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 				.from('user_roles')
 				.select('role_id')
 				.eq('user_id', supabaseUser.id)
-				.single()
+				.maybeSingle()
 
 			if (!userRoleError && userRoleData) {
 				roleId = userRoleData.role_id
@@ -443,7 +444,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 			lastName: userNames.lastName,
 			email: supabaseUser.email,
 			role: role,
-			role_id: roleId, // Include role_id for permission inheritance
+			role_id: roleId || undefined, // Fix the type error by converting null to undefined
 			username: supabaseUser.email?.split('@')[0] ?? '',
 			isRoleManager: userNames.is_role_manager,
 			isModuleLeader: userNames.is_module_leader,
