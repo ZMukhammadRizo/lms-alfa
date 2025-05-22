@@ -1102,16 +1102,19 @@ const RoleTabIcon = styled.div`
 
 const RoleTabContent = styled.div`
 	display: flex;
-	flex-direction: column;
+	align-items: center;
+	gap: 10px;
 `
 
 const RoleTabName = styled.span`
 	font-size: 0.9rem;
+	font-weight: 500;
 `
 
 const RoleTabCount = styled.span`
 	font-size: 0.8rem;
 	opacity: 0.7;
+	font-weight: 700;
 `
 
 const LoadingState = styled.div`
