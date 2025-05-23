@@ -7,18 +7,18 @@ import { fetchParentChildren } from './timetableService' // Adjust path if neces
 export interface Assignment {
 	id: string
 	title: string
-	description: string
-	due_date: string
+	description?: string
+	due_date?: string
+	subject?: string
 	subjectid?: string
-	subject: string
-	status: string
-	created_at: string
-	updated_at: string
+	status?: 'pending' | 'completed' | 'late' | 'overdue' | 'upcoming'
+	created_at?: string
+	updated_at?: string
 	grade?: number | null
 	submission_date?: string | null
 	attachments?: AttachmentFile[]
 	feedback_provided?: boolean
-	file_url?: string | null
+	file_url?: Array<{ name: string; url: string }> | string | null
 	classid?: string
 	className?: string
 	studentId?: string

@@ -18,7 +18,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { Assignment } from '../../services/assignmentService'
 
 interface ExtendedAssignment extends Assignment {
-	file_url?: string | null
+	file_url?: Array<{ name: string; url: string }> | null
 	classid?: string
 	className?: string
 }
@@ -448,7 +448,11 @@ const SingleAssignment: React.FC = () => {
 		if (!dueDate) return status.charAt(0).toUpperCase() + status.slice(1)
 
 		// Check if assignment has been submitted and graded
-		if (existingSubmission?.grade !== undefined || existingSubmission?.grade !== null) {
+		if (
+			existingSubmission &&
+			existingSubmission.grade !== undefined &&
+			existingSubmission.grade !== null
+		) {
 			return 'Completed'
 		}
 
@@ -534,20 +538,64 @@ const SingleAssignment: React.FC = () => {
 					</DueDateInfo>
 				</Section>
 
-				{assignment.file_url && (
+				{assignment &&
+				assignment.file_url &&
+				Array.isArray(assignment.file_url) &&
+				assignment.file_url.length > 0 ? (
+					<Section>
+						<SectionTitle>Assignment Materials</SectionTitle>
+						{assignment.file_url.map((file, index) => (
+							<MaterialItem key={index}>
+								<MaterialIcon>{getFileIcon(file.url)}</MaterialIcon>
+								<MaterialInfo>
+									<MaterialName>{file.name}</MaterialName>
+									<MaterialMeta>Assignment material from your teacher</MaterialMeta>
+								</MaterialInfo>
+								<MaterialActions>
+									<ActionButton
+										onClick={() => {
+											if (file.url) {
+												window.open(file.url, '_blank')
+											}
+										}}
+									>
+										View
+									</ActionButton>
+									<ActionButton
+										onClick={() => {
+											if (file.url) {
+												const link = document.createElement('a')
+												link.href = file.url
+												link.download = file.name
+												link.target = '_blank'
+												document.body.appendChild(link)
+												link.click()
+												document.body.removeChild(link)
+											}
+										}}
+									>
+										<FiDownload size={16} />
+										<span>Download</span>
+									</ActionButton>
+								</MaterialActions>
+							</MaterialItem>
+						))}
+					</Section>
+				) : assignment && assignment.file_url && typeof assignment.file_url === 'string' ? (
+					// Legacy support for old string format
 					<Section>
 						<SectionTitle>Assignment Materials</SectionTitle>
 						<MaterialItem>
-							<MaterialIcon>{getFileIcon(assignment.file_url)}</MaterialIcon>
+							<MaterialIcon>{getFileIcon(assignment.file_url as string)}</MaterialIcon>
 							<MaterialInfo>
-								<MaterialName>{getFileName(assignment.file_url)}</MaterialName>
+								<MaterialName>{getFileName(assignment.file_url as string)}</MaterialName>
 								<MaterialMeta>Assignment material from your teacher</MaterialMeta>
 							</MaterialInfo>
 							<MaterialActions>
 								<ActionButton
 									onClick={() => {
 										if (assignment.file_url) {
-											window.open(assignment.file_url, '_blank')
+											window.open(assignment.file_url as string, '_blank')
 										}
 									}}
 								>
@@ -557,8 +605,8 @@ const SingleAssignment: React.FC = () => {
 									onClick={() => {
 										if (assignment.file_url) {
 											const link = document.createElement('a')
-											link.href = assignment.file_url
-											link.download = getFileName(assignment.file_url)
+											link.href = assignment.file_url as string
+											link.download = getFileName(assignment.file_url as string)
 											link.target = '_blank'
 											document.body.appendChild(link)
 											link.click()
@@ -572,7 +620,7 @@ const SingleAssignment: React.FC = () => {
 							</MaterialActions>
 						</MaterialItem>
 					</Section>
-				)}
+				) : null}
 
 				<Section>
 					<SectionTitle>Your Submission</SectionTitle>
