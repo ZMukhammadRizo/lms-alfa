@@ -16,9 +16,8 @@ import {
 	getUserParentRole,
 	getUserRole,
 	hasAnnouncementPermission,
+	hasPermission,
 	hasRole,
-	isModuleLeader,
-	isRoleManager,
 } from '../../utils/authUtils'
 import LogoutButton from '../common/LogoutButton'
 
@@ -357,8 +356,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 										onMobileClick={handleNavItemClick}
 									/>
 								) : null}
-								{hasRole('RoleManager') ||
-								isRoleManager() ||
+								{hasPermission('manage_roles') ||
+								hasRole('RoleManager') ||
 								hasRole('Admin') ||
 								hasRole('SuperAdmin') ? (
 									<>
@@ -387,10 +386,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 										))}
 									</>
 								) : null}
-								{role === 'ModuleLeader' ||
-								isModuleLeader() ||
-								role === 'Admin' ||
-								role === 'SuperAdmin' ? (
+
+								{hasPermission('manage_subjects') || role === 'Admin' || role === 'SuperAdmin' ? (
 									<>
 										<AnimatePresence>
 											{(!isCollapsed || isMobile) && (

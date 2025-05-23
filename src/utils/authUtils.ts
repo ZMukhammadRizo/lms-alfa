@@ -183,11 +183,6 @@ export const getUserRole = (): string => {
 
 		// Object with name property
 		if (parsedInfo.role && typeof parsedInfo.role === 'object') {
-			// If the user is a RoleManager and has a parent role, return the parent role
-			if (parsedInfo.isRoleManager && parsedInfo.role.parent && parsedInfo.role.parent.name) {
-				return parsedInfo.role.parent.name
-			}
-
 			// Check if it has a name property
 			if (parsedInfo.role.name && typeof parsedInfo.role.name === 'string') {
 				return parsedInfo.role.name
