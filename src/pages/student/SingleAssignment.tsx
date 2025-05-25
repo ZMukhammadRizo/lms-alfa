@@ -21,14 +21,16 @@ interface ExtendedAssignment extends Assignment {
 	file_url?: Array<{ name: string; url: string }> | null
 	classid?: string
 	className?: string
+	subjectName?: string
 }
 
 interface SubmissionData {
 	id?: string
-	fileurl: string
+	fileurl: string[]
 	submittedat: string
 	grade?: number | null
 	feedback?: string | null
+	status?: string | null
 }
 
 const SingleAssignment: React.FC = () => {
@@ -62,6 +64,9 @@ const SingleAssignment: React.FC = () => {
           *,
           class:classid (
             classname
+          ),
+          subject:subject_id (
+            subjectname
           )
         `
 				)
@@ -92,13 +97,18 @@ const SingleAssignment: React.FC = () => {
 				description: assignmentData.description || '',
 				due_date: assignmentData.duedate,
 				subject: assignmentData.subject || 'General',
-				subjectid: assignmentData.subjectid,
+				subject_id: assignmentData.subject_id,
 				status: calculatedStatus,
-				created_at: assignmentData.created_at,
+				created_at:
+					assignmentData.created_at ||
+					assignmentData.updated_at ||
+					assignmentData.duedate ||
+					new Date().toISOString(),
 				updated_at: assignmentData.updated_at,
 				file_url: assignmentData.file_url || null,
 				classid: assignmentData.classid,
 				className: assignmentData.class?.classname || 'Unknown Class',
+				subjectName: assignmentData.subject?.subjectname || 'Unknown Subject',
 			}
 
 			setAssignment(formattedAssignment)
@@ -115,7 +125,16 @@ const SingleAssignment: React.FC = () => {
 				if (submissionError) throw submissionError
 
 				if (submissionData && submissionData.fileurl) {
-					setExistingSubmission(submissionData)
+					setExistingSubmission({
+						id: submissionData.id,
+						fileurl: Array.isArray(submissionData.fileurl)
+							? submissionData.fileurl
+							: [submissionData.fileurl],
+						submittedat: submissionData.submittedat,
+						grade: submissionData.grade,
+						feedback: submissionData.feedback,
+						status: submissionData.status,
+					})
 				}
 			}
 		} catch (error) {
@@ -133,13 +152,13 @@ const SingleAssignment: React.FC = () => {
 
 	// Format date for display
 	const formatDate = (dateString: string | null | undefined): string => {
-		if (!dateString) return 'N/A'
+		if (!dateString) return 'Not specified'
 
 		try {
 			const date = new Date(dateString)
 
 			if (isNaN(date.getTime())) {
-				return 'N/A'
+				return 'Not specified'
 			}
 
 			return date.toLocaleDateString('en-US', {
@@ -149,19 +168,19 @@ const SingleAssignment: React.FC = () => {
 			})
 		} catch (error) {
 			console.error('Error formatting date:', error)
-			return 'N/A'
+			return 'Not specified'
 		}
 	}
 
 	// Format time for display
 	const formatTime = (dateString: string | null | undefined): string => {
-		if (!dateString) return 'N/A'
+		if (!dateString) return 'Not specified'
 
 		try {
 			const date = new Date(dateString)
 
 			if (isNaN(date.getTime())) {
-				return 'N/A'
+				return 'Not specified'
 			}
 
 			return date.toLocaleTimeString('en-US', {
@@ -170,7 +189,7 @@ const SingleAssignment: React.FC = () => {
 			})
 		} catch (error) {
 			console.error('Error formatting time:', error)
-			return 'N/A'
+			return 'Not specified'
 		}
 	}
 
@@ -309,23 +328,32 @@ const SingleAssignment: React.FC = () => {
 	const submitAssignment = async (
 		assignmentId: string,
 		studentId: string,
-		fileUrl: string | null = null
+		fileUrl: string[] | null = null
 	) => {
 		try {
 			// Check if there's an existing submission
 			const { data: existing } = await supabase
 				.from('submissions')
-				.select('id')
+				.select('id, fileurl')
 				.eq('assignmentid', assignmentId)
 				.eq('studentid', studentId)
 				.maybeSingle()
 
 			if (existing) {
 				// If record exists, update it
+				// Combine existing files with new file if they exist
+				const updatedFileUrls = fileUrl
+					? Array.isArray(existing.fileurl)
+						? [...(existing.fileurl || []).filter(url => url !== null), ...fileUrl]
+						: [existing.fileurl, ...fileUrl].filter(url => url !== null)
+					: Array.isArray(existing.fileurl)
+					? existing.fileurl.filter(url => url !== null)
+					: existing.fileurl
+
 				const { error: updateError } = await supabase
 					.from('submissions')
 					.update({
-						fileurl: fileUrl,
+						fileurl: updatedFileUrls,
 						submittedat: new Date().toISOString(),
 					})
 					.eq('id', existing.id)
@@ -373,14 +401,25 @@ const SingleAssignment: React.FC = () => {
 			// 2. Upload file to Supabase Storage
 			const fileUrl = await uploadSubmissionFile(selectedFile, assignmentId, user.id)
 
-			// 3. Update submission record with the file URL
-			await submitAssignment(assignmentId, user.id, fileUrl)
+			// 3. Update submission record with the file URL (as an array)
+			await submitAssignment(assignmentId, user.id, [fileUrl])
 
-			// 4. Update UI
+			// 4. If this is a resubmission, explicitly set the status to null
+			if (existingSubmission) {
+				await supabase
+					.from('submissions')
+					.update({
+						status: null,
+					})
+					.eq('id', submissionId)
+			}
+
+			// 5. Update UI
 			setExistingSubmission({
 				id: submissionId,
-				fileurl: fileUrl,
+				fileurl: existingSubmission ? [...existingSubmission.fileurl, fileUrl] : [fileUrl],
 				submittedat: new Date().toISOString(),
+				status: null,
 			})
 
 			setSelectedFile(null)
@@ -408,13 +447,24 @@ const SingleAssignment: React.FC = () => {
 	}
 
 	// Download existing submission
-	const downloadSubmission = () => {
-		if (!existingSubmission?.fileurl) return
+	const downloadSubmission = (fileUrl?: string) => {
+		if (!fileUrl && (!existingSubmission?.fileurl || existingSubmission.fileurl.length === 0))
+			return
+
+		// Make sure urlToDownload is defined and not undefined
+		const urlToDownload =
+			fileUrl ||
+			(existingSubmission?.fileurl && existingSubmission.fileurl.length > 0
+				? existingSubmission.fileurl[0]
+				: '')
+
+		// Only proceed if we have a valid URL
+		if (!urlToDownload) return
 
 		const link = document.createElement('a')
-		link.href = existingSubmission.fileurl
+		link.href = urlToDownload
 		link.target = '_blank'
-		link.download = getFileName(existingSubmission.fileurl)
+		link.download = getFileName(urlToDownload)
 		document.body.appendChild(link)
 		link.click()
 		document.body.removeChild(link)
@@ -447,17 +497,31 @@ const SingleAssignment: React.FC = () => {
 	const getStatusText = (status: string, dueDate: string | undefined): string => {
 		if (!dueDate) return status.charAt(0).toUpperCase() + status.slice(1)
 
-		// Check if assignment has been submitted and graded
-		if (
-			existingSubmission &&
-			existingSubmission.grade !== undefined &&
-			existingSubmission.grade !== null
-		) {
-			return 'Completed'
-		}
-
-		// Check if assignment has been submitted but not graded
+		// First check if the submission has an explicit status from teacher
 		if (existingSubmission) {
+			if (existingSubmission.status === 'accepted') {
+				return 'Accepted'
+			}
+
+			if (existingSubmission.status === 'rejected') {
+				return 'Rejected'
+			}
+
+			// Check if assignment has been resubmitted (more than one file and null status)
+			if (
+				existingSubmission.status === null &&
+				existingSubmission.fileurl &&
+				existingSubmission.fileurl.length > 1
+			) {
+				return 'Resubmitted'
+			}
+
+			// Check if assignment has been submitted and graded
+			if (existingSubmission.grade !== undefined && existingSubmission.grade !== null) {
+				return 'Completed'
+			}
+
+			// Default for any submission without explicit status
 			return 'Submitted'
 		}
 
@@ -509,12 +573,17 @@ const SingleAssignment: React.FC = () => {
 			<AssignmentCard>
 				<AssignmentHeader>
 					<div>
-						<CourseName>{assignment.className || assignment.subject}</CourseName>
 						<AssignmentTitle>{assignment.title}</AssignmentTitle>
+						<CourseInfo>
+							<ClassBadge>{assignment.className}</ClassBadge>
+							{assignment.subjectName && <SubjectBadge>{assignment.subjectName}</SubjectBadge>}
+							<StatusBadge
+								$status={getStatusText(assignment.status || 'Unknown', assignment.due_date)}
+							>
+								{getStatusText(assignment.status || 'Unknown', assignment.due_date)}
+							</StatusBadge>
+						</CourseInfo>
 					</div>
-					<AssignmentStatus $status={getStatusText(assignment.status, assignment.due_date)}>
-						<span>{getStatusText(assignment.status, assignment.due_date)}</span>
-					</AssignmentStatus>
 				</AssignmentHeader>
 
 				<Section>
@@ -594,8 +663,8 @@ const SingleAssignment: React.FC = () => {
 							<MaterialActions>
 								<ActionButton
 									onClick={() => {
-										if (assignment.file_url) {
-											window.open(assignment.file_url as string, '_blank')
+										if (typeof assignment.file_url === 'string') {
+											window.open(assignment.file_url, '_blank')
 										}
 									}}
 								>
@@ -603,10 +672,10 @@ const SingleAssignment: React.FC = () => {
 								</ActionButton>
 								<ActionButton
 									onClick={() => {
-										if (assignment.file_url) {
+										if (typeof assignment.file_url === 'string') {
 											const link = document.createElement('a')
-											link.href = assignment.file_url as string
-											link.download = getFileName(assignment.file_url as string)
+											link.href = assignment.file_url
+											link.download = getFileName(assignment.file_url)
 											link.target = '_blank'
 											document.body.appendChild(link)
 											link.click()
@@ -629,32 +698,52 @@ const SingleAssignment: React.FC = () => {
 						<ExistingSubmission>
 							<SubmissionHeader>
 								<div>
-									<FiCheckCircle size={16} color='#4caf50' />
+									<FiCheckCircle
+										size={16}
+										color={existingSubmission.status === 'rejected' ? '#dc2626' : '#4caf50'}
+									/>
 									<span>
 										Submitted on {formatDate(existingSubmission.submittedat)} at{' '}
 										{formatTime(existingSubmission.submittedat)}
 									</span>
 								</div>
-								<DownloadButton onClick={downloadSubmission}>
-									<FiDownload size={16} />
-									<span>Download</span>
-								</DownloadButton>
 							</SubmissionHeader>
 
-							<ExistingFilePreview>
-								<FileIcon>{getFileIcon(existingSubmission.fileurl)}</FileIcon>
-								<FileDetails>
-									<FileName>{getFileName(existingSubmission.fileurl)}</FileName>
-									<FileInfo>You can resubmit by uploading a new file below.</FileInfo>
-								</FileDetails>
-							</ExistingFilePreview>
+							{/* Display all submitted files */}
+							{existingSubmission.fileurl && existingSubmission.fileurl.length > 0 && (
+								<>
+									{existingSubmission.fileurl.map((url, index) => (
+										<ExistingFilePreview key={index}>
+											<FileIcon>{getFileIcon(url)}</FileIcon>
+											<FileDetails>
+												<FileName>{getFileName(url)}</FileName>
+												<FileInfo>
+													{existingSubmission.status === 'rejected'
+														? 'Your submission was rejected. Please submit a new version.'
+														: existingSubmission.status === 'accepted'
+														? 'Your submission was accepted.'
+														: 'Your submission is under review.'}
+												</FileInfo>
+											</FileDetails>
+											<DownloadButton onClick={() => downloadSubmission(url)}>
+												<FiDownload size={16} />
+												<span>Download</span>
+											</DownloadButton>
+										</ExistingFilePreview>
+									))}
+								</>
+							)}
 
-							{existingSubmission.grade !== undefined && existingSubmission.grade !== null && (
+							{/* Always show grade and feedback when available */}
+							{(existingSubmission.grade !== undefined && existingSubmission.grade !== null) ||
+							existingSubmission.feedback ? (
 								<GradeFeedbackContainer>
-									<GradeContainer>
-										<GradeLabel>Grade:</GradeLabel>
-										<GradeValue>{existingSubmission.grade}/10</GradeValue>
-									</GradeContainer>
+									{existingSubmission.grade !== undefined && existingSubmission.grade !== null && (
+										<GradeContainer>
+											<GradeLabel>Grade:</GradeLabel>
+											<GradeValue>{existingSubmission.grade}/10</GradeValue>
+										</GradeContainer>
+									)}
 
 									{existingSubmission.feedback && (
 										<FeedbackContainer>
@@ -663,69 +752,109 @@ const SingleAssignment: React.FC = () => {
 										</FeedbackContainer>
 									)}
 								</GradeFeedbackContainer>
-							)}
+							) : null}
 						</ExistingSubmission>
 					) : (
-						<div>
-							<p>You haven't submitted this assignment yet.</p>
-						</div>
+						<ExistingSubmission>
+							<SubmissionHeader>
+								<div>
+									<FiClock size={16} color='#9e9e9e' />
+									<span>Not submitted yet</span>
+								</div>
+							</SubmissionHeader>
+
+							<ExistingFilePreview>
+								<FileIcon style={{ backgroundColor: '#f3f4f6', color: '#9e9e9e' }}>
+									<FiFileText size={20} />
+								</FileIcon>
+								<FileDetails>
+									<FileName>No files uploaded</FileName>
+									<FileInfo>Use the form below to submit your assignment</FileInfo>
+								</FileDetails>
+							</ExistingFilePreview>
+
+							<GradeFeedbackContainer>
+								<GradeContainer>
+									<GradeLabel>Grade:</GradeLabel>
+									<span style={{ fontSize: '14px', color: '#9e9e9e', fontStyle: 'italic' }}>
+										Not graded yet
+									</span>
+								</GradeContainer>
+
+								<FeedbackContainer>
+									<FeedbackLabel>Teacher Feedback:</FeedbackLabel>
+									<FeedbackContent style={{ color: '#9e9e9e', fontStyle: 'italic' }}>
+										Feedback will be provided after submission
+									</FeedbackContent>
+								</FeedbackContainer>
+							</GradeFeedbackContainer>
+						</ExistingSubmission>
 					)}
 
-					{assignment.status !== 'completed' && (
-						<SubmissionForm onSubmit={handleSubmit}>
-							<DropzoneContainer {...getRootProps()} $isDragActive={isDragActive}>
-								<input {...getInputProps()} />
-								{selectedFile ? (
-									<SelectedFilePreview>
-										<FilePreviewIcon>{getFileIcon(selectedFile.name)}</FilePreviewIcon>
-										<FilePreviewDetails>
-											<FilePreviewName>{selectedFile.name}</FilePreviewName>
-											<FilePreviewSize>
-												{(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-											</FilePreviewSize>
-										</FilePreviewDetails>
-										<RemoveFileButton
-											type='button'
-											onClick={e => {
-												e.stopPropagation()
-												handleRemoveFile()
-											}}
-										>
-											<FiX size={18} />
-										</RemoveFileButton>
-									</SelectedFilePreview>
-								) : (
-									<DropzoneContent>
-										<FiUpload size={32} />
-										<DropzoneText>
-											{isDragActive
-												? 'Drop the file here...'
-												: 'Drag and drop a file here, or click to select a file'}
-										</DropzoneText>
-										<DropzoneSupportedText>
-											Supported file types: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, JPG, PNG
-										</DropzoneSupportedText>
-									</DropzoneContent>
+					{assignment.status !== 'completed' &&
+						(!existingSubmission || existingSubmission.status === 'rejected') && (
+							<SubmissionForm onSubmit={handleSubmit}>
+								<DropzoneContainer {...getRootProps()} $isDragActive={isDragActive}>
+									<input {...getInputProps()} />
+									{selectedFile ? (
+										<SelectedFilePreview>
+											<FilePreviewIcon>{getFileIcon(selectedFile.name)}</FilePreviewIcon>
+											<FilePreviewDetails>
+												<FilePreviewName>{selectedFile.name}</FilePreviewName>
+												<FilePreviewSize>
+													{(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+												</FilePreviewSize>
+											</FilePreviewDetails>
+											<RemoveFileButton
+												type='button'
+												onClick={e => {
+													e.stopPropagation()
+													handleRemoveFile()
+												}}
+											>
+												<FiX size={18} />
+											</RemoveFileButton>
+										</SelectedFilePreview>
+									) : (
+										<DropzoneContent>
+											<FiUpload size={32} />
+											<DropzoneText>
+												{isDragActive
+													? 'Drop the file here...'
+													: 'Drag and drop a file here, or click to select a file'}
+											</DropzoneText>
+											<DropzoneSupportedText>
+												Supported file types: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, JPG, PNG
+											</DropzoneSupportedText>
+										</DropzoneContent>
+									)}
+								</DropzoneContainer>
+
+								{uploading && (
+									<ProgressContainer>
+										<ProgressBar $progress={uploadProgress} />
+										<ProgressText>{uploadProgress}% uploaded</ProgressText>
+									</ProgressContainer>
 								)}
-							</DropzoneContainer>
 
-							{uploading && (
-								<ProgressContainer>
-									<ProgressBar $progress={uploadProgress} />
-									<ProgressText>{uploadProgress}% uploaded</ProgressText>
-								</ProgressContainer>
-							)}
+								<SubmitButtonContainer>
+									<SubmitButton type='submit' disabled={!selectedFile || uploading}>
+										{uploading
+											? `Uploading... ${uploadProgress}%`
+											: existingSubmission
+											? 'Resubmit Assignment'
+											: 'Submit Assignment'}
+									</SubmitButton>
+								</SubmitButtonContainer>
+							</SubmissionForm>
+						)}
 
-							<SubmitButtonContainer>
-								<SubmitButton type='submit' disabled={!selectedFile || uploading}>
-									{uploading
-										? `Uploading... ${uploadProgress}%`
-										: existingSubmission
-										? 'Resubmit Assignment'
-										: 'Submit Assignment'}
-								</SubmitButton>
-							</SubmitButtonContainer>
-						</SubmissionForm>
+					{existingSubmission && existingSubmission.status !== 'rejected' && (
+						<PendingReviewMessage>
+							{existingSubmission.status === 'accepted'
+								? 'Your submission has been accepted by your teacher.'
+								: 'Your submission is currently under review by your teacher. You will be able to resubmit if it gets rejected.'}
+						</PendingReviewMessage>
 					)}
 				</Section>
 			</AssignmentCard>
@@ -800,6 +929,7 @@ const AssignmentTitle = styled.h2`
 	font-weight: 600;
 	color: ${props => props.theme.colors.text.primary};
 	margin: 0;
+	margin-bottom: 10px;
 `
 
 interface StatusProps {
@@ -812,7 +942,6 @@ const AssignmentStatus = styled.span<StatusProps>`
 	font-size: 0.75rem;
 	font-weight: 600;
 	background-color: ${props => {
-		console.log(props.$status)
 		switch (props.$status) {
 			case 'Completed':
 				return '#e8f5e9' // Light green
@@ -888,6 +1017,7 @@ const MaterialItem = styled.div`
 	padding: 16px;
 	background-color: ${props => props.theme.colors.background.secondary || '#f9fafb'};
 	border-radius: 8px;
+	margin-bottom: 10px;
 `
 
 const MaterialIcon = styled.div`
@@ -1301,9 +1431,7 @@ const GradeValue = styled.span`
 	border-radius: 20px;
 `
 
-const FeedbackContainer = styled.div`
-	margin-top: 12px;
-`
+const FeedbackContainer = styled.div``
 
 const FeedbackLabel = styled.div`
 	font-size: 15px;
@@ -1321,6 +1449,135 @@ const FeedbackContent = styled.div`
 	background-color: white;
 	border-radius: 6px;
 	border: 1px solid ${props => props.theme.colors.border.light};
+`
+
+const SubjectBadge = styled.span`
+	background-color: ${props => props.theme.colors.info?.[50] || '#e0f2fe'};
+	color: ${props => props.theme.colors.info?.[600] || '#0284c7'};
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 500;
+	display: inline-flex;
+	align-items: center;
+	margin-right: 8px;
+`
+
+const CourseInfo = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+`
+
+const ClassBadge = styled.span`
+	background-color: ${props => props.theme.colors.info?.[50] || '#e0f2fe'};
+	color: ${props => props.theme.colors.info?.[600] || '#0284c7'};
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 500;
+	display: inline-flex;
+	align-items: center;
+	margin-right: 8px;
+`
+
+const StatusBadge = styled.span<StatusProps>`
+	padding: 4px 10px;
+	border-radius: 12px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	background-color: ${props => {
+		switch (props.$status) {
+			case 'Completed':
+				return '#e8f5e9' // Light green
+			case 'Submitted':
+				return '#e1f5fe' // Light blue
+			case 'Accepted':
+				return props.theme.colors.success?.[100] || '#dcfce7' // Brighter light green
+			case 'Rejected':
+				return props.theme.colors.danger?.[100] || '#fee2e2' // Brighter light red
+			case 'Resubmitted':
+				return '#e8f7ff' // Light blue (different shade)
+			case 'In Progress':
+				return '#e3f2fd' // Medium blue
+			case 'Due Soon':
+				return '#fff3e0' // Orange-ish
+			case 'Overdue':
+				return '#ffebee' // Red-ish
+			case 'Upcoming':
+				return '#fff8e1' // Yellow-ish
+			default:
+				return '#f5f5f5' // Light gray
+		}
+	}};
+	color: ${props => {
+		switch (props.$status) {
+			case 'Completed':
+				return '#16a34a' // Green
+			case 'Submitted':
+				return '#03a9f4' // Blue
+			case 'Accepted':
+				return props.theme.colors.success?.[700] || '#15803d' // Darker green for better contrast
+			case 'Rejected':
+				return props.theme.colors.danger?.[700] || '#b91c1c' // Darker red for better contrast
+			case 'Resubmitted':
+				return '#0288d1' // Darker blue
+			case 'In Progress':
+				return '#03a9f4' // Medium blue
+			case 'Due Soon':
+				return '#ff9800' // Orange
+			case 'Overdue':
+				return '#f44336' // Red
+			case 'Upcoming':
+				return '#ffc107' // Amber
+			default:
+				return '#9e9e9e' // Gray
+		}
+	}};
+`
+
+const SubmissionStatus = styled.div<{ $status: string }>`
+	margin-top: 12px;
+	padding: 8px 12px;
+	border-radius: 6px;
+	font-size: 14px;
+	font-weight: 600;
+	text-align: center;
+
+	${props => {
+		const status = props.$status?.toLowerCase()
+		switch (status) {
+			case 'accepted':
+				return `
+					background-color: ${props.theme.colors.success?.[50] || '#dcfce7'};
+					color: ${props.theme.colors.success?.[600] || '#16a34a'};
+					border: 1px solid ${props.theme.colors.success?.[300] || '#86efac'};
+				`
+			case 'rejected':
+				return `
+					background-color: ${props.theme.colors.danger?.[50] || '#fee2e2'};
+					color: ${props.theme.colors.danger?.[600] || '#dc2626'};
+					border: 1px solid ${props.theme.colors.danger?.[300] || '#fca5a5'};
+				`
+			default:
+				return `
+					background-color: ${props.theme.colors.warning?.[50] || '#fef3c7'};
+					color: ${props.theme.colors.warning?.[600] || '#f59e0b'};
+					border: 1px solid ${props.theme.colors.warning?.[300] || '#fcd34d'};
+				`
+		}
+	}}
+`
+
+const PendingReviewMessage = styled.div`
+	margin-top: 24px;
+	padding: 16px;
+	background-color: ${props => props.theme.colors.info?.[50] || '#e0f2fe'};
+	color: ${props => props.theme.colors.info?.[600] || '#0284c7'};
+	border-radius: 6px;
+	font-size: 14px;
+	line-height: 1.5;
+	text-align: center;
 `
 
 export default SingleAssignment

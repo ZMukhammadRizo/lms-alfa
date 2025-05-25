@@ -35,6 +35,7 @@ export const adminMenu: MenuItem[] = [
 	{ path: '/admin/subjects', icon: <FiBook />, label: 'Subjects' },
 	{ path: '/admin/classes', icon: <FiLayers />, label: 'Classes' },
 	{ path: '/admin/assignments', icon: <FiFileText />, label: 'Assignments' },
+	{ path: '/admin/submissions', icon: <FiClipboard />, label: 'Submissions' },
 	{ path: '/admin/grades', icon: <FiClipboard />, label: 'Grades' },
 	{ path: '/admin/timetables', icon: <FiCalendar />, label: 'Timetables' },
 ]

@@ -21,6 +21,7 @@ import {
 	Assignment,
 	AttachmentFile,
 	getAssignmentsForSingleStudent,
+	getStudentCourses,
 } from '../../services/assignmentService'
 
 // For accessibility - bind modal to app element
@@ -40,12 +41,14 @@ interface ExtendedAssignment extends Assignment {
 	file_url?: string | null
 	classid?: string
 	className?: string
+	subjectName?: string // Add subject name field
 	submission?: {
 		id: string
-		fileurl: string
+		fileurl: string[] // Changed from string to string[] to support multiple files
 		submittedat: string
 		grade?: number | null
 		feedback?: string | null
+		status?: string | null // Add status field
 	} | null
 }
 
@@ -64,18 +67,6 @@ const Assignments: React.FC = () => {
 	const navigate = useNavigate()
 	// const { theme } = useTheme(); // Removed as theme is accessed via props
 
-	// Mock the courses data since the real function doesn't seem to be exported
-	const getLocalCourses = async (studentId: string): Promise<any[]> => {
-		return [
-			{ id: '1', name: 'Mathematics', teacher: 'Dr. Smith' },
-			{ id: '2', name: 'Physics', teacher: 'Prof. Johnson' },
-			{ id: '3', name: 'English Literature', teacher: 'Mrs. Davis' },
-			{ id: '4', name: 'Chemistry', teacher: 'Dr. Wilson' },
-			{ id: '5', name: 'World History', teacher: 'Prof. Anderson' },
-			{ id: '6', name: 'Computer Science', teacher: 'Dr. Roberts' },
-		]
-	}
-
 	// Load assignments and courses from API
 	useEffect(() => {
 		const fetchData = async () => {
@@ -87,9 +78,12 @@ const Assignments: React.FC = () => {
 
 			setLoading(true)
 			try {
-				// Use the renamed function
+				// Use the real functions to fetch data
 				const assignmentsData = await getAssignmentsForSingleStudent(user.id)
-				const coursesData = await getLocalCourses(user.id)
+				const coursesData = await getStudentCourses(user.id)
+
+				// Create a mapping of subject IDs to names for easy lookup
+				const subjectMap = new Map(coursesData.map(course => [course.id, course.name]))
 
 				// Fetch submissions for each assignment
 				const assignmentsWithSubmissions = await Promise.all(
@@ -105,13 +99,51 @@ const Assignments: React.FC = () => {
 
 							if (error) throw error
 
+							// Ensure created_at has a valid value
+							const created_at =
+								assignment.created_at ||
+								assignment.updated_at ||
+								assignment.due_date ||
+								new Date().toISOString()
+
+							// Process submission data to ensure fileurl is an array
+							let processedSubmission = null
+							if (submissionData) {
+								processedSubmission = {
+									...submissionData,
+									fileurl: Array.isArray(submissionData.fileurl)
+										? submissionData.fileurl
+										: submissionData.fileurl
+										? [submissionData.fileurl]
+										: [],
+								}
+							}
+
 							return {
 								...assignment,
-								submission: submissionData,
+								created_at, // Add the fixed created_at
+								subjectName: assignment.subject_id
+									? subjectMap.get(assignment.subject_id) || 'Unknown Subject'
+									: 'General',
+								submission: processedSubmission,
 							} as ExtendedAssignment
 						} catch (error) {
 							console.error(`Error fetching submission for assignment ${assignment.id}:`, error)
-							return assignment as ExtendedAssignment
+
+							// Ensure created_at has a valid value even in error case
+							const created_at =
+								assignment.created_at ||
+								assignment.updated_at ||
+								assignment.due_date ||
+								new Date().toISOString()
+
+							return {
+								...assignment,
+								created_at, // Add the fixed created_at
+								subjectName: assignment.subject_id
+									? subjectMap.get(assignment.subject_id) || 'Unknown Subject'
+									: 'General',
+							} as ExtendedAssignment
 						}
 					})
 				)
@@ -131,14 +163,14 @@ const Assignments: React.FC = () => {
 
 	// Format date for display - with error handling
 	const formatDate = (dateString: string | null | undefined): string => {
-		if (!dateString) return 'N/A'
+		if (!dateString) return 'Not specified'
 
 		try {
 			const date = new Date(dateString)
 
 			// Check if date is valid
 			if (isNaN(date.getTime())) {
-				return 'N/A'
+				return 'Not specified'
 			}
 
 			return date.toLocaleDateString('en-US', {
@@ -148,7 +180,7 @@ const Assignments: React.FC = () => {
 			})
 		} catch (error) {
 			console.error('Error formatting date:', error)
-			return 'N/A'
+			return 'Not specified'
 		}
 	}
 
@@ -178,16 +210,33 @@ const Assignments: React.FC = () => {
 	const getStatusText = (assignment: ExtendedAssignment): string => {
 		const { due_date, submission } = assignment
 
-		if (!due_date)
-			return assignment.status?.charAt(0).toUpperCase() + assignment.status?.slice(1) || 'Unknown'
-
-		// Check if assignment has been submitted and graded
-		if (submission?.grade !== undefined && submission?.grade !== null) {
-			return 'Completed'
+		if (!due_date) {
+			return assignment.status
+				? assignment.status.charAt(0).toUpperCase() + assignment.status.slice(1)
+				: 'Unknown'
 		}
 
-		// Check if assignment has been submitted but not graded
+		// First check submission status - prioritize teacher's status feedback
 		if (submission) {
+			if (submission.status === 'accepted') {
+				return 'Accepted'
+			}
+
+			if (submission.status === 'rejected') {
+				return 'Rejected'
+			}
+
+			// Check if assignment has been resubmitted (more than one file and null status)
+			if (submission.status === null && submission.fileurl && submission.fileurl.length > 1) {
+				return 'Resubmitted'
+			}
+
+			// Then check if graded
+			if (submission.grade !== undefined && submission.grade !== null) {
+				return 'Completed'
+			}
+
+			// Default for any submission without explicit status
 			return 'Submitted'
 		}
 
@@ -233,9 +282,9 @@ const Assignments: React.FC = () => {
 	const filteredAssignments = assignments.filter(assignment => {
 		const matchesSearch =
 			assignment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			assignment.description.toLowerCase().includes(searchTerm.toLowerCase())
+			(assignment.description?.toLowerCase() || '').includes(searchTerm.toLowerCase())
 
-		const matchesCourse = selectedCourse ? assignment.subjectid === selectedCourse : true
+		const matchesCourse = selectedCourse ? assignment.subject_id === selectedCourse : true
 
 		// Use computed status
 		const status = getStatusText(assignment)
@@ -420,6 +469,12 @@ const Assignments: React.FC = () => {
 							Submitted
 						</TabButton>
 						<TabButton
+							$isActive={activeTab === 'resubmitted' || activeTab === 'Resubmitted'}
+							onClick={() => setActiveTab('Resubmitted')}
+						>
+							Resubmitted
+						</TabButton>
+						<TabButton
 							$isActive={activeTab === 'completed' || activeTab === 'Completed'}
 							onClick={() => setActiveTab('Completed')}
 						>
@@ -446,7 +501,9 @@ const Assignments: React.FC = () => {
 					<AssignmentCard key={assignment.id} as={motion.div} whileHover={{ y: -4 }}>
 						<AssignmentContent>
 							<AssignmentHeader>
-								<CourseName>{assignment.className || 'General'}</CourseName>
+								<CourseName>
+									{assignment.subjectName || assignment.className || 'General'}
+								</CourseName>
 								<AssignmentStatus $status={getStatusText(assignment)}>
 									{getStatusText(assignment)}
 								</AssignmentStatus>
@@ -484,10 +541,16 @@ const Assignments: React.FC = () => {
 
 							{assignment.status === 'completed' ||
 							getStatusText(assignment) === 'Completed' ||
-							getStatusText(assignment) === 'Submitted' ? (
+							getStatusText(assignment) === 'Submitted' ||
+							getStatusText(assignment) === 'Accepted' ||
+							getStatusText(assignment) === 'Resubmitted' ||
+							getStatusText(assignment) === 'Rejected' ? (
 								<CompletedSection>
 									<CompletedHeader>
-										<FiCheckCircle size={14} color='#4caf50' />
+										<FiCheckCircle
+											size={14}
+											color={getStatusText(assignment) === 'Rejected' ? '#f44336' : '#4caf50'}
+										/>
 										<span>
 											{assignment.submission
 												? `Submitted on ${formatDate(assignment.submission.submittedat)}`
@@ -505,8 +568,37 @@ const Assignments: React.FC = () => {
 												</GradeValue>
 											</GradeDisplay>
 										)}
+									{assignment.submission?.feedback && (
+										<FeedbackPreview>
+											<FeedbackLabel>Feedback:</FeedbackLabel>
+											<FeedbackText>
+												{assignment.submission.feedback.length > 50
+													? `${assignment.submission.feedback.substring(0, 50)}...`
+													: assignment.submission.feedback}
+											</FeedbackText>
+										</FeedbackPreview>
+									)}
 								</CompletedSection>
-							) : null}
+							) : (
+								<CompletedSection>
+									<CompletedHeader>
+										<FiClock size={14} color='#9e9e9e' />
+										<span>Not submitted yet</span>
+									</CompletedHeader>
+									<GradeDisplay>
+										<GradeLabel>Grade:</GradeLabel>
+										<span style={{ fontSize: '13px', color: '#9e9e9e', fontStyle: 'italic' }}>
+											Not graded yet
+										</span>
+									</GradeDisplay>
+									<FeedbackPreview>
+										<FeedbackLabel>Feedback:</FeedbackLabel>
+										<FeedbackText style={{ color: '#9e9e9e', fontStyle: 'italic' }}>
+											Feedback will be provided after submission
+										</FeedbackText>
+									</FeedbackPreview>
+								</CompletedSection>
+							)}
 						</AssignmentContent>
 
 						<AssignmentFooter>
@@ -620,24 +712,25 @@ const SearchInput = styled.input`
 
 const FilterControls = styled.div`
 	display: flex;
+	flex-direction: column;
 	gap: 16px;
-	align-items: center;
-	flex-wrap: wrap;
+	width: 100%;
 
-	@media (max-width: ${props => props.theme.breakpoints.md}) {
-		width: 100%;
+	@media (min-width: ${props => props.theme.breakpoints.md}) {
+		flex-direction: row;
+		align-items: center;
 		justify-content: space-between;
-	}
-
-	@media (max-width: ${props => props.theme.breakpoints.sm}) {
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 12px;
 	}
 `
 
 const CourseDropdown = styled.div`
 	position: relative;
+	width: 100%;
+	max-width: 300px;
+
+	@media (max-width: ${props => props.theme.breakpoints.sm}) {
+		max-width: 100%;
+	}
 `
 
 const CourseSelector = styled.div`
@@ -653,9 +746,16 @@ const CourseSelector = styled.div`
 	background-color: ${props => props.theme.colors.background.secondary};
 	min-width: 180px;
 	justify-content: space-between;
+	transition: all 0.2s ease;
 
 	&:hover {
 		background-color: ${props => props.theme.colors.background.hover};
+		border-color: ${props => props.theme.colors.primary[300]};
+		color: ${props => props.theme.colors.primary[500]};
+	}
+
+	@media (max-width: ${props => props.theme.breakpoints.sm}) {
+		width: 100%;
 	}
 `
 
@@ -705,9 +805,23 @@ const TabsContainer = styled.div`
 	display: flex;
 	gap: 8px;
 	flex-wrap: wrap;
+	margin-top: 8px;
+	overflow-x: auto;
+	width: 100%;
+	padding-bottom: 4px;
 
-	@media (max-width: ${props => props.theme.breakpoints.sm}) {
-		width: 100%;
+	/* Hide scrollbar but allow scrolling */
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+	&::-webkit-scrollbar {
+		display: none; /* Chrome, Safari, Opera */
+	}
+
+	@media (max-width: ${props => props.theme.breakpoints.md}) {
+		justify-content: flex-start;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		padding-bottom: 12px;
 	}
 `
 
@@ -716,34 +830,25 @@ interface TabButtonProps {
 }
 
 const TabButton = styled.button<TabButtonProps>`
-	background-color: ${props => {
-		if (props.$isActive) {
-			return props.children === 'All' ? '#4F46E5' : props.theme.colors.primary
-		}
-		return 'transparent'
-	}};
+	background-color: ${props => (props.$isActive ? props.theme.colors.primary[500] : 'transparent')};
 	color: ${props => (props.$isActive ? 'white' : props.theme.colors.text.secondary)};
 	border: 1px solid
-		${props => {
-			if (props.$isActive) {
-				return props.children === 'All' ? '#4F46E5' : props.theme.colors.primary
-			}
-			return props.theme.colors.border.light
-		}};
+		${props =>
+			props.$isActive ? props.theme.colors.primary[500] : props.theme.colors.border.light};
 	border-radius: 8px;
 	padding: 8px 16px;
 	cursor: pointer;
 	font-size: 14px;
 	font-weight: 500;
 	transition: all 0.2s ease;
+	white-space: nowrap;
 
 	&:hover {
-		background-color: ${props => {
-			if (props.$isActive) {
-				return props.children === 'All' ? '#4338CA' : props.theme.colors.primary
-			}
-			return props.theme.colors.background.hover
-		}};
+		background-color: ${props =>
+			props.$isActive ? props.theme.colors.primary[600] : props.theme.colors.background.hover};
+		border-color: ${props =>
+			props.$isActive ? props.theme.colors.primary[600] : props.theme.colors.primary[300]};
+		color: ${props => (props.$isActive ? 'white' : props.theme.colors.primary[500])};
 	}
 `
 
@@ -807,6 +912,12 @@ const AssignmentStatus = styled.span<StatusProps>`
 				return '#e8f5e9' // Light green
 			case 'Submitted':
 				return '#e1f5fe' // Light blue
+			case 'Accepted':
+				return '#dcfce7' // Light green (success)
+			case 'Rejected':
+				return '#fee2e2' // Light red
+			case 'Resubmitted':
+				return '#e8f7ff' // Light blue (different shade)
 			case 'In Progress':
 				return '#e3f2fd' // Medium blue
 			case 'Due Soon':
@@ -825,6 +936,12 @@ const AssignmentStatus = styled.span<StatusProps>`
 				return '#4caf50' // Green
 			case 'Submitted':
 				return '#03a9f4' // Blue
+			case 'Accepted':
+				return '#16a34a' // Green (success)
+			case 'Rejected':
+				return '#dc2626' // Red (danger)
+			case 'Resubmitted':
+				return '#0288d1' // Darker blue
 			case 'In Progress':
 				return '#2196f3' // Medium blue
 			case 'Due Soon':
@@ -1041,261 +1158,24 @@ const LoadingSpinner = styled.div`
 	}
 `
 
-const ModalContent = styled.div`
-	display: flex;
-	flex-direction: column;
-	width: 100%;
-	max-height: 85vh;
-`
-
-const ModalHeader = styled.div`
-	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
-	padding: 20px;
-	border-bottom: 1px solid ${props => props.theme.colors.border.light};
-`
-
-const ModalTitle = styled.h2`
-	margin: 8px 0 0 0;
-	font-size: 20px;
-	font-weight: 600;
-	color: ${props => props.theme.colors.text.primary};
-`
-
-const CloseButton = styled.button`
-	background: transparent;
-	border: none;
-	cursor: pointer;
-	color: ${props => props.theme.colors.text.secondary};
-	padding: 4px;
-	margin: -4px;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	transition: all 0.2s;
-
-	&:hover {
-		color: ${props => props.theme.colors.text.primary};
-		background-color: ${props => props.theme.colors.background.hover};
-	}
-`
-
-const ModalBody = styled.div`
-	padding: 20px;
-	overflow-y: auto;
-	display: flex;
-	flex-direction: column;
-	gap: 24px;
-`
-
-const ModalFooter = styled.div`
-	display: flex;
-	justify-content: flex-end;
-	gap: 16px;
-	padding: 16px 20px;
-	border-top: 1px solid ${props => props.theme.colors.border.light};
-	background-color: ${props => props.theme.colors.background.secondary};
-`
-
-const StatusSection = styled.div`
-	display: flex;
-	justify-content: flex-start;
-	margin-bottom: 8px;
-`
-
-const DetailSection = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-`
-
-const DetailSectionTitle = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 16px;
-	font-weight: 600;
-	color: ${props => props.theme.colors.text.primary};
-`
-
-const DetailContent = styled.div`
-	font-size: 15px;
-	line-height: 1.6;
-	color: ${props => props.theme.colors.text.secondary};
-	white-space: pre-wrap;
-`
-
-const DateDetails = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-`
-
-const AttachmentDownloadItem = styled.div`
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 12px 16px;
-	background-color: ${props => props.theme.colors.background.hover};
-	border-radius: 8px;
-	margin-bottom: 8px;
-
-	.file-info {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-	}
-
-	.file-name {
-		font-size: 14px;
-		font-weight: 500;
-		color: ${props => props.theme.colors.text.primary};
-	}
-
-	.file-meta {
-		font-size: 12px;
-		color: ${props => props.theme.colors.text.secondary};
-		margin-top: 4px;
-	}
-`
-
-const DownloadButton = styled.button`
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	background-color: ${props => props.theme.colors.background.primary};
-	color: ${props => props.theme.colors.primary};
-	border: 1px solid ${props => props.theme.colors.primary};
-	border-radius: 6px;
-	padding: 8px 12px;
-	font-size: 14px;
-	font-weight: 500;
-	cursor: pointer;
-	transition: all 0.2s;
-
-	&:hover {
-		background-color: ${props => props.theme.colors.primary[600]};
-	}
-`
-
-const PrimaryButton = styled.button`
-	background-color: #4f46e5;
-	color: white;
-	border: none;
-	border-radius: 6px;
-	padding: 10px 16px;
-	font-size: 14px;
-	font-weight: 500;
-	cursor: pointer;
-	transition: all 0.2s;
-
-	&:hover {
-		background-color: #4338ca;
-	}
-`
-
-const SecondaryButton = styled.button`
-	background-color: transparent;
-	color: ${props => props.theme.colors.text.secondary};
-	border: 1px solid ${props => props.theme.colors.border.light};
-	border-radius: 6px;
-	padding: 10px 16px;
-	font-size: 14px;
-	font-weight: 500;
-	cursor: pointer;
-	transition: all 0.2s;
-
-	&:hover {
-		background-color: ${props => props.theme.colors.background.hover};
-		color: ${props => props.theme.colors.text.primary};
-	}
-`
-
-const MaterialsList = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
+const FeedbackPreview = styled.div`
 	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px dashed ${props => props.theme.colors.border.light};
 `
 
-const MaterialItem = styled.div`
-	display: flex;
-	align-items: center;
-	padding: 12px;
-	background-color: ${props => props.theme.colors.background.hover};
-	border-radius: 8px;
-	transition: all 0.2s;
-
-	&:hover {
-		background-color: ${props => `${props.theme.colors.primary}10`};
-	}
-`
-
-const MaterialIcon = styled.div`
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 40px;
-	height: 40px;
-	border-radius: 8px;
-	background-color: ${props => `${props.theme.colors.primary}20`};
-	color: ${props => props.theme.colors.primary};
-	margin-right: 12px;
-`
-
-const MaterialInfo = styled.div`
-	display: flex;
-	flex-direction: column;
-	flex: 1;
-`
-
-const MaterialTitle = styled.div`
-	font-size: 15px;
-	font-weight: 600;
-	color: ${props => props.theme.colors.text.primary};
-	margin-bottom: 4px;
-`
-
-const MaterialDescription = styled.div`
-	font-size: 13px;
-	color: ${props => props.theme.colors.text.secondary};
-	line-height: 1.4;
-`
-
-const MaterialActions = styled.div`
-	display: flex;
-	gap: 8px;
-	margin-left: 16px;
-`
-
-const MaterialButton = styled.button`
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	background-color: ${props => props.theme.colors.background.primary};
-	color: ${props => props.theme.colors.primary};
-	border: 1px solid ${props => props.theme.colors.primary};
-	border-radius: 6px;
-	padding: 6px 12px;
-	font-size: 13px;
-	font-weight: 500;
-	cursor: pointer;
-	transition: all 0.2s;
-
-	&:hover {
-		background-color: ${props => `${props.theme.colors.primary}10`};
-	}
-`
-
-const ClassTag = styled.div`
+const FeedbackLabel = styled.div`
 	font-size: 12px;
 	font-weight: 500;
 	color: ${props => props.theme.colors.text.secondary};
-	padding: 4px 8px;
-	border-radius: 4px;
-	background-color: ${props => props.theme.colors.background.hover};
+	margin-bottom: 4px;
+`
+
+const FeedbackText = styled.div`
+	font-size: 13px;
+	color: ${props => props.theme.colors.text.primary};
+	font-style: italic;
+	line-height: 1.4;
 `
 
 export default Assignments

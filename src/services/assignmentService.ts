@@ -10,7 +10,7 @@ export interface Assignment {
 	description?: string
 	due_date?: string
 	subject?: string
-	subjectid?: string
+	subject_id?: string
 	status?: 'pending' | 'completed' | 'late' | 'overdue' | 'upcoming'
 	created_at?: string
 	updated_at?: string
@@ -102,7 +102,7 @@ export async function getAssignmentsForSingleStudent(studentId: string): Promise
 				description: assignment.description || '',
 				due_date: assignment.duedate,
 				subject: assignment.subject || 'General',
-				subjectid: assignment.subjectid,
+				subject_id: assignment.subject_id,
 				status: calculatedStatus,
 				created_at: assignment.created_at,
 				updated_at: assignment.updated_at,
