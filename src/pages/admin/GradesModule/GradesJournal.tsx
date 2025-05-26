@@ -6,6 +6,7 @@ import styled from 'styled-components'
 import { Variants, motion } from 'framer-motion'
 import UnifiedJournalTable from '../../../components/common/UnifiedJournalTable'
 import { ErrorMessage } from '../../../components/styled/TeacherComponents'
+import { useAuth } from '../../../contexts/AuthContext'
 import { getClassInfo, getGradeInfo } from '../../../services/gradesService'
 import { supabase } from '../../../services/supabaseClient'
 import useAttendanceStore from '../../../store/attendanceStore'
@@ -288,6 +289,7 @@ const GradesJournal: React.FC = () => {
 	const quarterDropdownRef = useRef<HTMLDivElement>(null)
 	const gradesStore = useGradesStore()
 	const attendanceStore = useAttendanceStore()
+	const { user } = useAuth()
 
 	const attendance = useAttendanceStore(state => state.attendance)
 
@@ -754,7 +756,10 @@ const GradesJournal: React.FC = () => {
 					// Update the grade
 					const { error } = await supabase
 						.from('scores')
-						.update({ score: effectiveScore })
+						.update({
+							score: effectiveScore,
+							teacher_id: user?.id,
+						})
 						.eq('student_id', effectiveStudentId)
 						.eq('lesson_id', effectiveLessonId)
 
@@ -777,6 +782,7 @@ const GradesJournal: React.FC = () => {
 						student_id: effectiveStudentId,
 						lesson_id: effectiveLessonId,
 						quarter_id: selectedQuarterId,
+						teacher_id: user?.id,
 						score: effectiveScore,
 					})
 					.select()
@@ -1121,6 +1127,7 @@ const GradesJournal: React.FC = () => {
 					.from('scores')
 					.update({
 						comment,
+						teacher_id: user?.id,
 					})
 					.eq('student_id', studentId)
 					.eq('lesson_id', lessonId)
@@ -1133,8 +1140,9 @@ const GradesJournal: React.FC = () => {
 					lesson_id: lessonId,
 					quarter_id: selectedQuarterId,
 					comment,
-					grade: 0, // Default grade
-					attendance: 'absent', // Default attendance
+					teacher_id: user?.id,
+					grade: 0,
+					attendance: 'absent',
 				})
 
 				if (error) throw error

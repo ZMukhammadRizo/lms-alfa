@@ -16,9 +16,15 @@ import {
 	FiXCircle,
 } from 'react-icons/fi'
 import { toast } from 'react-toastify'
-import styled from 'styled-components'
+import styled, { DefaultTheme } from 'styled-components'
 import supabase from '../../config/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
+
+// Import the project's DefaultTheme
+import 'styled-components'
+
+// Create a type-safe theme accessor
+const getThemeValue = (theme: any): DefaultTheme => theme as DefaultTheme
 
 // Interface definitions
 interface Submission {
@@ -86,12 +92,12 @@ const PageTitle = styled.h1`
 	font-size: 28px;
 	font-weight: 700;
 	margin: 0;
-	color: ${({ theme }) => theme.colors.text.primary};
+	color: ${({ theme }: { theme: any }) => getThemeValue(theme).colors.text.primary};
 `
 
 const PageDescription = styled.p`
 	font-size: 16px;
-	color: ${({ theme }) => theme.colors.text.secondary};
+	color: ${({ theme }: { theme: any }) => getThemeValue(theme).colors.text.secondary};
 	margin: 5px 0 0;
 `
 
@@ -113,22 +119,22 @@ const SearchIcon = styled(FiSearch)`
 	left: 15px;
 	top: 50%;
 	transform: translateY(-50%);
-	color: ${({ theme }) => theme.colors.text.secondary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.secondary};
 `
 
 const SearchInput = styled.input`
 	width: 100%;
 	padding: 12px 15px 12px 45px;
 	border-radius: 8px;
-	border: 1px solid ${({ theme }) => theme.colors.border.light};
+	border: 1px solid ${({ theme }) => getThemeValue(theme).colors.border.light};
 	font-size: 16px;
-	background: ${({ theme }) => theme.colors.background.light};
-	color: ${({ theme }) => theme.colors.text.primary};
+	background: ${({ theme }) => getThemeValue(theme).colors.background.light};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.primary};
 
 	&:focus {
 		outline: none;
-		border-color: ${({ theme }) => theme.colors.primary[500]};
-		box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[100]};
+		border-color: ${({ theme }) => getThemeValue(theme).colors.primary[500]};
+		box-shadow: 0 0 0 2px ${({ theme }) => getThemeValue(theme).colors.primary[100]};
 	}
 `
 
@@ -143,15 +149,15 @@ const FilterButton = styled.button`
 	gap: 8px;
 	padding: 12px 15px;
 	border-radius: 8px;
-	border: 1px solid ${({ theme }) => theme.colors.border.light};
-	background: ${({ theme }) => theme.colors.background.light};
-	color: ${({ theme }) => theme.colors.text.primary};
+	border: 1px solid ${({ theme }) => getThemeValue(theme).colors.border.light};
+	background: ${({ theme }) => getThemeValue(theme).colors.background.light};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.primary};
 	font-size: 15px;
 	cursor: pointer;
 	white-space: nowrap;
 
 	&:hover {
-		background: ${({ theme }) => theme.colors.background.hover};
+		background: ${({ theme }) => getThemeValue(theme).colors.background.hover};
 	}
 `
 
@@ -193,7 +199,7 @@ const LoadingContainer = styled.div`
 
 const LoadingText = styled.p`
 	font-size: 16px;
-	color: ${({ theme }) => theme.colors.text.secondary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.secondary};
 `
 
 const EmptyState = styled.div`
@@ -209,7 +215,7 @@ const EmptyState = styled.div`
 
 const EmptyStateText = styled.p`
 	font-size: 16px;
-	color: ${({ theme }) => theme.colors.text.secondary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.secondary};
 	margin: 15px 0 0;
 `
 
@@ -235,11 +241,11 @@ const SubmissionCard = styled.div`
 
 const CardHeader = styled.div`
 	padding: 16px 20px;
-	background: ${({ theme }) => theme.colors.background.light};
+	background: ${({ theme }) => getThemeValue(theme).colors.background.light};
 	font-weight: 600;
 	font-size: 16px;
-	color: ${({ theme }) => theme.colors.text.primary};
-	border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.primary};
+	border-bottom: 1px solid ${({ theme }) => getThemeValue(theme).colors.border.light};
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -257,12 +263,12 @@ const InfoItem = styled.div`
 	display: flex;
 	align-items: center;
 	margin-bottom: 8px;
-	color: ${({ theme }) => theme.colors.text.secondary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.secondary};
 	font-size: 14px;
 
 	svg {
 		margin-right: 10px;
-		color: ${({ theme }) => theme.colors.text.secondary};
+		color: ${({ theme }) => getThemeValue(theme).colors.text.secondary};
 	}
 `
 
@@ -340,14 +346,14 @@ const SubmissionFileLink = styled.div`
 	align-items: center;
 	justify-content: space-between;
 	padding: 8px 12px;
-	background: ${({ theme }) => theme.colors.background.lighter};
+	background: ${({ theme }) => getThemeValue(theme).colors.background.lighter};
 	border-radius: 6px;
 	margin-bottom: 8px;
 
 	a {
 		display: flex;
 		align-items: center;
-		color: ${({ theme }) => theme.colors.primary[500]};
+		color: ${({ theme }) => getThemeValue(theme).colors.primary[500]};
 		text-decoration: none;
 		font-size: 14px;
 
@@ -367,15 +373,15 @@ const DownloadButton = styled.button`
 	background: none;
 	border: none;
 	cursor: pointer;
-	color: ${({ theme }) => theme.colors.text.secondary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.secondary};
 	display: flex;
 	align-items: center;
 	padding: 4px;
 	border-radius: 4px;
 
 	&:hover {
-		background: ${({ theme }) => theme.colors.background.hover};
-		color: ${({ theme }) => theme.colors.primary[500]};
+		background: ${({ theme }) => getThemeValue(theme).colors.background.hover};
+		color: ${({ theme }) => getThemeValue(theme).colors.primary[500]};
 	}
 `
 
@@ -387,19 +393,19 @@ const LoadMoreContainer = styled.div`
 
 const LoadMoreButton = styled.button`
 	background: none;
-	border: 1px solid ${({ theme }) => theme.colors.border.light};
+	border: 1px solid ${({ theme }) => getThemeValue(theme).colors.border.light};
 	border-radius: 8px;
 	padding: 10px 20px;
 	font-size: 15px;
 	font-weight: 500;
-	color: ${({ theme }) => theme.colors.text.primary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.primary};
 	cursor: pointer;
 	display: flex;
 	align-items: center;
 	gap: 8px;
 
 	&:hover {
-		background: ${({ theme }) => theme.colors.background.hover};
+		background: ${({ theme }) => getThemeValue(theme).colors.background.hover};
 	}
 `
 
@@ -430,7 +436,7 @@ const ModalContent = styled.div`
 
 const ModalHeader = styled.div`
 	padding: 20px 25px;
-	border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
+	border-bottom: 1px solid ${({ theme }) => getThemeValue(theme).colors.border.light};
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -444,13 +450,13 @@ const ModalTitle = styled.h2`
 	font-size: 20px;
 	font-weight: 600;
 	margin: 0;
-	color: ${({ theme }) => theme.colors.text.primary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.primary};
 `
 
 const CloseButton = styled.button`
 	background: none;
 	border: none;
-	color: ${({ theme }) => theme.colors.text.secondary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.secondary};
 	cursor: pointer;
 	padding: 5px;
 	display: flex;
@@ -458,7 +464,7 @@ const CloseButton = styled.button`
 	justify-content: center;
 
 	&:hover {
-		color: ${({ theme }) => theme.colors.text.primary};
+		color: ${({ theme }) => getThemeValue(theme).colors.text.primary};
 	}
 `
 
@@ -477,13 +483,13 @@ const InfoGroup = styled.div`
 const InfoLabel = styled.div`
 	font-size: 14px;
 	font-weight: 500;
-	color: ${({ theme }) => theme.colors.text.secondary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.secondary};
 	margin-bottom: 5px;
 `
 
 const InfoValue = styled.div`
 	font-size: 16px;
-	color: ${({ theme }) => theme.colors.text.primary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.primary};
 `
 
 const FileContainer = styled.div`
@@ -494,7 +500,7 @@ const FileHeader = styled.h3`
 	font-size: 16px;
 	font-weight: 600;
 	margin: 0 0 15px;
-	color: ${({ theme }) => theme.colors.text.primary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.primary};
 `
 
 const FileItem = styled.div`
@@ -502,7 +508,7 @@ const FileItem = styled.div`
 	align-items: center;
 	justify-content: space-between;
 	padding: 12px 15px;
-	background: ${({ theme }) => theme.colors.background.lighter};
+	background: ${({ theme }) => getThemeValue(theme).colors.background.lighter};
 	border-radius: 8px;
 	margin-bottom: 10px;
 `
@@ -513,13 +519,13 @@ const FileInfo = styled.div`
 
 	svg {
 		margin-right: 10px;
-		color: ${({ theme }) => theme.colors.primary[500]};
+		color: ${({ theme }) => getThemeValue(theme).colors.primary[500]};
 	}
 `
 
 const FileName = styled.span`
 	font-size: 14px;
-	color: ${({ theme }) => theme.colors.text.primary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.primary};
 `
 
 const FileActions = styled.div`
@@ -531,7 +537,7 @@ const FileButton = styled.a`
 	background: none;
 	border: none;
 	cursor: pointer;
-	color: ${({ theme }) => theme.colors.primary[500]};
+	color: ${({ theme }) => getThemeValue(theme).colors.primary[500]};
 	padding: 5px;
 	border-radius: 4px;
 	display: flex;
@@ -539,14 +545,14 @@ const FileButton = styled.a`
 	text-decoration: none;
 
 	&:hover {
-		background: ${({ theme }) => theme.colors.background.hover};
+		background: ${({ theme }) => getThemeValue(theme).colors.background.hover};
 	}
 `
 
 const FeedbackForm = styled.div`
 	margin-top: 30px;
 	padding-top: 20px;
-	border-top: 1px solid ${({ theme }) => theme.colors.border.light};
+	border-top: 1px solid ${({ theme }) => getThemeValue(theme).colors.border.light};
 `
 
 const FormGroup = styled.div`
@@ -558,7 +564,7 @@ const FormLabel = styled.label`
 	font-size: 14px;
 	font-weight: 500;
 	margin-bottom: 8px;
-	color: ${({ theme }) => theme.colors.text.primary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.primary};
 `
 
 const GradeInput = styled.input`
@@ -566,13 +572,13 @@ const GradeInput = styled.input`
 	max-width: 80px;
 	padding: 10px 12px;
 	border-radius: 6px;
-	border: 1px solid ${({ theme }) => theme.colors.border.light};
+	border: 1px solid ${({ theme }) => getThemeValue(theme).colors.border.light};
 	font-size: 15px;
 
 	&:focus {
 		outline: none;
-		border-color: ${({ theme }) => theme.colors.primary[500]};
-		box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[100]};
+		border-color: ${({ theme }) => getThemeValue(theme).colors.primary[500]};
+		box-shadow: 0 0 0 2px ${({ theme }) => getThemeValue(theme).colors.primary[100]};
 	}
 `
 
@@ -580,15 +586,15 @@ const FeedbackTextarea = styled.textarea`
 	width: 100%;
 	padding: 12px 15px;
 	border-radius: 8px;
-	border: 1px solid ${({ theme }) => theme.colors.border.light};
+	border: 1px solid ${({ theme }) => getThemeValue(theme).colors.border.light};
 	font-size: 15px;
 	min-height: 120px;
 	resize: vertical;
 
 	&:focus {
 		outline: none;
-		border-color: ${({ theme }) => theme.colors.primary[500]};
-		box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[100]};
+		border-color: ${({ theme }) => getThemeValue(theme).colors.primary[500]};
+		box-shadow: 0 0 0 2px ${({ theme }) => getThemeValue(theme).colors.primary[100]};
 	}
 `
 
@@ -602,10 +608,18 @@ const StatusOption = styled.button<{ $isSelected: boolean; $status: string }>`
 	background: ${({ $isSelected, $status, theme }) =>
 		$isSelected ? ($status === 'accepted' ? '#e8f5e9' : '#ffebee') : 'white'};
 	color: ${({ $isSelected, $status, theme }) =>
-		$isSelected ? ($status === 'accepted' ? '#388e3c' : '#d32f2f') : theme.colors.text.secondary};
+		$isSelected
+			? $status === 'accepted'
+				? '#388e3c'
+				: '#d32f2f'
+			: getThemeValue(theme).colors.text.secondary};
 	border: 1px solid
 		${({ $isSelected, $status, theme }) =>
-			$isSelected ? ($status === 'accepted' ? '#388e3c' : '#d32f2f') : theme.colors.border.light};
+			$isSelected
+				? $status === 'accepted'
+					? '#388e3c'
+					: '#d32f2f'
+				: getThemeValue(theme).colors.border.light};
 	padding: 8px 15px;
 	border-radius: 6px;
 	font-size: 14px;
@@ -631,22 +645,22 @@ const ButtonGroup = styled.div`
 
 const CancelButton = styled.button`
 	background: none;
-	border: 1px solid ${({ theme }) => theme.colors.border.light};
+	border: 1px solid ${({ theme }) => getThemeValue(theme).colors.border.light};
 	padding: 10px 20px;
 	border-radius: 8px;
 	font-size: 15px;
 	font-weight: 500;
-	color: ${({ theme }) => theme.colors.text.secondary};
+	color: ${({ theme }) => getThemeValue(theme).colors.text.secondary};
 	cursor: pointer;
 
 	&:hover {
-		background: ${({ theme }) => theme.colors.background.hover};
-		color: ${({ theme }) => theme.colors.text.primary};
+		background: ${({ theme }) => getThemeValue(theme).colors.background.hover};
+		color: ${({ theme }) => getThemeValue(theme).colors.text.primary};
 	}
 `
 
 const SaveButton = styled.button`
-	background: ${({ theme }) => theme.colors.primary[500]};
+	background: ${({ theme }) => getThemeValue(theme).colors.primary[500]};
 	border: none;
 	padding: 10px 20px;
 	border-radius: 8px;
@@ -659,7 +673,7 @@ const SaveButton = styled.button`
 	gap: 8px;
 
 	&:hover {
-		background: ${({ theme }) => theme.colors.primary[700]};
+		background: ${({ theme }) => getThemeValue(theme).colors.primary[700]};
 	}
 
 	&:disabled {
@@ -930,44 +944,33 @@ const AdminSubmissions: React.FC = () => {
 
 			// Transform data to ensure fileurl is always an array
 			const transformedData = data.map(item => {
-				// First extract the assignment and student from the response
-				const { assignment: assignmentData, student: studentData, ...rest } = item
-
 				// Create the properly formatted submission object
 				const submission: Submission = {
-					...rest,
+					...item,
 					assignmentid: item.assignmentid,
 					studentid: item.studentid,
 					fileurl: Array.isArray(item.fileurl) ? item.fileurl : item.fileurl ? [item.fileurl] : [],
-					// Format the nested objects correctly
-					assignment: assignmentData
-						? {
-								id: assignmentData.id,
-								title: assignmentData.title,
-								classid: assignmentData.classid,
-								quarter_id: assignmentData.quarter_id,
-								createdby: assignmentData.createdby,
-								class: assignmentData.class
-									? {
-											id: assignmentData.class.id,
-											classname: assignmentData.class.classname,
-									  }
-									: undefined,
-								quarter: assignmentData.quarter
-									? {
-											id: assignmentData.quarter.id,
-											name: assignmentData.quarter.name,
-									  }
-									: undefined,
-						  }
-						: undefined,
-					student: studentData
-						? {
-								id: studentData.id,
-								fullName: studentData.fullName,
-								email: studentData.email,
-						  }
-						: undefined,
+					// Format the nested objects correctly, using type assertion to fix TypeScript errors
+					assignment: item.assignment && {
+						id: (item.assignment as any).id,
+						title: (item.assignment as any).title,
+						classid: (item.assignment as any).classid,
+						quarter_id: (item.assignment as any).quarter_id,
+						createdby: (item.assignment as any).createdby,
+						class: (item.assignment as any).class && {
+							id: (item.assignment as any).class.id,
+							classname: (item.assignment as any).class.classname,
+						},
+						quarter: (item.assignment as any).quarter && {
+							id: (item.assignment as any).quarter.id,
+							name: (item.assignment as any).quarter.name,
+						},
+					},
+					student: item.student && {
+						id: (item.student as any).id,
+						fullName: (item.student as any).fullName,
+						email: (item.student as any).email,
+					},
 				}
 
 				return submission
