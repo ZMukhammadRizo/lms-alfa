@@ -5,8 +5,12 @@
  * that can be reused throughout the application.
  */
 
+import { checkUserPermission, getCurrentUserPermissions } from './permissionUtils'
+
 /**
  * Check if the current user has a specific permission
+ * This is a synchronous version that checks only local storage
+ * For a more comprehensive check that includes permission inheritance, use checkUserPermission
  *
  * @param permissionName The name of the permission to check
  * @returns true if the user has the permission, false otherwise
@@ -19,6 +23,11 @@ export const hasPermission = (permissionName: string): boolean => {
 
 	try {
 		const parsedInfo = JSON.parse(userInfo)
+
+		// SuperAdmin role always has all permissions
+		if (hasRole('SuperAdmin')) {
+			return true
+		}
 
 		// Check if permissions array exists and contains the permission
 		if (parsedInfo.permissions && Array.isArray(parsedInfo.permissions)) {
@@ -85,6 +94,12 @@ export const isRoleManager = (): boolean => {
 	try {
 		const parsedInfo = JSON.parse(userInfo)
 
+		// Check for RoleManager role first
+		if (hasRole('RoleManager')) {
+			return true
+		}
+
+		// Fallback to older isRoleManager flag
 		if (parsedInfo.isRoleManager) {
 			return parsedInfo.isRoleManager || false
 		}
@@ -243,4 +258,34 @@ export const getUserParentRole = (): string | null => {
 		console.error('Error parsing user info:', error)
 		return null
 	}
+}
+
+/**
+ * Wrapper for the async checkUserPermission function from permissionUtils.
+ * Can be used in place of hasPermission when permission inheritance is needed.
+ *
+ * @param permissionName Permission to check
+ * @param callback Function to call if permission granted
+ * @param fallback Optional function to call if permission denied
+ */
+export const withPermission = async (
+	permissionName: string,
+	callback: () => void,
+	fallback?: () => void
+): Promise<void> => {
+	const hasPermission = await checkUserPermission(permissionName)
+	if (hasPermission) {
+		callback()
+	} else if (fallback) {
+		fallback()
+	}
+}
+
+/**
+ * Get all permissions for the current user
+ *
+ * @returns Array of permission names
+ */
+export const getUserPermissions = async (): Promise<string[]> => {
+	return await getCurrentUserPermissions()
 }

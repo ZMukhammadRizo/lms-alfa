@@ -6,6 +6,7 @@ import {
 	Score,
 	updateScore,
 } from '../services/scoresService'
+import { supabase } from '../services/supabaseClient'
 
 export interface Student {
 	id: string
@@ -97,6 +98,17 @@ const useScoresStore = create<ScoresState>((set, get) => ({
 			// Validate score data
 			if (!score.student_id || !score.lesson_id) {
 				throw new Error('Missing required fields in score: student_id and lesson_id are required')
+			}
+
+			// Add teacher_id if not present in the score object
+			if (!score.teacher_id) {
+				// Get current user
+				const {
+					data: { user },
+				} = await supabase.auth.getUser()
+				if (user) {
+					score.teacher_id = user.id
+				}
 			}
 
 			// First update the local state optimistically

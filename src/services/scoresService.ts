@@ -7,6 +7,7 @@ export interface Score {
 	grade: number | null
 	attendance: string
 	comment: string | null
+	teacher_id?: string | null
 	created_at?: string
 	updated_at?: string
 }
@@ -101,6 +102,7 @@ export const updateScore = async (score: Score): Promise<Score> => {
 					grade: score.grade,
 					attendance: score.attendance,
 					comment: score.comment,
+					teacher_id: score.teacher_id,
 					updated_at: new Date().toISOString(),
 				},
 				{

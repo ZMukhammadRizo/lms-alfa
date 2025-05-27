@@ -21,10 +21,11 @@ import { useAuth } from '../../contexts/AuthContext'
 // Interface definitions
 interface Submission {
 	id: string
-	fileurl: string
+	fileurl: string[]
 	submittedat: string
 	grade: number | null
 	feedback: string | null
+	status: string | null
 	assignment: {
 		id: string
 		title: string
@@ -78,6 +79,7 @@ const TeacherSubmissions = () => {
 	const [feedbackInput, setFeedbackInput] = useState('')
 	const [currentPage, setCurrentPage] = useState(1)
 	const [hasMore, setHasMore] = useState(true)
+	const [submissionStatus, setSubmissionStatus] = useState<string | null>(null)
 
 	// Fetch submissions and initial data on component mount
 	useEffect(() => {
@@ -142,15 +144,32 @@ const TeacherSubmissions = () => {
 		}
 	}
 
-	// Fetch teacher's classes
+	// Fetch teacher's classes from the classteachers table
 	const fetchTeacherClasses = async () => {
 		if (!user) return
 
 		try {
+			// First fetch the classes this teacher teaches from classteachers table
+			const { data: classTeacherData, error: classTeacherError } = await supabase
+				.from('classteachers')
+				.select('id, classid, subjectid')
+				.eq('teacherid', user.id)
+
+			if (classTeacherError) throw classTeacherError
+
+			if (!classTeacherData || classTeacherData.length === 0) {
+				setClasses([])
+				return
+			}
+
+			// Extract class IDs
+			const classIds = classTeacherData.map(item => item.classid)
+
+			// Then fetch the class details
 			const { data, error } = await supabase
 				.from('classes')
 				.select('id, classname')
-				.eq('teacherid', user.id)
+				.in('id', classIds)
 
 			if (error) throw error
 
@@ -178,59 +197,99 @@ const TeacherSubmissions = () => {
 		}
 	}
 
-	// Fetch all submissions for this teacher
+	// Fetch all submissions for this teacher based on their classes
 	const fetchAllSubmissions = async () => {
 		if (!user) return
 
 		setIsLoading(true)
 		try {
+			// First get the classes this teacher teaches
+			const { data: classTeacherData, error: classTeacherError } = await supabase
+				.from('classteachers')
+				.select('classid')
+				.eq('teacherid', user.id)
+
+			if (classTeacherError) throw classTeacherError
+
+			if (!classTeacherData || classTeacherData.length === 0) {
+				setAllSubmissions([])
+				setSubmissions([])
+				setFilteredSubmissions([])
+				setIsLoading(false)
+				return
+			}
+
+			// Extract class IDs
+			const classIds = classTeacherData.map(item => item.classid)
+
+			// Get assignments for these classes
 			const { data: assignments, error: assignmentError } = await supabase
 				.from('assignments')
 				.select('id')
-				.eq('createdby', user.id)
+				.in('classid', classIds)
 
-		const assignmentIds = assignments?.map(a => a.id) || [];
+			if (assignmentError) throw assignmentError
 
-const { data, error } = await supabase
-  .from('submissions')
-  .select(`
-    id,
-    fileurl,
-    submittedat,
-    grade,
-    feedback,
-    assignment:assignmentid (
-      id,
-      title,
-      classid,
-      quarter_id,
-      createdby,
-      class:classes!assignments_classid_fkey (
-        id,
-        classname
-      ),
-      quarter:quarters!assignments_quarter_id_fkey (
-        id,
-        name
-      )
-    ),
-    student:studentid (
-      id,
-      fullName
-    )
-  `)
-  .in('assignmentid', assignmentIds)
-  .order('submittedat', { ascending: false });
+			if (!assignments || assignments.length === 0) {
+				setAllSubmissions([])
+				setSubmissions([])
+				setFilteredSubmissions([])
+				setIsLoading(false)
+				return
+			}
+
+			const assignmentIds = assignments.map(a => a.id)
+
+			// Fetch submissions for these assignments
+			const { data, error } = await supabase
+				.from('submissions')
+				.select(
+					`
+					id,
+					fileurl,
+					submittedat,
+					grade,
+					feedback,
+					status,
+					assignment:assignmentid (
+						id,
+						title,
+						classid,
+						quarter_id,
+						class:classid (
+							id,
+							classname
+						),
+						quarter:quarter_id (
+							id,
+							name
+						),
+						createdby
+					),
+					student:studentid (
+						id,
+						fullName
+					)
+				`
+				)
+				.in('assignmentid', assignmentIds)
+				.order('submittedat', { ascending: false })
 
 			if (error) throw error
 
-			setAllSubmissions(data || [])
-			setSubmissions(data || [])
-			setFilteredSubmissions(data || [])
+			// Transform data to ensure fileurl is always an array
+			const transformedData = data.map(item => ({
+				...item,
+				fileurl: Array.isArray(item.fileurl) ? item.fileurl : item.fileurl ? [item.fileurl] : [],
+			}))
+
+			setAllSubmissions(transformedData)
+			setSubmissions(transformedData)
+			setFilteredSubmissions(transformedData)
+			setIsLoading(false)
 		} catch (error) {
 			console.error('Error fetching submissions:', error)
 			toast.error('Failed to load submissions')
-		} finally {
 			setIsLoading(false)
 		}
 	}
@@ -257,6 +316,7 @@ const { data, error } = await supabase
 		setSelectedSubmission(submission)
 		setGradeInput(submission.grade || '')
 		setFeedbackInput(submission.feedback || '')
+		setSubmissionStatus(submission.status)
 		setShowDetailModal(true)
 	}
 
@@ -275,39 +335,43 @@ const { data, error } = await supabase
 				.from('submissions')
 				.update({
 					grade: gradeInput === '' ? null : gradeInput,
-					feedback: feedbackInput.trim() === '' ? null : feedbackInput,
+					feedback: feedbackInput,
+					status: submissionStatus,
 				})
 				.eq('id', selectedSubmission.id)
 
 			if (error) throw error
 
-			// Update local states (all variants of submissions)
+			// Update the submission in the local state
 			const updatedSubmission = {
 				...selectedSubmission,
 				grade: gradeInput === '' ? null : Number(gradeInput),
-				feedback: feedbackInput.trim() === '' ? null : feedbackInput,
+				feedback: feedbackInput,
+				status: submissionStatus,
 			}
 
-			// Helper function to update submissions in state
+			setSelectedSubmission(updatedSubmission)
+
+			// Update all submission states
 			const updateSubmissionsState = (prevSubmissions: Submission[]) => {
-				return prevSubmissions.map(sub => {
-					if (sub.id === selectedSubmission.id) {
-						return updatedSubmission
-					}
-					return sub
-				})
+				return prevSubmissions.map(submission =>
+					submission.id === selectedSubmission.id ? updatedSubmission : submission
+				)
 			}
 
 			setAllSubmissions(updateSubmissionsState)
 			setSubmissions(updateSubmissionsState)
 			setFilteredSubmissions(updateSubmissionsState)
-			setDisplayedSubmissions(updateSubmissionsState)
+			setDisplayedSubmissions(
+				displayedSubmissions.map(submission =>
+					submission.id === selectedSubmission.id ? updatedSubmission : submission
+				)
+			)
 
-			toast.success('Feedback and grade updated successfully')
-			handleCloseDetail()
+			toast.success('Feedback saved successfully!')
 		} catch (error) {
-			console.error('Error updating submission:', error)
-			toast.error('Failed to update feedback and grade')
+			console.error('Error saving feedback:', error)
+			toast.error('Failed to save feedback')
 		}
 	}
 
@@ -323,6 +387,57 @@ const { data, error } = await supabase
 		const numValue = parseInt(value, 10)
 		if (!isNaN(numValue) && numValue >= 1 && numValue <= 10) {
 			setGradeInput(numValue)
+		}
+	}
+
+	// Helper function to download a file
+	const downloadFile = (fileUrl: string) => {
+		// Make sure we have a valid URL
+		if (!fileUrl) return
+
+		try {
+			const link = document.createElement('a')
+			link.href = fileUrl
+			link.target = '_blank'
+			link.download = getFileNameFromUrl(fileUrl)
+			document.body.appendChild(link)
+			link.click()
+			document.body.removeChild(link)
+		} catch (error) {
+			console.error('Error downloading file:', error)
+			toast.error('Failed to download file')
+		}
+	}
+
+	// Helper to extract file name from URL
+	const getFileNameFromUrl = (url: string): string => {
+		try {
+			const urlParts = url.split('/')
+			let fileName = urlParts[urlParts.length - 1]
+			fileName = fileName.split('?')[0]
+
+			if (!fileName || fileName.length < 3) {
+				return 'Submission File'
+			}
+
+			// Try to decode and clean up the filename
+			let decodedName = decodeURIComponent(fileName)
+
+			// Remove UUID pattern if present
+			if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[_-]/.test(decodedName)) {
+				decodedName = decodedName.replace(
+					/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[_-]/,
+					''
+				)
+			} else if (
+				/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(decodedName)
+			) {
+				return 'Submission File'
+			}
+
+			return decodedName
+		} catch (e) {
+			return 'Submission File'
 		}
 	}
 
@@ -459,7 +574,7 @@ const { data, error } = await supabase
 											</InfoItem>
 											<InfoItem>
 												<FiCalendar />
-												<InfoText>{submission.assignment.quarter.name}</InfoText>
+												<InfoText>{submission.assignment.quarter?.name || 'No Quarter'}</InfoText>
 											</InfoItem>
 											<InfoItem>
 												<FiCalendar />
@@ -467,14 +582,27 @@ const { data, error } = await supabase
 											</InfoItem>
 										</CardInfo>
 										<CardActions>
-											{submission.fileurl && (
-												<ActionLink
-													href={submission.fileurl}
-													target='_blank'
-													rel='noopener noreferrer'
-												>
-													<FiDownload /> Download File
-												</ActionLink>
+											{submission.fileurl && submission.fileurl.length > 0 && (
+												<SubmissionFileSection>
+													{submission.fileurl.map((url, index) => (
+														<SubmissionFileLink key={index}>
+															<a href={url} target='_blank' rel='noopener noreferrer'>
+																<FiExternalLink size={14} />
+																<span>
+																	View File {submission.fileurl.length > 1 ? `${index + 1}` : ''}
+																</span>
+															</a>
+															<DownloadButton
+																onClick={e => {
+																	e.stopPropagation()
+																	downloadFile(url)
+																}}
+															>
+																<FiDownload size={14} />
+															</DownloadButton>
+														</SubmissionFileLink>
+													))}
+												</SubmissionFileSection>
 											)}
 										</CardActions>
 										<FeedbackSection>
@@ -482,6 +610,11 @@ const { data, error } = await supabase
 												<GradeBadge>Grade: {submission.grade}/10</GradeBadge>
 											) : (
 												<PendingBadge>Not Graded</PendingBadge>
+											)}
+											{submission.status && (
+												<StatusBadge $status={submission.status}>
+													{submission.status === 'accepted' ? 'Accepted' : 'Rejected'}
+												</StatusBadge>
 											)}
 											{submission.feedback && (
 												<FeedbackIndicator>
@@ -526,7 +659,9 @@ const { data, error } = await supabase
 								</DetailItem>
 								<DetailItem>
 									<DetailLabel>Quarter:</DetailLabel>
-									<DetailValue>{selectedSubmission.assignment.quarter.name}</DetailValue>
+									<DetailValue>
+										{selectedSubmission.assignment.quarter?.name || 'No Quarter'}
+									</DetailValue>
 								</DetailItem>
 								<DetailItem>
 									<DetailLabel>Submitted On:</DetailLabel>
@@ -535,16 +670,32 @@ const { data, error } = await supabase
 								<DetailItem>
 									<DetailLabel>File:</DetailLabel>
 									<DetailValue>
-										{selectedSubmission.fileurl ? (
-											<FileLink
-												href={selectedSubmission.fileurl}
-												target='_blank'
-												rel='noopener noreferrer'
-											>
-												View Submission <FiExternalLink />
-											</FileLink>
+										{selectedSubmission.fileurl && selectedSubmission.fileurl.length > 0 ? (
+											<FileContainer>
+												<FileListTitle>
+													Submitted Files{' '}
+													{selectedSubmission.fileurl.length > 1
+														? `(${selectedSubmission.fileurl.length})`
+														: ''}
+													:
+												</FileListTitle>
+												{selectedSubmission.fileurl.map((url, index) => (
+													<FileLink key={index}>
+														<a href={url} target='_blank' rel='noopener noreferrer'>
+															<FiFileText size={16} />
+															<span>
+																View File{' '}
+																{selectedSubmission.fileurl.length > 1 ? `${index + 1}` : ''}
+															</span>
+														</a>
+														<DownloadButton onClick={() => downloadFile(url)}>
+															<FiDownload size={16} />
+														</DownloadButton>
+													</FileLink>
+												))}
+											</FileContainer>
 										) : (
-											'No file attached'
+											<NoFileMessage>No file submitted</NoFileMessage>
 										)}
 									</DetailValue>
 								</DetailItem>
@@ -552,6 +703,33 @@ const { data, error } = await supabase
 
 							<GradeFeedbackSection>
 								<SectionTitle>Grade & Feedback</SectionTitle>
+
+								<StatusSelection>
+									<StatusLabel>Submission Status:</StatusLabel>
+									<StatusOptions>
+										<StatusOption
+											$isActive={submissionStatus === null}
+											onClick={() => setSubmissionStatus(null)}
+										>
+											Pending Review
+										</StatusOption>
+										<StatusOption
+											$isActive={submissionStatus === 'accepted'}
+											$status='accepted'
+											onClick={() => setSubmissionStatus('accepted')}
+										>
+											Accept
+										</StatusOption>
+										<StatusOption
+											$isActive={submissionStatus === 'rejected'}
+											$status='rejected'
+											onClick={() => setSubmissionStatus('rejected')}
+										>
+											Reject
+										</StatusOption>
+									</StatusOptions>
+								</StatusSelection>
+
 								<GradeInput>
 									<GradeLabel>Grade (1-10):</GradeLabel>
 									<GradeNumberInput
@@ -879,16 +1057,31 @@ const CardActions = styled.div`
 	margin-bottom: 1rem;
 `
 
-const ActionLink = styled.a`
+const SubmissionFileSection = styled.div`
+	display: flex;
+	gap: 0.5rem;
+`
+
+const SubmissionFileLink = styled.div`
 	display: flex;
 	align-items: center;
 	gap: 0.3rem;
 	color: ${({ theme }) => theme.colors.primary[600]};
 	font-size: 0.9rem;
 	text-decoration: none;
+`
+
+const DownloadButton = styled.button`
+	background: none;
+	border: none;
+	font-size: 1rem;
+	color: ${({ theme }) => theme.colors.primary[600]};
+	cursor: pointer;
+	padding: 0;
+	line-height: 1;
 
 	&:hover {
-		text-decoration: underline;
+		color: ${({ theme }) => theme.colors.primary[700]};
 	}
 `
 
@@ -1004,16 +1197,32 @@ const DetailValue = styled.div`
 	color: ${({ theme }) => theme.colors.text.primary};
 `
 
-const FileLink = styled.a`
+const FileContainer = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+`
+
+const FileListTitle = styled.h3`
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: ${({ theme }) => theme.colors.text.primary};
+	padding-bottom: 0.5rem;
+	border-bottom: 1px solid ${({ theme }) => theme.colors.border.light};
+`
+
+const FileLink = styled.div`
 	display: flex;
 	align-items: center;
 	gap: 0.3rem;
 	color: ${({ theme }) => theme.colors.primary[600]};
 	text-decoration: none;
+`
 
-	&:hover {
-		text-decoration: underline;
-	}
+const NoFileMessage = styled.div`
+	font-size: 1rem;
+	color: ${({ theme }) => theme.colors.text.secondary};
+	text-align: center;
 `
 
 const GradeFeedbackSection = styled.div`
@@ -1104,6 +1313,97 @@ const SaveButton = styled.button`
 	&:hover {
 		background: ${({ theme }) => theme.colors.primary[700]};
 	}
+`
+
+const StatusSelection = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin-bottom: 1rem;
+`
+
+const StatusLabel = styled.label`
+	font-size: 0.9rem;
+	color: ${({ theme }) => theme.colors.text.secondary};
+`
+
+const StatusOptions = styled.div`
+	display: flex;
+	gap: 0.5rem;
+`
+
+interface StatusOptionProps {
+	$isActive: boolean
+	$status?: string
+}
+
+const StatusOption = styled.button<StatusOptionProps>`
+	padding: 0.5rem 1rem;
+	border-radius: ${({ theme }) => theme.borderRadius.md};
+	border: 1px solid
+		${({ $isActive, $status, theme }) => {
+			if ($isActive) {
+				if ($status === 'accepted') return theme.colors.success[500]
+				if ($status === 'rejected') return theme.colors.danger[500]
+				return theme.colors.primary[500]
+			}
+			return theme.colors.border.light
+		}};
+	background: ${({ $isActive, $status, theme }) => {
+		if ($isActive) {
+			if ($status === 'accepted') return theme.colors.success[50]
+			if ($status === 'rejected') return theme.colors.danger[50]
+			return theme.colors.primary[50]
+		}
+		return theme.colors.background.secondary
+	}};
+	color: ${({ $isActive, $status, theme }) => {
+		if ($isActive) {
+			if ($status === 'accepted') return theme.colors.success[700]
+			if ($status === 'rejected') return theme.colors.danger[700]
+			return theme.colors.primary[700]
+		}
+		return theme.colors.text.primary
+	}};
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: all 0.2s;
+
+	&:hover {
+		background: ${({ $status, theme }) => {
+			if ($status === 'accepted') return theme.colors.success[100]
+			if ($status === 'rejected') return theme.colors.danger[100]
+			return theme.colors.background.hover
+		}};
+		border-color: ${({ $status, theme }) => {
+			if ($status === 'accepted') return theme.colors.success[300]
+			if ($status === 'rejected') return theme.colors.danger[300]
+			return theme.colors.primary[300]
+		}};
+	}
+`
+
+interface StatusBadgeProps {
+	$status: string
+}
+
+const StatusBadge = styled.div<StatusBadgeProps>`
+	padding: 0.3rem 0.6rem;
+	background: ${({ $status, theme }) =>
+		$status === 'accepted' ? theme.colors.success[50] : theme.colors.danger[50]};
+	color: ${({ $status, theme }) =>
+		$status === 'accepted' ? theme.colors.success[700] : theme.colors.danger[700]};
+	border-radius: ${({ theme }) => theme.borderRadius.sm};
+	font-size: 0.8rem;
+	font-weight: 600;
+	border: 1px solid
+		${({ $status, theme }) =>
+			$status === 'accepted' ? theme.colors.success[300] : theme.colors.danger[300]};
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	box-shadow: 0 1px 2px
+		${({ $status, theme }) =>
+			$status === 'accepted' ? 'rgba(0, 128, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)'};
 `
 
 export default TeacherSubmissions

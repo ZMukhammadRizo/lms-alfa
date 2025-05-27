@@ -35,6 +35,7 @@ export const adminMenu: MenuItem[] = [
 	{ path: '/admin/subjects', icon: <FiBook />, label: 'Subjects' },
 	{ path: '/admin/classes', icon: <FiLayers />, label: 'Classes' },
 	{ path: '/admin/assignments', icon: <FiFileText />, label: 'Assignments' },
+	{ path: '/admin/submissions', icon: <FiClipboard />, label: 'Submissions' },
 	{ path: '/admin/grades', icon: <FiClipboard />, label: 'Grades' },
 	{ path: '/admin/timetables', icon: <FiCalendar />, label: 'Timetables' },
 ]
@@ -63,7 +64,11 @@ export const getModuleLeaderMenu = (
 ): MenuItem[] => [
 	{
 		path: `/${
-			parentRole !== 'Unknown' ? parentRole?.toLowerCase() : fallbackRole.toLowerCase()
+			parentRole && parentRole !== 'Unknown'
+				? parentRole.toLowerCase()
+				: typeof fallbackRole === 'string'
+				? fallbackRole.toLowerCase()
+				: 'teacher'
 		}/subjects`,
 		icon: <FiBookOpen />,
 		label: 'Manage Subjects',
@@ -99,7 +104,11 @@ export const parentMenu: MenuItem[] = [
 export const getManagerMenu = (parentRole: string | null, fallbackRole: string): MenuItem[] => [
 	{
 		path: `/${
-			parentRole !== 'Unknown' ? parentRole?.toLowerCase() : fallbackRole.toLowerCase()
+			parentRole && parentRole !== 'Unknown'
+				? parentRole.toLowerCase()
+				: typeof fallbackRole === 'string'
+				? fallbackRole.toLowerCase()
+				: 'admin'
 		}/roles`,
 		icon: <FiShield />,
 		label: 'Role Management',

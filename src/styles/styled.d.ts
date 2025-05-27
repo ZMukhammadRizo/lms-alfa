@@ -134,4 +134,4 @@ declare module 'styled-components' {
       navButton?: number;
     };
   }
-} 
+}

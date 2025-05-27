@@ -35,7 +35,7 @@ export const GlobalStyles = createGlobalStyle<{ theme: Theme }>`
   }
 
   /* Global transitions for smooth theme switching */
-  a, button, input, select, textarea, 
+  a, button, input, select, textarea,
   div, span, p, h1, h2, h3, h4, h5, h6,
   section, article, nav, footer {
     transition: background-color 0.3s ease,
@@ -87,7 +87,7 @@ export const GlobalStyles = createGlobalStyle<{ theme: Theme }>`
     border: 1px solid ${({ theme }) => theme.colors.border.input};
     border-radius: ${({ theme }) => theme.borders.radius.md};
     padding: 0.5rem 0.75rem;
-    
+
     &:focus {
       outline: none;
       border-color: ${({ theme }) => theme.colors.border.focus};
@@ -140,7 +140,7 @@ export const GlobalStyles = createGlobalStyle<{ theme: Theme }>`
     border-radius: ${({ theme }) => theme.borders.radius.md};
     overflow-x: auto;
     margin-bottom: 1rem;
-    
+
     code {
       background-color: transparent;
       padding: 0;
@@ -180,7 +180,7 @@ export const GlobalStyles = createGlobalStyle<{ theme: Theme }>`
     border: 1px solid ${({ theme }) => theme.colors.border.light};
     overflow: hidden;
     transition: box-shadow 0.3s ease, transform 0.3s ease;
-    
+
     &:hover {
       box-shadow: ${({ theme }) => theme.colors.shadow.md};
     }
@@ -242,4 +242,4 @@ export const GlobalStyles = createGlobalStyle<{ theme: Theme }>`
       text-decoration: underline;
     }
   }
-`; 
+`;

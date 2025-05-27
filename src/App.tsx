@@ -27,6 +27,7 @@ import Roles from './pages/admin/Roles'
 import Settings from './pages/admin/Settings'
 import SubjectGroups from './pages/admin/SubjectGroups'
 import Subjects from './pages/admin/Subjects'
+import AdminSubmissions from './pages/admin/Submissions'
 import Timetables from './pages/admin/Timetables'
 import Users from './pages/admin/Users'
 import Debug from './pages/auth/Debug'
@@ -154,6 +155,7 @@ function AppContent() {
 							<Route path='subjects/:subjectId/lessons' element={<LessonsManagePage />} />
 							<Route path='subjects' element={<SubjectsManagePage />} />
 							<Route path='lessons/:id' element={<LessonDetail />} />
+							<Route path='submissions' element={<AdminSubmissions />} />
 						</Route>
 					</Route>
 

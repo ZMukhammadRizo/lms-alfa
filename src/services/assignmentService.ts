@@ -7,18 +7,18 @@ import { fetchParentChildren } from './timetableService' // Adjust path if neces
 export interface Assignment {
 	id: string
 	title: string
-	description: string
-	due_date: string
-	subjectid?: string
-	subject: string
-	status: string
-	created_at: string
-	updated_at: string
+	description?: string
+	due_date?: string
+	subject?: string
+	subject_id?: string
+	status?: 'pending' | 'completed' | 'late' | 'overdue' | 'upcoming'
+	created_at?: string
+	updated_at?: string
 	grade?: number | null
 	submission_date?: string | null
 	attachments?: AttachmentFile[]
 	feedback_provided?: boolean
-	file_url?: string | null
+	file_url?: Array<{ name: string; url: string }> | string | null
 	classid?: string
 	className?: string
 	studentId?: string
@@ -102,7 +102,7 @@ export async function getAssignmentsForSingleStudent(studentId: string): Promise
 				description: assignment.description || '',
 				due_date: assignment.duedate,
 				subject: assignment.subject || 'General',
-				subjectid: assignment.subjectid,
+				subject_id: assignment.subject_id,
 				status: calculatedStatus,
 				created_at: assignment.created_at,
 				updated_at: assignment.updated_at,

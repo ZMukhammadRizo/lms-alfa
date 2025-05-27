@@ -14,12 +14,14 @@ import {
 	FiUsers,
 	FiX,
 } from 'react-icons/fi'
+import { toast } from 'react-toastify'
 import styled from 'styled-components'
 import UserForm from '../../components/admin/UserForm'
 import supabase, { supabaseAdmin } from '../../config/supabaseClient'
+import { useAuth } from '../../contexts/AuthContext'
 import { User as UserType } from '../../types/User'
 import { formatDateToLocal } from '../../utils/formatDate'
-import { toast } from 'react-toastify'
+import { canCreateUserWithRole } from '../../utils/permissions'
 
 // User interface
 interface User extends UserType {
@@ -29,6 +31,14 @@ interface User extends UserType {
 	name?: string // Keep for backwards compatibility
 	email: string
 	role: string
+	roleObj?: {
+		name: string
+		parent_role?: string
+		parent?: {
+			name: string
+		}
+	}
+	effectiveRole?: string // The parent role or main role for grouping purposes
 	status: 'active' | 'inactive'
 	lastLogin: string
 	createdAt: string
@@ -61,27 +71,53 @@ const Users: React.FC = () => {
 	const [isDeleting, setIsDeleting] = useState(false)
 	const [deleteError, setDeleteError] = useState<string | null>(null)
 
+	// Get current user and permissions from context
+	const { user } = useAuth()
+
+	// Function to get effective role for a user (considering parent roles)
+	const getEffectiveRole = (user: User): UserRole => {
+		// If user has a roleObj with parent information
+		if (user.roleObj?.parent?.name) {
+			// Return parent role name if it's one of our primary roles
+			const parentName = user.roleObj.parent.name
+			if (['Admin', 'Teacher', 'Student', 'Parent'].includes(parentName)) {
+				return parentName as UserRole
+			}
+		}
+
+		// If no parent or parent is not a primary role, use the user's own role
+		return user.role as UserRole
+	}
+
+	// Count users by effective role (including parent roles)
+	const countUsersByRole = (role: UserRole): number => {
+		return users.filter(user => {
+			const effectiveRole = user.effectiveRole || getEffectiveRole(user)
+			return effectiveRole === role
+		}).length
+	}
+
 	// Roles with icons for tabs
 	const roles: { role: UserRole; icon: React.ReactNode; count: number }[] = [
 		{
 			role: 'Admin',
 			icon: <FiUserCheck />,
-			count: users.filter(user => user.role === 'Admin').length,
+			count: countUsersByRole('Admin'),
 		},
 		{
 			role: 'Teacher',
 			icon: <FiUser />,
-			count: users.filter(user => user.role === 'Teacher').length,
+			count: countUsersByRole('Teacher'),
 		},
 		{
 			role: 'Student',
 			icon: <FiUsers />,
-			count: users.filter(user => user.role === 'Student').length,
+			count: countUsersByRole('Student'),
 		},
 		{
 			role: 'Parent',
 			icon: <FiHome />,
-			count: users.filter(user => user.role === 'Parent').length,
+			count: countUsersByRole('Parent'),
 		},
 	]
 	// User deletion helper function
@@ -99,91 +135,98 @@ const Users: React.FC = () => {
 	// Add this new function before the useEffect that calls fetchUsers
 	const inspectDatabaseSchema = async () => {
 		try {
-			console.log('Inspecting database schema...');
-			
+			console.log('Inspecting database schema...')
+
 			// First, get a sample record to understand fields
 			const { data: sampleData, error: sampleError } = await supabase
 				.from('users')
 				.select('*')
-				.limit(1);
-				
+				.limit(1)
+
 			if (sampleError) {
-				console.error('Error fetching sample data:', sampleError);
+				console.error('Error fetching sample data:', sampleError)
 			} else if (sampleData && sampleData.length > 0) {
-				console.log('Sample user data structure:', sampleData[0]);
-				console.log('Available fields:', Object.keys(sampleData[0]));
+				console.log('Sample user data structure:', sampleData[0])
+				console.log('Available fields:', Object.keys(sampleData[0]))
 			} else {
-				console.log('No sample data found');
+				console.log('No sample data found')
 			}
-			
+
 			// Try to get actual schema using system tables if accessible
 			try {
 				const { data: schemaData, error: schemaError } = await supabase.rpc('get_schema_info', {
-					table_name: 'users'
-				});
-				
+					table_name: 'users',
+				})
+
 				if (schemaError) {
-					console.error('Error fetching schema:', schemaError);
+					console.error('Error fetching schema:', schemaError)
 				} else {
-					console.log('Table schema information:', schemaData);
+					console.log('Table schema information:', schemaData)
 				}
 			} catch (e) {
-				console.log('Schema function not available');
+				console.log('Schema function not available')
 			}
 		} catch (err) {
-			console.error('Error inspecting schema:', err);
+			console.error('Error inspecting schema:', err)
 		}
-	};
+	}
 
 	useEffect(() => {
 		const fetchUsers = async () => {
 			setIsLoading(true)
 			try {
 				// Debug database schema
-				await inspectDatabaseSchema();
-				
-				// Try fetching from 'users' table first
-				console.log('Attempting to fetch users from "users" table...')
-				let { data, error } = await supabase.from('users').select('*')
+				await inspectDatabaseSchema()
+
+				// Try fetching from 'users' table with role details including parent role
+				console.log('Fetching users with roles and parent roles...')
+				let { data, error } = await supabase.from('users').select(`
+						*,
+						roleObj:roles!users_role_id_fkey (
+							name,
+							parent_role,
+							parent:parent_role (
+								name
+							)
+						)
+					`)
 
 				if (error) {
-					console.error('Error fetching from users table:', error)
+					console.error('Error fetching users with roles:', error)
+					// Fallback to basic user fetching without role details
+					const { data: basicData, error: basicError } = await supabase.from('users').select('*')
 
-					// Try fetching from 'profiles' table as fallback
-					console.log('Attempting to fetch from "profiles" table...')
-					const { data: profilesData, error: profilesError } = await supabase
-						.from('profiles')
-						.select('*')
-
-					if (!profilesError && profilesData) {
-						console.log('Successfully fetched data from profiles table')
-						data = profilesData
+					if (!basicError && basicData) {
+						console.log('Successfully fetched basic user data')
+						data = basicData
 						error = null
 					} else {
-						console.error('Error fetching from profiles table:', profilesError)
-
-						// Try 'user' table as a last resort
-						console.log('Attempting to fetch from "user" table...')
-						const { data: userData, error: userError } = await supabase.from('user').select('*')
-
-						if (!userError && userData) {
-							console.log('Successfully fetched data from user table')
-							data = userData
-							error = null
-						} else {
-							console.error('Error fetching from user table:', userError)
-						}
+						console.error('Error fetching basic user data:', basicError)
 					}
 				}
 
 				if (data) {
-					// Ensure all users have a role set to one of our expected values
+					// Process users with role information
 					const formattedUsers = data.map(user => {
 						// Handle different field naming conventions
 						const firstName = user.firstName || user.first_name || user.firstname || ''
 						const lastName = user.lastName || user.last_name || user.lastname || ''
 						const email = user.email || ''
-						const role = user.role || user.user_role || 'Student'
+
+						// Determine role display name and effective role for filtering
+						let roleName = user.role || user.user_role || 'Student'
+						let effectiveRole = roleName
+
+						// If we have role object with parent information
+						if (user.roleObj) {
+							roleName = user.roleObj.name || roleName
+
+							// If there's a parent role, use it for the effective role (for tab grouping)
+							if (user.roleObj.parent && user.roleObj.parent.name) {
+								effectiveRole = user.roleObj.parent.name
+							}
+						}
+
 						const status =
 							typeof user.status === 'string'
 								? user.status
@@ -212,7 +255,9 @@ const Users: React.FC = () => {
 							firstName: extractedFirstName,
 							lastName: extractedLastName,
 							email,
-							role,
+							role: roleName,
+							roleObj: user.roleObj,
+							effectiveRole,
 							status,
 							lastLogin,
 							createdAt: user.createdAt || user.created_at || '',
@@ -224,7 +269,7 @@ const Users: React.FC = () => {
 					})
 
 					setUsers(formattedUsers)
-					console.log('Processed users:', formattedUsers)
+					console.log('Processed users with roles:', formattedUsers)
 				}
 			} catch (error) {
 				console.error('Error in fetchUsers:', error)
@@ -244,7 +289,10 @@ const Users: React.FC = () => {
 			user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
 			user.email.toLowerCase().includes(searchTerm.toLowerCase())
 
-		const matchesRole = user.role === activeRole
+		// Check if user's effective role matches the active tab
+		const effectiveRole = user.effectiveRole || getEffectiveRole(user)
+		const matchesRole = effectiveRole === activeRole
+
 		const matchesStatus = filterStatus ? user.status === filterStatus : true
 
 		return matchesSearch && matchesRole && matchesStatus
@@ -358,50 +406,48 @@ const Users: React.FC = () => {
 	// Function to check if email already exists
 	const checkEmailExists = async (email: string): Promise<boolean> => {
 		try {
-			const { data, error } = await supabase
-				.from('users')
-				.select('id')
-				.eq('email', email)
-				.single();
+			const { data, error } = await supabase.from('users').select('id').eq('email', email).single()
 
 			if (error) {
 				if (error.code === 'PGRST116') {
 					// PGRST116 means no rows returned, so email doesn't exist
-					return false;
+					return false
 				}
-				console.error('Error checking email existence:', error);
+				console.error('Error checking email existence:', error)
 				// If there's an error querying, we can't be sure, so treat as not existing
-				return false;
+				return false
 			}
 
 			// If we got data back, the email exists
-			return !!data;
+			return !!data
 		} catch (err) {
-			console.error('Unexpected error checking email:', err);
-			return false;
+			console.error('Unexpected error checking email:', err)
+			return false
 		}
-	};
+	}
 
 	// Handle form submission (creating or updating a user)
 	const handleFormSubmit = async (userData: Partial<User>) => {
-		console.log('Form submission with user data:', userData);
-		
+		console.log('Form submission with user data:', userData)
+
 		// Add loading state for form submission
-		setIsLoading(true);
+		setIsLoading(true)
 
 		try {
 			if (currentUser && currentUser.id) {
 				// If updating, check if changing to an email that already exists
 				if (userData.email !== currentUser.email) {
-					const emailExists = await checkEmailExists(userData.email as string);
+					const emailExists = await checkEmailExists(userData.email as string)
 					if (emailExists) {
-						setIsLoading(false);
-						throw new Error(`Email address ${userData.email} is already registered. Please use a different email.`);
+						setIsLoading(false)
+						throw new Error(
+							`Email address ${userData.email} is already registered. Please use a different email.`
+						)
 					}
 				}
 
-			// Update existing user
-				console.log('Updating existing user:', currentUser.id);
+				// Update existing user
+				console.log('Updating existing user:', currentUser.id)
 
 				// First update the user data
 				const { error } = await supabase
@@ -411,50 +457,67 @@ const Users: React.FC = () => {
 						lastName: userData.lastName,
 						email: userData.email,
 						role: userData.role,
-						status: userData.status
+						status: userData.status,
 					})
-					.eq('id', currentUser.id);
+					.eq('id', currentUser.id)
 
 				if (error) {
-					console.error('Error updating user:', error);
-					toast.error(`Failed to update user: ${error.message || 'Unknown error'}`);
-					throw error;
+					console.error('Error updating user:', error)
+					toast.error(`Failed to update user: ${error.message || 'Unknown error'}`)
+					throw error
 				}
 
 				// Check if we're updating a parent user with child associations
 				if (userData.role === 'Parent' && userData.childrenIds) {
 					// Assign the selected children to this parent
-					await assignChildrenToParent(currentUser.id, userData.childrenIds as string[]);
+					await assignChildrenToParent(currentUser.id, userData.childrenIds as string[])
 				}
 
 				// Update the user in our local state
-			setUsers(prevUsers =>
-				prevUsers.map(user =>
+				setUsers(prevUsers =>
+					prevUsers.map(user =>
 						user.id === currentUser.id
-						? {
-								...user,
-								...userData,
+							? {
+									...user,
+									...userData,
 							  }
-							: user,
-					),
-				);
+							: user
+					)
+				)
 
-				toast.success('User updated successfully!');
-		} else {
+				toast.success('User updated successfully!')
+			} else {
 				// Create new user
-				console.log('Creating new user:', userData.email);
-				
-				// Check if email already exists
-				const emailExists = await checkEmailExists(userData.email as string);
-				if (emailExists) {
-					setIsLoading(false);
-					throw new Error(`Email address ${userData.email} is already registered. Please use a different email.`);
+				console.log('Creating new user:', userData.email)
+
+				// Check permission for creating a user with this role
+				if (userData.role === 'Parent') {
+					const hasPermission = canCreateUserWithRole({
+						currentUserRole: typeof user?.role === 'string' ? user.role : user?.role?.name || '',
+						currentUserPermissions: user?.permissions || [],
+						newUserRole: 'Parent',
+					})
+
+					if (!hasPermission) {
+						setIsLoading(false)
+						toast.error('You do not have permission to create Parent users.')
+						return
+					}
 				}
-				
-				let userId;
-				let retryCount = 0;
-				const maxRetries = 2;
-				
+
+				// Check if email already exists
+				const emailExists = await checkEmailExists(userData.email as string)
+				if (emailExists) {
+					setIsLoading(false)
+					throw new Error(
+						`Email address ${userData.email} is already registered. Please use a different email.`
+					)
+				}
+
+				let userId
+				let retryCount = 0
+				const maxRetries = 2
+
 				// Retry loop for user creation
 				while (retryCount <= maxRetries) {
 					try {
@@ -463,45 +526,47 @@ const Users: React.FC = () => {
 							email: userData.email as string,
 							password: userData.password as string,
 							email_confirm: true,
-						});
+						})
 
 						if (authError) {
-							console.error('Error creating user in auth:', authError);
+							console.error('Error creating user in auth:', authError)
 							if (retryCount >= maxRetries) {
 								// We've exhausted our retries, show error and keep form open
-								setIsLoading(false);
-								toast.error(`Authentication error: ${authError.message}`);
-								return; // Return early to prevent closing the form
+								setIsLoading(false)
+								toast.error(`Authentication error: ${authError.message}`)
+								return // Return early to prevent closing the form
 							}
-							throw authError;
+							throw authError
 						}
 
 						// Get the user ID from auth
-						userId = authData.user.id;
-						break; // Successfully created auth user, exit retry loop
+						userId = authData.user.id
+						break // Successfully created auth user, exit retry loop
 					} catch (error: any) {
-						retryCount++;
-						console.error(`Auth creation attempt ${retryCount} failed:`, error);
-						
+						retryCount++
+						console.error(`Auth creation attempt ${retryCount} failed:`, error)
+
 						if (retryCount > maxRetries) {
 							// Don't close the form, show error instead
-							setIsLoading(false);
-							toast.error(error.message ? 
-								`Authentication error: ${error.message}` : 
-								'Failed to create user account after multiple attempts');
-							
+							setIsLoading(false)
+							toast.error(
+								error.message
+									? `Authentication error: ${error.message}`
+									: 'Failed to create user account after multiple attempts'
+							)
+
 							// Return early to prevent closing the form
-							return;
+							return
 						}
-						
+
 						// Wait before retrying
-						await new Promise(resolve => setTimeout(resolve, 1000));
-						toast.error(`Authentication error: ${error.message}. Retrying...`);
+						await new Promise(resolve => setTimeout(resolve, 1000))
+						toast.error(`Authentication error: ${error.message}. Retrying...`)
 					}
 				}
-				
+
 				if (!userId) {
-					throw new Error('Failed to create user authentication');
+					throw new Error('Failed to create user authentication')
 				}
 
 				// Log detailed information about the user table structure for debugging
@@ -514,8 +579,8 @@ const Users: React.FC = () => {
 					email: userData.email,
 					role: userData.role,
 					status: userData.status,
-					password: userData.password
-				});
+					password: userData.password,
+				})
 
 				// Then, create the user in our users table
 				try {
@@ -526,12 +591,12 @@ const Users: React.FC = () => {
 						email: userData.email,
 						role: userData.role,
 						status: userData.status,
-						password: userData.password // Add password field to satisfy NOT NULL constraint
+						password: userData.password, // Add password field to satisfy NOT NULL constraint
 						// Removed created_at as it's not in the schema
-					});
+					})
 
 					if (dbError) {
-						console.error('Error inserting user into database:', dbError);
+						console.error('Error inserting user into database:', dbError)
 						// Show detailed error information for debugging
 						console.log('Failed user data:', {
 							id: userId,
@@ -540,42 +605,45 @@ const Users: React.FC = () => {
 							email: userData.email,
 							role: userData.role,
 							status: userData.status,
-							password: userData.password ? '(provided)' : '(missing)'
-						});
-						
+							password: userData.password ? '(provided)' : '(missing)',
+						})
+
 						// Don't close the form, show error instead
-						setIsLoading(false);
-						toast.error(`Database error: ${dbError.message || 'Unknown error'}`);
-						
+						setIsLoading(false)
+						toast.error(`Database error: ${dbError.message || 'Unknown error'}`)
+
 						// Return early to prevent closing the form
-						return;
+						return
 					}
 				} catch (dbError) {
 					// If database insert fails, attempt to clean up the auth user
 					try {
-						await supabaseAdmin.auth.admin.deleteUser(userId);
+						await supabaseAdmin.auth.admin.deleteUser(userId)
 					} catch (cleanupError) {
-						console.error('Failed to clean up auth user after database error:', cleanupError);
+						console.error('Failed to clean up auth user after database error:', cleanupError)
 					}
-					
+
 					// Don't close the form, show error instead
-					setIsLoading(false);
-					toast.error('Failed to create user in database');
-					
+					setIsLoading(false)
+					toast.error('Failed to create user in database')
+
 					// Return early to prevent closing the form
-					return;
+					return
 				}
 
 				// Check if we're creating a parent with child associations
 				if (userData.role === 'Parent' && userData.childrenIds && userData.childrenIds.length > 0) {
 					try {
 						// Assign the selected children to this parent
-						await assignChildrenToParent(userId, userData.childrenIds as string[]);
+						await assignChildrenToParent(userId, userData.childrenIds as string[])
 					} catch (relationError: any) {
-						console.error('Error setting up parent-child relationships:', relationError);
-						
+						console.error('Error setting up parent-child relationships:', relationError)
+
 						// We still consider this a partial success, but inform the user
-						toast.error('User created but failed to assign children: ' + (relationError.message || 'Unknown error'));
+						toast.error(
+							'User created but failed to assign children: ' +
+								(relationError.message || 'Unknown error')
+						)
 					}
 				}
 
@@ -586,99 +654,96 @@ const Users: React.FC = () => {
 					lastName: userData.lastName || '',
 					email: userData.email || '',
 					role: userData.role || 'Student',
+					effectiveRole: userData.role as string, // Set effective role same as role for new users
 					status: (userData.status as 'active' | 'inactive') || 'active',
 					lastLogin: 'Never',
 					createdAt: new Date().toISOString(),
 					childrenIds: userData.childrenIds,
 					password: userData.password,
-				};
-
-				setUsers(prevUsers => [...prevUsers, newUser]);
-
-				toast.success('User created successfully!');
 				}
 
+				setUsers(prevUsers => [...prevUsers, newUser])
+
+				toast.success('User created successfully!')
+			}
+
 			// Close the form
-			setIsFormOpen(false);
-			setCurrentUser(null);
+			setIsFormOpen(false)
+			setCurrentUser(null)
 		} catch (error: any) {
-			console.error('Error in handleFormSubmit:', error);
-			toast.error(error.message ? `Error: ${error.message}` : 'Failed to save user data');
+			console.error('Error in handleFormSubmit:', error)
+			toast.error(error.message ? `Error: ${error.message}` : 'Failed to save user data')
 		} finally {
-			setIsLoading(false);
+			setIsLoading(false)
 		}
-	};
+	}
 
 	// Function to assign children to a parent
 	const assignChildrenToParent = async (parentId: string, childrenIds: string[]) => {
 		try {
-			console.log('Assigning children to parent:', { parentId, childrenIds });
+			console.log('Assigning children to parent:', { parentId, childrenIds })
 
 			// Update each child's parent_id to point to this parent
 			// Use camelCase (parentId) instead of snake_case (parent_id) to match DB schema
 			const { data, error } = await supabase
 				.from('users')
 				.update({ parent_id: parentId })
-				.in('id', childrenIds);
+				.in('id', childrenIds)
 
 			if (error) {
-				console.error('Error assigning children to parent:', error);
-				console.log('Failed assignment data:', { parentId, childIds: childrenIds });
-				toast.error(`Failed to assign children: ${error.message || 'Unknown error'}`);
-				throw error;
+				console.error('Error assigning children to parent:', error)
+				console.log('Failed assignment data:', { parentId, childIds: childrenIds })
+				toast.error(`Failed to assign children: ${error.message || 'Unknown error'}`)
+				throw error
 			}
 
-			console.log('Successfully assigned children to parent:', data);
+			console.log('Successfully assigned children to parent:', data)
 
 			// Update the local state to reflect parent-child relationships
 			setUsers(prevUsers =>
 				prevUsers.map(user => {
 					if (childrenIds.includes(user.id)) {
-						return { ...user, parent_id: parentId }; // Keep using parent_id in state for consistency
+						return { ...user, parent_id: parentId } // Keep using parent_id in state for consistency
 					}
-					return user;
-				}),
-			);
+					return user
+				})
+			)
 
-			return data;
+			return data
 		} catch (err) {
-			console.error('Error in assignChildrenToParent:', err);
-			throw err;
-			}
-	};
+			console.error('Error in assignChildrenToParent:', err)
+			throw err
+		}
+	}
 
 	// Function to get children for a parent
 	const getChildrenForParent = (parentId: string) => {
 		// Filter users that have this parent ID
 		// Check both camelCase and snake_case field names for compatibility
-		return users.filter(user => 
-			user.parent_id === parentId || 
-			user.parentId === parentId
-		);
-	};
+		return users.filter(user => user.parent_id === parentId || user.parentId === parentId)
+	}
 
 	// Create a new component to display child users for a parent
 	const ChildrenList: React.FC<{ parentId: string; users: User[] }> = ({ parentId, users }) => {
-		const children = users.filter(user => 
-			user.parent_id === parentId || 
-			user.parentId === parentId
-		);
-		
+		const children = users.filter(user => user.parent_id === parentId || user.parentId === parentId)
+
 		if (children.length === 0) {
-			return <span className="text-gray-400">No children assigned</span>;
+			return <span className='text-gray-400'>No children assigned</span>
 		}
-		
+
 		return (
-			<div className="flex flex-col gap-1">
+			<div className='flex flex-col gap-1'>
 				{children.map(child => (
-					<div key={child.id} className="text-sm flex items-center">
-						<FiUsers className="mr-1 text-blue-500" size={12} />
-						<span>{child.firstName} {child.lastName}</span>
+					<div key={child.id} className='text-sm flex items-center'>
+						<FiUsers className='mr-1 text-blue-500' size={12} />
+						<span>
+							{child.firstName} {child.lastName}
+						</span>
 					</div>
 				))}
 			</div>
-		);
-	};
+		)
+	}
 
 	const handleFormClose = () => {
 		setIsFormOpen(false)
@@ -904,22 +969,24 @@ const Users: React.FC = () => {
 											</StatusIndicator>
 										</TableCell>
 										{(activeRole === 'Student' || activeRole === 'Parent') && (
-										<TableCell>
-											{user.role === 'Parent' ? (
-												<ChildrenList parentId={user.id} users={users} />
-											) : user.parent_id || user.parentId ? (
-												<div className="flex items-center text-sm">
-													<FiHome className="mr-1 text-green-500" size={14} />
-													{(() => {
-														const parentId = user.parent_id || user.parentId;
-														const parent = users.find(p => p.id === parentId);
-														return parent ? `${parent.firstName} ${parent.lastName}` : 'Unknown Parent';
-													})()}
-												</div>
-											) : (
-												<span className="text-gray-400">None</span>
-											)}
-										</TableCell>
+											<TableCell>
+												{user.role === 'Parent' ? (
+													<ChildrenList parentId={user.id} users={users} />
+												) : user.parent_id || user.parentId ? (
+													<div className='flex items-center text-sm'>
+														<FiHome className='mr-1 text-green-500' size={14} />
+														{(() => {
+															const parentId = user.parent_id || user.parentId
+															const parent = users.find(p => p.id === parentId)
+															return parent
+																? `${parent.firstName} ${parent.lastName}`
+																: 'Unknown Parent'
+														})()}
+													</div>
+												) : (
+													<span className='text-gray-400'>None</span>
+												)}
+											</TableCell>
 										)}
 										<TableCell>{user.lastLogin || 'Never'}</TableCell>
 										<TableCell>
@@ -967,6 +1034,8 @@ const Users: React.FC = () => {
 					onSubmit={handleFormSubmit}
 					initialData={currentUser || undefined}
 					formTitle={currentUser ? 'Edit User' : 'Add New User'}
+					currentUserRole={typeof user?.role === 'string' ? user?.role : user?.role?.name || ''}
+					currentUserPermissions={user?.permissions || []}
 				/>
 			)}
 
@@ -1033,16 +1102,19 @@ const RoleTabIcon = styled.div`
 
 const RoleTabContent = styled.div`
 	display: flex;
-	flex-direction: column;
+	align-items: center;
+	gap: 10px;
 `
 
 const RoleTabName = styled.span`
 	font-size: 0.9rem;
+	font-weight: 500;
 `
 
 const RoleTabCount = styled.span`
 	font-size: 0.8rem;
 	opacity: 0.7;
+	font-weight: 700;
 `
 
 const LoadingState = styled.div`

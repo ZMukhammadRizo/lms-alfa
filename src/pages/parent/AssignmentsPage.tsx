@@ -17,7 +17,7 @@ import styled from 'styled-components'
 import { PageTitle } from '../../components/common'
 import { Badge, Button, Card, Col, Container, Row } from '../../components/ui'
 import { useAuth } from '../../contexts/AuthContext'
-import { Assignment, Submission, fetchParentDashboardData } from '../../services/assignmentService'
+import { Submission, fetchParentDashboardData } from '../../services/assignmentService'
 
 // Set app element for modal accessibility
 Modal.setAppElement('#root')
@@ -138,6 +138,21 @@ const ModalSecondaryButton = styled(Button)`
 
 type FilterType = 'all' | 'pending' | 'completed' | 'late' | 'upcoming' | 'overdue'
 type ChildFilter = string | 'all'
+
+interface Assignment {
+	id: string
+	title: string
+	description?: string
+	due_date?: string
+	subject?: string
+	subjectid?: string
+	status?: 'pending' | 'completed' | 'late' | 'overdue' | 'upcoming'
+	created_at?: string
+	updated_at?: string
+	studentId?: string
+	studentName?: string
+	file_url?: Array<{ name: string; url: string }> | string | null
+}
 
 const AssignmentsPage: React.FC = () => {
 	const [activeFilter, setActiveFilter] = useState<FilterType>('all')
@@ -481,6 +496,48 @@ const AssignmentsPage: React.FC = () => {
 								</ModalDetailsGrid>
 							</ModalDetailSection>
 
+							{selectedAssignment.file_url && (
+								<ModalDetailSection>
+									<ModalDetailSectionTitle>
+										<FiFileText />
+										Assignment Materials
+									</ModalDetailSectionTitle>
+									{Array.isArray(selectedAssignment.file_url) ? (
+										<FilesList>
+											{selectedAssignment.file_url.map((file, index) => (
+												<FileItem key={index}>
+													<FileIcon>
+														<FiFileText />
+													</FileIcon>
+													<FileName>{file.name}</FileName>
+													<FileActionButton
+														href={file.url}
+														target='_blank'
+														rel='noopener noreferrer'
+													>
+														View
+													</FileActionButton>
+												</FileItem>
+											))}
+										</FilesList>
+									) : (
+										<FileItem>
+											<FileIcon>
+												<FiFileText />
+											</FileIcon>
+											<FileName>Assignment Material</FileName>
+											<FileActionButton
+												href={selectedAssignment.file_url}
+												target='_blank'
+												rel='noopener noreferrer'
+											>
+												View
+											</FileActionButton>
+										</FileItem>
+									)}
+								</ModalDetailSection>
+							)}
+
 							{selectedSubmission?.feedback && (
 								<ModalDetailSection>
 									<ModalDetailSectionTitle>Feedback</ModalDetailSectionTitle>
@@ -764,6 +821,46 @@ const LoadingState = styled.div`
 			transform: rotate(360deg);
 		}
 	}
+`
+
+const FilesList = styled.ul`
+	list-style: none;
+	padding: 0;
+	margin: 0;
+`
+
+const FileItem = styled.li`
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 0;
+`
+
+const FileIcon = styled.div`
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background-color: ${props => props.theme?.colors?.background?.tertiary || '#f5f5f5'};
+	color: ${props => props.theme?.colors?.primary?.[500] || '#1890ff'};
+`
+
+const FileName = styled.span`
+	font-size: 14px;
+	font-weight: 500;
+	color: ${props => props.theme?.colors?.text?.primary || '#333'};
+`
+
+const FileActionButton = styled.a`
+	background: none;
+	border: none;
+	color: ${props => props.theme?.colors?.text?.primary || '#333'};
+	font: inherit;
+	cursor: pointer;
+	outline: inherit;
+	text-decoration: underline;
 `
 
 export default AssignmentsPage

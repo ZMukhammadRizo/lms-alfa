@@ -173,20 +173,20 @@ const RedirectContainer = styled.div`
 	align-items: center;
 	min-height: 100vh;
 	width: 100%;
-	background-color: ${props => props.theme.colors.background.lighter};
+	background-color: ${props => props.theme.colors?.background?.lighter};
 	animation: ${fadeIn} 0.5s ease-in-out;
 `
 
 const ContentCard = styled.div`
 	display: flex;
 	flex-direction: column;
-	padding: ${props => props.theme.spacing[8]};
-	background-color: ${props => props.theme.colors.background.secondary};
-	box-shadow: ${props => props.theme.shadows.md};
-	border-radius: ${props => props.theme.borderRadius.lg};
+	padding: 2rem;
+	background-color: ${props => props.theme.colors?.background?.secondary};
+	box-shadow: ${props => props.theme.shadows?.md};
+	border-radius: ${props => props.theme.borderRadius?.lg};
 	max-width: 500px;
 	width: 100%;
-	margin: ${props => props.theme.spacing[4]};
+	margin: 2rem;
 	animation: ${scaleUp} 0.5s ease-in-out;
 `
 
@@ -194,13 +194,13 @@ const LogoSection = styled.div`
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	margin-bottom: ${props => props.theme.spacing[6]};
+	margin-bottom: 2rem;
 
 	h1 {
 		font-size: 1.5rem;
 		font-weight: 700;
-		color: ${props => props.theme.colors.text.primary};
-		margin-top: ${props => props.theme.spacing[4]};
+		color: ${props => props.theme.colors?.text?.primary};
+		margin-top: 1rem;
 		text-align: center;
 	}
 `
@@ -209,7 +209,7 @@ const LogoIcon = styled.div`
 	width: 80px;
 	height: 80px;
 	border-radius: 16px;
-	background-color: ${props => props.theme.colors.primary[500]};
+	background-color: ${props => props.theme.colors?.primary?.[500]};
 	color: white;
 	display: flex;
 	align-items: center;
@@ -229,7 +229,7 @@ const StatusSection = styled.div`
 const SpinnerContainer = styled.div`
 	width: 50px;
 	height: 50px;
-	margin-bottom: ${props => props.theme.spacing[4]};
+	margin-bottom: 1rem;
 `
 
 const Spinner = styled.div`
@@ -237,20 +237,20 @@ const Spinner = styled.div`
 	height: 100%;
 	border: 3px solid rgba(0, 0, 0, 0.1);
 	border-radius: 50%;
-	border-left-color: ${props => props.theme.colors.primary[500]};
+	border-left-color: ${props => props.theme.colors?.primary?.[500]};
 	animation: ${spin} 1s linear infinite;
 `
 
 const StatusMessage = styled.p`
 	font-size: 1.125rem;
 	font-weight: 500;
-	color: ${props => props.theme.colors.text.primary};
-	margin-bottom: ${props => props.theme.spacing[4]};
+	color: ${props => props.theme.colors?.text?.primary};
+	margin-bottom: 1rem;
 `
 
 const CountdownText = styled.p`
 	font-size: 0.875rem;
-	color: ${props => props.theme.colors.text.secondary};
+	color: ${props => props.theme.colors?.text?.secondary};
 	animation: ${pulse} 1.5s ease-in-out infinite;
 `
 
@@ -258,30 +258,30 @@ const ErrorMessage = styled.div`
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	padding: ${props => props.theme.spacing[4]};
-	background-color: ${props => props.theme.colors.danger[50]};
-	color: ${props => props.theme.colors.danger[700]};
-	border: 1px solid ${props => props.theme.colors.danger[100]};
-	border-radius: ${props => props.theme.borderRadius.md};
+	padding: 1rem;
+	background-color: ${props => props.theme.colors?.danger?.[50]};
+	color: ${props => props.theme.colors?.danger?.[700]};
+	border: 1px solid ${props => props.theme.colors?.danger?.[100]};
+	border-radius: ${props => props.theme.borderRadius?.md};
 	font-size: 0.875rem;
-	margin-top: ${props => props.theme.spacing[4]};
+	margin-top: 1rem;
 	width: 100%;
 `
 
 const RetryButton = styled.button`
-	margin-top: ${props => props.theme.spacing[2]};
-	padding: ${props => props.theme.spacing[2]} ${props => props.theme.spacing[4]};
-	background-color: ${props => props.theme.colors.primary[500]};
+	margin-top: 0.5rem;
+	padding: 0.5rem 1rem;
+	background-color: ${props => props.theme.colors?.primary?.[500]};
 	color: white;
 	border: none;
-	border-radius: ${props => props.theme.borderRadius.md};
+	border-radius: ${props => props.theme.borderRadius?.md};
 	font-size: 0.875rem;
 	font-weight: 500;
 	cursor: pointer;
 	transition: background-color 0.2s ease;
 
 	&:hover {
-		background-color: ${props => props.theme.colors.primary[600]};
+		background-color: ${props => props.theme.colors?.primary?.[600]};
 	}
 `
 

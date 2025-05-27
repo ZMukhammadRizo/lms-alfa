@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import styled from 'styled-components'
-import Sidebar from '../components/admin/Sidebar'
-import Header from '../components/admin/Header'
 import Footer from '../components/admin/Footer'
+import Header from '../components/admin/Header'
+import Sidebar from '../components/admin/Sidebar'
 
 const AdminLayout: React.FC = () => {
 	const [isSidebarCollapsed, setSidebarCollapsed] = useState(false)

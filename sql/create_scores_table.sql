@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS scores (
   attendance VARCHAR(10) CHECK (attendance IN ('present', 'absent', 'late', 'excused')) DEFAULT 'present',
   comment TEXT,
   quarter_id UUID REFERENCES quarters(id),
+  teacher_id UUID REFERENCES users(id), -- Store the teacher who gave the score
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
@@ -22,6 +23,9 @@ CREATE INDEX IF NOT EXISTS idx_scores_lesson_id ON scores(lesson_id);
 
 -- Create an index to speed up queries on quarter_id
 CREATE INDEX IF NOT EXISTS idx_scores_quarter_id ON scores(quarter_id);
+
+-- Create an index to speed up queries on teacher_id
+CREATE INDEX IF NOT EXISTS idx_scores_teacher_id ON scores(teacher_id);
 
 -- Create a trigger to automatically update the updated_at timestamp
 CREATE OR REPLACE FUNCTION update_scores_updated_at()

@@ -3,12 +3,12 @@ import React, { useEffect, useState } from 'react'
 import { FiChevronLeft, FiChevronRight, FiMenu, FiX } from 'react-icons/fi'
 import { NavLink, useLocation } from 'react-router-dom'
 import styled, { css } from 'styled-components'
-import { getSystemMenu, getModuleLeaderMenu,teacherMenu } from '../../constants/menuItems'
+import { getModuleLeaderMenu, getSystemMenu, teacherMenu } from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
 import {
 	getUserParentRole,
 	getUserRole as getUserRealRole,
-	isModuleLeader,
+	hasPermission,
 } from '../../utils/authUtils'
 import LogoutButton from '../common/LogoutButton'
 
@@ -228,7 +228,7 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 								))}
 							</MenuSection>
 
-							{isModuleLeader() && (
+							{hasPermission('manage_subjects') && (
 								<MenuSection>
 									<SectionLabel
 										initial={{ opacity: 0 }}
@@ -279,9 +279,7 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 						</MenuContainer>
 
 						<ProfileSection $isCollapsed={isMobile ? false : isCollapsed}>
-							<ProfileAvatar>
-								{getUserInitials()}
-							</ProfileAvatar>
+							<ProfileAvatar>{getUserInitials()}</ProfileAvatar>
 							<AnimatePresence>
 								{(!isCollapsed || isMobile) && (
 									<ProfileInfo
