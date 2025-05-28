@@ -576,7 +576,9 @@ const UnifiedJournalTable: React.FC<StudentJournalTableProps> = ({
 															)}
 														</GradeStatus>
 													) : (
-														<EmptyGradeStatus>
+														<EmptyGradeStatus
+															onClick={() => handleCellClick(student.id, lesson.date)}
+														>
 															<Plus size={14} />
 														</EmptyGradeStatus>
 													)}
@@ -595,6 +597,8 @@ const UnifiedJournalTable: React.FC<StudentJournalTableProps> = ({
 														{isAttendanceDropdownOpen && (
 															<AttendanceDropdown ref={attendanceDropdownRef}>
 																<AttendanceOption
+																	$isSelected={attendanceStatus === 'present'}
+																	$color='success'
 																	onClick={e => {
 																		e.stopPropagation()
 																		handleAttendanceChange(student.id, lesson.date, 'present')
@@ -604,6 +608,8 @@ const UnifiedJournalTable: React.FC<StudentJournalTableProps> = ({
 																	<AttendanceText>Present</AttendanceText>
 																</AttendanceOption>
 																<AttendanceOption
+																	$isSelected={attendanceStatus === 'late'}
+																	$color='warning'
 																	onClick={e => {
 																		e.stopPropagation()
 																		handleAttendanceChange(student.id, lesson.date, 'late')
@@ -613,6 +619,8 @@ const UnifiedJournalTable: React.FC<StudentJournalTableProps> = ({
 																	<AttendanceText>Late</AttendanceText>
 																</AttendanceOption>
 																<AttendanceOption
+																	$isSelected={attendanceStatus === 'absent'}
+																	$color='danger'
 																	onClick={e => {
 																		e.stopPropagation()
 																		handleAttendanceChange(student.id, lesson.date, 'absent')
@@ -622,6 +630,8 @@ const UnifiedJournalTable: React.FC<StudentJournalTableProps> = ({
 																	<AttendanceText>Absent</AttendanceText>
 																</AttendanceOption>
 																<AttendanceOption
+																	$isSelected={attendanceStatus === 'excused'}
+																	$color='primary'
 																	onClick={e => {
 																		e.stopPropagation()
 																		handleAttendanceChange(student.id, lesson.date, 'excused')
@@ -1184,7 +1194,7 @@ const AttendanceDropdown = styled.div`
 	transform: translateY(-50%);
 	min-width: 120px;
 	background-color: ${props => props.theme.colors.background.secondary};
-	border: 1px solid ${props => props.theme.colors.border.medium};
+	border: 1px solid ${props => props.theme.colors.border.light};
 	border-radius: ${props => props.theme.borderRadius.md};
 	box-shadow: ${props => props.theme.shadows.lg};
 	padding: ${props => props.theme.spacing[2]} 0;
@@ -1193,8 +1203,8 @@ const AttendanceDropdown = styled.div`
 `
 
 interface AttendanceOptionProps {
-	$isSelected: boolean;
-	$color: string;
+	$isSelected: boolean
+	$color: string
 }
 
 const AttendanceOption = styled.div<AttendanceOptionProps>`
@@ -1205,8 +1215,9 @@ const AttendanceOption = styled.div<AttendanceOptionProps>`
 	cursor: pointer;
 	font-size: 0.9rem;
 	color: ${props => props.theme.colors.text.primary};
-	background-color: ${props => props.$isSelected ? props.theme.colors.background.tertiary : 'transparent'};
-	font-weight: ${props => props.$isSelected ? '600' : '400'};
+	background-color: ${props =>
+		props.$isSelected ? props.theme.colors.background.tertiary : 'transparent'};
+	font-weight: ${props => (props.$isSelected ? '600' : '400')};
 
 	&:hover {
 		background-color: ${props => props.theme.colors.background.hover};

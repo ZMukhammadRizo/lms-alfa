@@ -784,6 +784,7 @@ const GradesJournal: React.FC = () => {
 						quarter_id: selectedQuarterId,
 						teacher_id: user?.id,
 						score: effectiveScore,
+						created_at: new Date().toISOString(),
 					})
 					.select()
 
@@ -1135,6 +1136,7 @@ const GradesJournal: React.FC = () => {
 				if (error) throw error
 			} else {
 				// Create new record with comment
+				const now = new Date().toISOString()
 				const { error } = await supabase.from('scores').insert({
 					student_id: studentId,
 					lesson_id: lessonId,
@@ -1143,6 +1145,8 @@ const GradesJournal: React.FC = () => {
 					teacher_id: user?.id,
 					grade: 0,
 					attendance: 'absent',
+					created_at: now,
+					updated_at: now,
 				})
 
 				if (error) throw error

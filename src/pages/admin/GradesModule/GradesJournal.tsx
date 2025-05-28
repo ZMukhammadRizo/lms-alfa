@@ -754,11 +754,13 @@ const GradesJournal: React.FC = () => {
 					)
 				} else {
 					// Update the grade
+					const now = new Date().toISOString()
 					const { error } = await supabase
 						.from('scores')
 						.update({
 							score: effectiveScore,
 							teacher_id: user?.id,
+							updated_at: now,
 						})
 						.eq('student_id', effectiveStudentId)
 						.eq('lesson_id', effectiveLessonId)
@@ -776,6 +778,7 @@ const GradesJournal: React.FC = () => {
 				}
 			} else if (effectiveScore !== null) {
 				// Insert new grade
+				const now = new Date().toISOString()
 				const { data, error } = await supabase
 					.from('scores')
 					.insert({
@@ -784,6 +787,8 @@ const GradesJournal: React.FC = () => {
 						quarter_id: selectedQuarterId,
 						teacher_id: user?.id,
 						score: effectiveScore,
+						created_at: now,
+						updated_at: now,
 					})
 					.select()
 
@@ -1143,6 +1148,7 @@ const GradesJournal: React.FC = () => {
 					teacher_id: user?.id,
 					grade: 0,
 					attendance: 'absent',
+					created_at: new Date().toISOString(),
 				})
 
 				if (error) throw error

@@ -37,6 +37,7 @@ import AnnouncementsPage from './pages/parent/AnnouncementsPage'
 import AssignmentsPage from './pages/parent/AssignmentsPage'
 import AttendancePage from './pages/parent/AttendancePage'
 import GradesPage from './pages/parent/GradesPage'
+import NotificationsPage from './pages/parent/NotificationsPage'
 import ParentCalendar from './pages/parent/ParentCalendar'
 import ParentDashboard from './pages/parent/ParentDashboard'
 import { SettingsPage } from './pages/parent/SettingsPage'
@@ -225,6 +226,7 @@ function AppContent() {
 							<Route path='messages' element={<h1>Coming Soon...</h1>} />
 							<Route path='calendar' element={<ParentCalendar />} />
 							<Route path='announcements' element={<AnnouncementsPage />} />
+							<Route path='notifications' element={<NotificationsPage />} />
 							<Route path='settings' element={<SettingsPage />} />
 							<Route path='profile' element={<ProfilePage />} />
 						</Route>

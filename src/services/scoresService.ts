@@ -93,6 +93,8 @@ export const updateScore = async (score: Score): Promise<Score> => {
 			throw new Error('updateScore: Missing required fields: student_id and lesson_id are required')
 		}
 
+		const now = new Date().toISOString()
+
 		const { data, error } = await supabase
 			.from('scores')
 			.upsert(
@@ -103,7 +105,8 @@ export const updateScore = async (score: Score): Promise<Score> => {
 					attendance: score.attendance,
 					comment: score.comment,
 					teacher_id: score.teacher_id,
-					updated_at: new Date().toISOString(),
+					updated_at: now,
+					created_at: score.created_at || now, // Use existing created_at or set new for new records
 				},
 				{
 					onConflict: 'student_id,lesson_id',
