@@ -31,7 +31,6 @@ export interface MenuItem {
 export const adminMenu: MenuItem[] = [
 	{ path: '/admin/dashboard', icon: <FiHome />, label: 'Dashboard' },
 	{ path: '/admin/users', icon: <FiUsers />, label: 'User Management' },
-	{ path: '/admin/morning-classes', icon: <FiSunrise />, label: 'Morning Classes' },
 	{ path: '/admin/subjects', icon: <FiBook />, label: 'Subjects' },
 	{ path: '/admin/classes', icon: <FiLayers />, label: 'Classes' },
 	{ path: '/admin/assignments', icon: <FiFileText />, label: 'Assignments' },
