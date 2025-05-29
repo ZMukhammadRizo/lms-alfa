@@ -3148,7 +3148,24 @@ export const Classes: React.FC = () => {
 		try {
 			console.log(`Deleting section with ID: ${sectionToDelete.id}, name: ${sectionToDelete.name}`)
 
-			// Delete section from database - correct table name is 'classes', not 'sections'
+      // Step 1: Delete associated student enrollments from classstudents
+      console.log(`Deleting student enrollments for class ID: ${sectionToDelete.id}`);
+      const { error: studentDeleteError } = await supabase
+        .from('classstudents')
+        .delete()
+        .eq('classid', sectionToDelete.id);
+
+      if (studentDeleteError) {
+        console.error('Supabase error when deleting student enrollments:', studentDeleteError);
+        // If it's a foreign key constraint on a table that references classstudents, this might be more complex.
+        // For now, we'll assume direct deletion is okay or it might fail if other tables depend on classstudents.
+        toast.error(`Failed to remove student enrollments: ${studentDeleteError.message}`);
+        // Do not throw here if you want to attempt section deletion anyway, 
+        // or throw if this step is critical before section deletion.
+        // For now, we'll let it proceed to section deletion attempt but log the error.
+      }
+
+			// Step 2: Delete section from database - correct table name is 'classes', not 'sections'
 			const { error } = await supabase.from('classes').delete().eq('id', sectionToDelete.id)
 
 			if (error) {
@@ -3173,7 +3190,12 @@ export const Classes: React.FC = () => {
 			toast.success('Section deleted successfully')
 		} catch (error) {
 			console.error('Error deleting section:', error)
-			toast.error('Failed to delete section')
+      // Check if the error is the specific foreign key violation we encountered
+      if (error && typeof error === 'object' && 'code' in error && (error as any).code === '23503') {
+        toast.error('Failed to delete section: Ensure all dependent data (like student enrollments) is removed first or set up cascading deletes in your database.');
+      } else {
+        toast.error('Failed to delete section')
+      }
 		}
 	}
 
