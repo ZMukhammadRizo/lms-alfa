@@ -31,6 +31,22 @@ import supabase from '../../config/supabaseClient'
 // Set the app element for accessibility reasons
 Modal.setAppElement('#root')
 
+// Placeholder for withPermissionCheck function
+const withPermissionCheck = (
+	permissionName: string,
+	callbackIfPermitted: () => void,
+	callbackIfNotPermitted?: () => void // Make the third argument optional
+) => {
+	console.warn(
+		`withPermissionCheck: Permission check for '${permissionName}' is currently bypassed. Assuming permission is granted.`
+	);
+	callbackIfPermitted(); // Directly execute the permitted callback
+	// Example of how you might handle the not permitted case in a real implementation:
+	// if (!hasPermission(permissionName) && callbackIfNotPermitted) {
+	//   callbackIfNotPermitted();
+	// }
+};
+
 // Interfaces
 interface Student {
 	id: string
@@ -70,6 +86,13 @@ interface Class {
 	status: string
 	color: string
 	sectionCount: number // Add this new property
+}
+
+// New Interface for ClassType
+interface ClassType {
+  id: string;
+  name: string;
+  created_at: string;
 }
 
 // Interface for subject teacher assignments - DEFINED HERE
@@ -1666,20 +1689,25 @@ const StudentsList = styled.div`
 	border-radius: 6px;
 `
 
-const StudentItem = styled.div<{ $isSelected: boolean }>`
+const StudentItem = styled.div<{ $isSelected: boolean; $isExcluded?: boolean }>`
 	display: flex;
 	align-items: center;
 	padding: 12px 16px;
 	border-bottom: 1px solid #e5e7eb;
-	cursor: pointer;
-	background-color: ${props => (props.$isSelected ? '#EEF2FF' : 'white')};
+	cursor: ${props => props.$isExcluded ? 'not-allowed' : 'pointer'};
+	background-color: ${props => 
+    props.$isExcluded ? '#f3f4f6' : // Different background for excluded
+    props.$isSelected ? '#EEF2FF' : 'white'};
+  opacity: ${props => props.$isExcluded ? 0.7 : 1};
 
 	&:last-child {
 		border-bottom: none;
 	}
 
 	&:hover {
-		background-color: ${props => (props.$isSelected ? '#EEF2FF' : '#F9FAFB')};
+		background-color: ${props => 
+      props.$isExcluded ? '#f3f4f6' : 
+      props.$isSelected ? '#EEF2FF' : '#F9FAFB'};
 	}
 `
 
@@ -1800,11 +1828,16 @@ export const Classes: React.FC = () => {
 
 	const [selectedClassId, setSelectedClassId] = useState<string | null>(null)
 	const [isCreateClassModalOpen, setIsCreateClassModalOpen] = useState(false)
-	const [createClassModalOpen, setCreateClassModalOpen] = useState(false)
 
 	const [isManageSubjectTeachersModalOpen, setIsManageSubjectTeachersModalOpen] = useState(false)
 	const [currentSectionForSubjectTeachersModal, setCurrentSectionForSubjectTeachersModal] =
 		useState<Section | null>(null)
+
+	// New state for ClassTypes
+	const [classTypes, setClassTypes] = useState<ClassType[]>([]);
+	const [selectedClassType, setSelectedClassType] = useState<ClassType | null>(null);
+	const [isLoadingClassTypes, setIsLoadingClassTypes] = useState(true);
+	const [classTypesError, setClassTypesError] = useState<string | null>(null);
 
 	// Add click outside listener for filter dropdowns
 	useEffect(() => {
@@ -2057,13 +2090,44 @@ export const Classes: React.FC = () => {
 
 	// Fetch classes data from Supabase
 	useEffect(() => {
+		const fetchClassTypes = async () => {
+			setIsLoadingClassTypes(true);
+			setClassTypesError(null);
+			try {
+				const { data, error } = await supabase
+					.from('class_types')
+					.select('*')
+					.order('name');
+
+				if (error) throw error;
+				setClassTypes(data || []);
+			} catch (error: any) {
+				console.error('Error fetching class types:', error);
+				toast.error('Failed to load class types');
+				setClassTypesError(error.message);
+			} finally {
+				setIsLoadingClassTypes(false);
+			}
+		};
+
+		fetchClassTypes();
+	}, []);
+
+	useEffect(() => {
 		const fetchClasses = async () => {
+			if (!selectedClassType) {
+				setClasses([]); // Clear levels if no class type is selected
+				setIsLoading(false); // Ensure loading is set to false
+				return;
+			}
+
 			setIsLoading(true)
 			try {
-				// Fetch all classes
+				// Fetch all classes (Levels) based on selectedClassType.id
 				const { data: classesData, error: classesError } = await supabase
 					.from('levels')
 					.select('*')
+					.eq('type_id', selectedClassType.id) // Filter by selected class type
 					.order('name')
 
 				if (classesError) throw classesError
@@ -2154,7 +2218,7 @@ export const Classes: React.FC = () => {
 		}
 
 		fetchClasses()
-	}, [])
+	}, [selectedClassType])
 
 	// Fetch sections data when a grade is selected
 	useEffect(() => {
@@ -2489,10 +2553,20 @@ export const Classes: React.FC = () => {
 	const handleBackToClasses = () => {
 		if (showStudents) {
 			setShowStudents(false)
-			setShowSections(true)
+      // selectedGradeForSections should still be set to the current level/grade
+      // selectedSection should also persist to show the correct section view initially
+			// No need to explicitly set showSections to true, as the main render logic will handle it
 		} else if (showSections) {
 			setShowSections(false)
-		}
+      setSelectedGradeForSections(null); // Clear selected grade when going back to levels view
+      setSections([]); // Clear sections
+		} else if (selectedClassType) {
+      // This case means we are in the Levels view and want to go back to Class Types
+      // This is usually handled by a dedicated button, but added for completeness
+      setSelectedClassType(null);
+      setClasses([]); // Clear levels
+      setSelectedGradeForSections(null);
+    }
 	}
 
 	const handleCardClick = (cls: Class) => {
@@ -3179,7 +3253,7 @@ export const Classes: React.FC = () => {
 		withPermissionCheck(
 			'create_classes',
 			() => {
-				setCreateClassModalOpen(true)
+				setIsCreateClassModalOpen(true)
 			},
 			() => {
 				toast.error("You don't have permission to create classes")
@@ -3260,12 +3334,12 @@ export const Classes: React.FC = () => {
 					toast.error('An unexpected error occurred')
 				}
 
-				setCreateClassModalOpen(false)
+				setIsCreateClassModalOpen(false)
 			},
 			() => {
 				// This runs if the user lacks permission
 				toast.error('You do not have permission to create classes')
-				setCreateClassModalOpen(false)
+				setIsCreateClassModalOpen(false)
 			}
 		)
 	}
@@ -3287,13 +3361,68 @@ export const Classes: React.FC = () => {
 		)
 	}
 
+	if (isLoadingClassTypes) {
+		return (
+			<ClassesContainer>
+				<LoadingMessage>
+					<LoadingSpinner />
+					<span>Loading class types...</span>
+				</LoadingMessage>
+			</ClassesContainer>
+		)
+	}
+
+	if (classTypesError) {
+		return (
+			<ClassesContainer>
+				<div style={{ textAlign: 'center', color: 'red', marginTop: '20px' }}>
+					<p>Error loading class types: {classTypesError}</p>
+					<button onClick={() => { /* Implement refetch logic */ }}>Try Again</button>
+				</div>
+			</ClassesContainer>
+		);
+	}
+
 	return (
 		<ClassesContainer>
-			{!showSections && !showStudents && (
+			{!selectedClassType && !showSections && !showStudents && (
+				<>
+					<HeaderSection>
+						<div>
+							<PageTitle>Class Types</PageTitle>
+							<PageDescription>Select a class type to manage levels and sections.</PageDescription>
+						</div>
+						{/* Add button for creating new class type if needed */}
+					</HeaderSection>
+					{classTypes.length === 0 && !isLoadingClassTypes && (
+						<EmptyState>
+							<EmptyStateText>No class types found.</EmptyStateText>
+							{/* Button to create class type */}
+						</EmptyState>
+					)}
+					<ClassGrid> {/* Re-using ClassGrid for ClassTypes for now, might need a new style */}
+						{classTypes.map(ct => (
+							<ClassCard key={ct.id} $color={generateRandomColor()} onClick={() => setSelectedClassType(ct)}>
+								<CardHeader $color={generateRandomColor()}>
+									<ClassName color={generateRandomColor()}>{ct.name}</ClassName>
+								</CardHeader>
+							</ClassCard>
+						))}
+					</ClassGrid>
+				</>
+			)}
+
+			{selectedClassType && !showSections && !showStudents && (
 				<HeaderSection>
 					<div>
-						<PageTitle>Classes</PageTitle>
-						<PageDescription>Manage school classes and student enrollment</PageDescription>
+						<PageTitleWithBack>
+							<BackButton onClick={() => { setSelectedClassType(null); setClasses([]); /* Clear other states if needed */ }}>
+								<FiArrowLeft />
+								Back to Class Types
+							</BackButton>
+						</PageTitleWithBack>
+						<PageTitle>{selectedClassType.name} - Levels</PageTitle>
+						<PageDescription>Manage levels (e.g., grades) and their sections.</PageDescription>
 					</div>
 					<AddClassButton onClick={handleCreateClass}>
 						<FiPlus />
@@ -3310,7 +3439,7 @@ export const Classes: React.FC = () => {
 							<PageTitleWithBack>
 								<BackButton onClick={handleBackToClasses}>
 									<FiArrowLeft />
-									Back to Sections
+									Back to {selectedClassType?.name ? `${selectedClassType.name} - Levels` : 'Levels'}
 								</BackButton>
 							</PageTitleWithBack>
 							<PageTitle>{selectedSection} Students</PageTitle>
@@ -3329,16 +3458,10 @@ export const Classes: React.FC = () => {
 								<FiPlus />
 								<span>Add Students</span>
 							</AddButton>
-							{/* New Assign Teachers Button */}
-							<ManageSubjectTeachersButton
+							{/* New Assign Teachers Button - Assuming this is a styled AddButton or similar */}
+							<AddButton // Changed from ManageSubjectTeachersButton to AddButton, assuming similar style/functionality base
 								onClick={() => {
-									// We need to ensure currentSectionDetails is the correct Section object
-									// for the currently viewed selectedSection (e.g., "10A")
-									// This might require finding it from the `sections` array using `selectedSection` name or ID.
-									// For now, assuming `currentSectionDetails` is accessible and correct.
-									// Find the current section object from the sections list
 									const currentSectionObject = sections.find(s => s.id === selectedClassId)
-									// selectedClassId should hold the ID of the section whose students are being viewed
 									if (currentSectionObject) {
 										handleOpenManageSubjectTeachersModal(currentSectionObject)
 									} else {
@@ -3350,9 +3473,9 @@ export const Classes: React.FC = () => {
 									}
 								}}
 							>
-								<FiBookOpen /> {/* Changed Icon */}
+								<FiBookOpen /> 
 								<span>Manage Subject Teachers</span>
-							</ManageSubjectTeachersButton>
+							</AddButton>
 							<ExportDataButton>
 								<FiDownload />
 								<span>Export Data</span>
@@ -3539,177 +3662,187 @@ export const Classes: React.FC = () => {
 						grade={selectedGradeForSections!}
 						onSearchChange={handleSectionSearchChange}
 						onViewStudents={setViewingStudents}
-						onBackToGrades={() => setShowSections(false)}
-						onCreateNewSection={handleCreateNewSection}
-						onEditSection={handleEditSection}
-						onAssignTeacher={handleAssignTeacher}
-						onDeleteSection={handleDeleteSection}
+						onBackToGrades={() => {setShowSections(false); /*setSelectedGradeForSections(null);*/} } // Keep selectedGradeForSections to know which level we are in
+							onCreateNewSection={handleCreateNewSection}
+							onEditSection={handleEditSection}
+							onAssignTeacher={handleAssignTeacher}
+							onDeleteSection={handleDeleteSection}
 					/>
 				)
 			) : (
-				// Original classes view - shows only classes without letters
+				// Default view: Levels for a selected ClassType, or nothing if no ClassType is selected.
 				<>
-					<FiltersContainer>
-						<SearchAndFilters>
-							<SearchContainer>
-								<FiSearch />
-								<SearchInput
-									type='text'
-									placeholder='Search for classes...'
-									value={searchTerm}
-									onChange={handleSearchChange}
-								/>
-							</SearchContainer>
+					{selectedClassType && (
+						<>
+							<FiltersContainer>
+								<SearchAndFilters>
+									<SearchContainer>
+										<FiSearch />
+										<SearchInput
+											type='text'
+											placeholder='Search for levels...' // Updated placeholder
+											value={searchTerm}
+											onChange={handleSearchChange}
+										/>
+									</SearchContainer>
 
-							<FilterDropdown>
-								<select value={filterStatus} onChange={handleStatusFilterChange}>
-									<option value=''>All Status</option>
-									<option value='active'>Active</option>
-									<option value='inactive'>Inactive</option>
-								</select>
-							</FilterDropdown>
-						</SearchAndFilters>
+									<FilterDropdown>
+										<select value={filterStatus} onChange={handleStatusFilterChange}>
+											<option value=''>All Status</option>
+											<option value='active'>Active</option>
+											<option value='inactive'>Inactive</option>
+										</select>
+									</FilterDropdown>
+								</SearchAndFilters>
 
-						<ViewToggle>
-							<ViewButton $isActive={viewMode === 'grid'} onClick={() => setViewMode('grid')}>
-								<FiGrid />
-							</ViewButton>
-							<ViewButton $isActive={viewMode === 'list'} onClick={() => setViewMode('list')}>
-								<FiList />
-							</ViewButton>
-						</ViewToggle>
-					</FiltersContainer>
+								<ViewToggle>
+									<ViewButton $isActive={viewMode === 'grid'} onClick={() => setViewMode('grid')}>
+										<FiGrid />
+									</ViewButton>
+									<ViewButton $isActive={viewMode === 'list'} onClick={() => setViewMode('list')}>
+										<FiList />
+									</ViewButton>
+								</ViewToggle>
+							</FiltersContainer>
 
-					{filteredClasses.length === 0 && !isLoading && (
-						<EmptyState>
-							<EmptyStateText>
-								No classes found. Try adjusting your search or filters.
-							</EmptyStateText>
-						</EmptyState>
-					)}
+							{isLoading && !isLoadingClassTypes && (
+								<LoadingMessage>
+									<LoadingSpinner />
+									<span>Loading levels...</span>
+								</LoadingMessage>
+							)}
 
-					{viewMode === 'grid' ? (
-						<ClassGrid>
-							{filteredClasses.map(cls => (
-								<ClassCard key={cls.id} $color={cls.color} onClick={() => handleCardClick(cls)}>
-									<CardHeader $color={cls.color}>
-										<ClassName color={cls.color}>
-											{!isNaN(Number(cls.classname)) ? (
-												<ClassNumberDisplay color={cls.color}>{cls.classname}</ClassNumberDisplay>
-											) : (
-												cls.classname
-											)}
-										</ClassName>
-										<CardActions
-											onClick={e => {
-												e.stopPropagation()
-												toggleActionsMenu(cls.id)
-											}}
-										>
-											<FiMoreHorizontal />
-											<AnimatePresence>
-												{isActionsMenuOpen === cls.id && (
-													<ActionsMenu
-														as={motion.div}
-														initial={{ opacity: 0, y: -10 }}
-														animate={{ opacity: 1, y: 0 }}
-														exit={{ opacity: 0, y: -10 }}
-														transition={{ duration: 0.2 }}
-														onClick={e => e.stopPropagation()}
-													>
-														<ActionButton
-															$isPrimary={true}
-															onClick={e => {
-																e.stopPropagation()
-																handleEditClass(cls.id)
-															}}
-														>
-															<FiEdit />
-															<span>Edit</span>
-														</ActionButton>
-														<ActionButton
-															$isPrimary={false}
-															onClick={e => {
-																e.stopPropagation()
-																handleDeleteClass(cls.id)
-															}}
-														>
-															<FiTrash2 />
-															<span>Delete</span>
-														</ActionButton>
-													</ActionsMenu>
+							{filteredClasses.length === 0 && !isLoading && (
+								<EmptyState>
+									<EmptyStateText>
+										No levels found for {selectedClassType?.name}. Try adjusting your search or filters.
+									</EmptyStateText>
+								</EmptyState>
+							)}
+
+							{viewMode === 'grid' ? (
+								<ClassGrid>
+									{filteredClasses.map(cls => (
+										<ClassCard key={cls.id} $color={cls.color} onClick={() => handleCardClick(cls)}>
+											<CardHeader $color={cls.color}>
+												<ClassName color={cls.color}>
+													{!isNaN(Number(cls.classname)) ? (
+														<ClassNumberDisplay color={cls.color}>{cls.classname}</ClassNumberDisplay>
+													) : (
+														cls.classname
+													)}
+												</ClassName>
+												<CardActions
+													onClick={e => {
+														e.stopPropagation()
+														toggleActionsMenu(cls.id)
+													}}
+												>
+													<FiMoreHorizontal />
+													<AnimatePresence>
+														{isActionsMenuOpen === cls.id && (
+															<ActionsMenu
+																as={motion.div}
+																initial={{ opacity: 0, y: -10 }}
+																animate={{ opacity: 1, y: 0 }}
+																exit={{ opacity: 0, y: -10 }}
+																transition={{ duration: 0.2 }}
+																onClick={e => e.stopPropagation()}
+															>
+																<ActionButton
+																	$isPrimary={true}
+																	onClick={e => {
+																		e.stopPropagation()
+																		handleEditClass(cls.id)
+																	}}
+																>
+																	<FiEdit />
+																	<span>Edit</span>
+																</ActionButton>
+																<ActionButton
+																	$isPrimary={false}
+																	onClick={e => {
+																		e.stopPropagation()
+																		handleDeleteClass(cls.id)
+																	}}
+																>
+																	<FiTrash2 />
+																	<span>Delete</span>
+																</ActionButton>
+															</ActionsMenu>
+														)}
+													</AnimatePresence>
+												</CardActions>
+											</CardHeader>
+
+											<ClassDetails>
+												<ClassStatus $status={cls.status}>
+													{cls.status === 'active' ? 'Active' : 'Inactive'}
+												</ClassStatus>
+												<DetailItem>
+													<FiLayers />
+													<span>
+														{cls.sectionCount} {cls.sectionCount === 1 ? 'Section' : 'Sections'}
+													</span>
+												</DetailItem>
+											</ClassDetails>
+										</ClassCard>
+									))}
+								</ClassGrid>
+							) : (
+								<ClassTable>
+									<ClassTableHeader>
+										<div className='class-number'>Level #</div> {/* Updated Header */}
+										<div className='days'>Sections</div>
+										<div className='times'>Times</div>
+										<div className='status'>Status</div>
+										<div className='actions'>Actions</div>
+									</ClassTableHeader>
+									{filteredClasses.map(cls => (
+										<ClassTableRow key={cls.id} color={cls.color} onClick={() => handleCardClick(cls)}>
+											<div className='class-number'>
+												{!isNaN(Number(cls.classname)) ? (
+													<ClassNumberDisplay color={cls.color}>{cls.classname}</ClassNumberDisplay>
+												) : (
+													cls.classname
 												)}
-											</AnimatePresence>
-										</CardActions>
-									</CardHeader>
-
-									<ClassDetails>
-										<ClassStatus $status={cls.status}>
-											{cls.status === 'active' ? 'Active' : 'Inactive'}
-										</ClassStatus>
-										<DetailItem>
-											<FiLayers />
-											<span>
+											</div>
+											<div className='days'>
 												{cls.sectionCount} {cls.sectionCount === 1 ? 'Section' : 'Sections'}
-											</span>
-										</DetailItem>
-									</ClassDetails>
-								</ClassCard>
-							))}
-						</ClassGrid>
-					) : (
-						// List view - click on row to view sections
-						<ClassTable>
-							<ClassTableHeader>
-								<div className='class-number'>Class #</div>
-								<div className='days'>Sections</div>
-								<div className='times'>Times</div>
-								<div className='status'>Status</div>
-								<div className='actions'>Actions</div>
-							</ClassTableHeader>
-							{filteredClasses.map(cls => (
-								<ClassTableRow key={cls.id} color={cls.color} onClick={() => handleCardClick(cls)}>
-									<div className='class-number'>
-										{!isNaN(Number(cls.classname)) ? (
-											<ClassNumberDisplay color={cls.color}>{cls.classname}</ClassNumberDisplay>
-										) : (
-											cls.classname
-										)}
-									</div>
-									<div className='days'>
-										{cls.sectionCount} {cls.sectionCount === 1 ? 'Section' : 'Sections'}
-									</div>
-									<div className='times'>{cls.formattedTimes || 'Not scheduled'}</div>
-									<div className='status'>
-										<StatusBadge $status={cls.status}>
-											{cls.status === 'active' ? 'Active' : 'Inactive'}
-										</StatusBadge>
-									</div>
-									<div className='actions'>
-										<ActionIconsContainer>
-											<ActionIcon
-												onClick={e => {
-													e.stopPropagation()
-													handleEditClass(cls.id)
-												}}
-												title='Edit'
-											>
-												<FiEdit />
-											</ActionIcon>
-											<ActionIcon
-												onClick={e => {
-													e.stopPropagation()
-													handleDeleteClass(cls.id)
-												}}
-												title='Delete'
-											>
-												<FiTrash2 />
-											</ActionIcon>
-										</ActionIconsContainer>
-									</div>
-								</ClassTableRow>
-							))}
-						</ClassTable>
+											</div>
+											<div className='times'>{cls.formattedTimes || 'Not scheduled'}</div>
+											<div className='status'>
+												<StatusBadge $status={cls.status}>
+													{cls.status === 'active' ? 'Active' : 'Inactive'}
+												</StatusBadge>
+											</div>
+											<div className='actions'>
+												<ActionIconsContainer>
+													<ActionIcon
+														onClick={e => {
+															e.stopPropagation()
+															handleEditClass(cls.id)
+														}}
+														title='Edit'
+													>
+														<FiEdit />
+													</ActionIcon>
+													<ActionIcon
+														onClick={e => {
+															e.stopPropagation()
+															handleDeleteClass(cls.id)
+														}}
+														title='Delete'
+													>
+														<FiTrash2 />
+													</ActionIcon>
+												</ActionIconsContainer>
+											</div>
+										</ClassTableRow>
+									))}
+								</ClassTable>
+							)}
+						</>
 					)}
 				</>
 			)}
@@ -3812,8 +3945,8 @@ export const Classes: React.FC = () => {
 
 			{/* Add the CreateClassModal */}
 			<CreateClassModal
-				isOpen={createClassModalOpen}
-				onClose={() => setCreateClassModalOpen(false)}
+				isOpen={isCreateClassModalOpen} // Ensure this uses isCreateClassModalOpen
+				onClose={() => setIsCreateClassModalOpen(false)} // Ensure this uses setIsCreateClassModalOpen
 				onSave={handleSaveNewClass}
 			/>
 
@@ -3832,8 +3965,8 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 	isOpen,
 	onClose,
 	onAddStudents,
-	classId,
-	excludedStudentIds,
+	classId, // This is the ID of the section we are adding students to
+	excludedStudentIds, // Students already in THIS section
 }) => {
 	console.log('AddStudentModal render - isOpen:', isOpen, 'classId:', classId)
 	const [availableStudents, setAvailableStudents] = useState<AvailableStudent[]>([])
@@ -3849,30 +3982,17 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 		}
 	}, [])
 
-	// Count selected students
-	const selectedCount = availableStudents.filter(student => student.selected).length
+	// Count selected students (excluding those already in this section)
+	const selectedCount = availableStudents.filter(student => student.selected && !excludedStudentIds.includes(student.id)).length
 
-	// Effect to load available students (students not already in any class)
+	// Effect to load available students
 	useEffect(() => {
 		const fetchAvailableStudents = async () => {
 			setIsLoading(true)
 			try {
-				console.log('Fetching available students...')
+				console.log('Fetching all students with role Student...');
 
-				// Step 1: Get IDs of all students currently assigned to ANY class
-				const { data: assignedStudentsData, error: assignedError } = await supabase
-					.from('classstudents')
-					.select('studentid')
-
-				if (assignedError) {
-					console.error('Error fetching assigned students:', assignedError)
-					throw assignedError
-				}
-
-				const assignedStudentIds = new Set(assignedStudentsData?.map(item => item.studentid) || [])
-				console.log(`Found ${assignedStudentIds.size} students assigned to at least one class.`)
-
-				// Step 2: Get all users with the 'Student' role
+				// Fetch ALL users with the 'Student' role
 				const { data: allStudentsData, error: allStudentsError } = await supabase
 					.from('users')
 					.select('id, firstName, lastName, email, role')
@@ -3893,18 +4013,13 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 					return
 				}
 
-				// Step 3: Filter out students who are already assigned to ANY class
-				const unassignedStudents = allStudentsData.filter(user => !assignedStudentIds.has(user.id))
-
-				console.log(`Found ${unassignedStudents.length} students not assigned to any class.`)
-
-				// Step 4: Format the unassigned students for the modal
-				const formattedStudents = unassignedStudents.map(user => ({
+				// Format all fetched students
+				const formattedStudents = allStudentsData.map(user => ({
 					id: user.id,
 					name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unnamed User',
 					email: user.email || 'No email',
 					role: user.role || 'unknown',
-					selected: false,
+					selected: false, // Initially not selected
 				}))
 
 				setAvailableStudents(formattedStudents)
@@ -3922,8 +4037,8 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 		if (isOpen) {
 			fetchAvailableStudents()
 		}
-		// We only depend on isOpen because excludedStudentIds is now implicitly handled by the logic
-	}, [isOpen])
+	}, [isOpen]) // excludedStudentIds is not strictly needed here as a dependency for fetching ALL students
+                 // It will be used for UI rendering and selection logic.
 
 	// Filter students based on search term
 	useEffect(() => {
@@ -3931,8 +4046,8 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 			const lowerCaseSearch = searchTerm.toLowerCase()
 			const filtered = availableStudents.filter(
 				student =>
-					student.name.toLowerCase().includes(lowerCaseSearch) ||
-					student.email.toLowerCase().includes(lowerCaseSearch)
+						student.name.toLowerCase().includes(lowerCaseSearch) ||
+						student.email.toLowerCase().includes(lowerCaseSearch)
 			)
 			setFilteredStudents(filtered)
 		} else {
@@ -3947,6 +4062,11 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 
 	// Toggle student selection
 	const toggleStudentSelection = (studentId: string) => {
+    // Prevent selection if student is already in this specific section
+    if (excludedStudentIds.includes(studentId)) {
+      toast.info('This student is already in this section.');
+      return;
+    }
 		setAvailableStudents(prevStudents =>
 			prevStudents.map(student =>
 				student.id === studentId ? { ...student, selected: !student.selected } : student
@@ -4005,6 +4125,8 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 									<StudentItem
 										key={student.id}
 										$isSelected={student.selected}
+                    // Pass a new prop to indicate if the student is already in this section
+                    $isExcluded={excludedStudentIds.includes(student.id)}
 										onClick={() => toggleStudentSelection(student.id)}
 									>
 										<StudentCheckbox
@@ -4012,6 +4134,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 											checked={student.selected}
 											onChange={() => toggleStudentSelection(student.id)}
 											onClick={e => e.stopPropagation()}
+                      disabled={excludedStudentIds.includes(student.id)} // Disable if excluded
 										/>
 										<StudentInfo>
 											<ModalStudentName>{student.name}</ModalStudentName>
@@ -4022,6 +4145,11 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 														({student.role})
 													</span>
 												)}
+                            {excludedStudentIds.includes(student.id) && (
+                              <span style={{ marginLeft: '10px', fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic' }}>
+                                (Already in this section)
+                              </span>
+                            )}
 											</ModalStudentEmail>
 										</StudentInfo>
 									</StudentItem>

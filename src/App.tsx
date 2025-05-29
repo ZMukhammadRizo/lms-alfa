@@ -20,7 +20,6 @@ import AdminGradesModule from './pages/admin/GradesModule'
 import GroupStudents from './pages/admin/GroupStudents'
 import LessonDetail from './pages/admin/LessonDetail'
 import LessonsManagePage from './pages/admin/LessonsManagePage'
-import MorningClasses from './pages/admin/MorningClasses'
 import NewClassPage from './pages/admin/NewClassPage'
 import ProfilePage from './pages/admin/ProfilePage'
 import Roles from './pages/admin/Roles'
@@ -140,12 +139,6 @@ function AppContent() {
 							<Route path='roles' element={<Roles />} />
 							<Route path='subjects' element={<Subjects />} />
 							<Route path='classes' element={<Classes />} />
-							<Route path='morning-classes' element={<MorningClasses />} />
-							<Route path='morning-classes/:subjectId' element={<SubjectGroups />} />
-							<Route
-								path='morning-classes/:subjectId/groups/:groupId'
-								element={<GroupStudents />}
-							/>
 							<Route path='assignments' element={<AdminAssignments />} />
 							<Route path='grades/*' element={<AdminGradesModule />} />
 							<Route path='timetables' element={<Timetables />} />
