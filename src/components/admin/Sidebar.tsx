@@ -277,6 +277,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 	// Get module leader menu items based on parent role
 	const moduleLeaderMenu = getModuleLeaderMenu(parentRole, role)
 
+	console.log('hasPermission("manage_roles")', hasPermission('manage_roles'))
+
 	return (
 		<>
 			{/* Mobile menu button */}

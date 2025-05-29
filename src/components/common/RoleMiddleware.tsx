@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import RedirectPage from '../../pages/auth/RedirectPage'
-import { getUserParentRole, getUserRole, isRoleManager } from '../../utils/authUtils'
 
 interface RoleMiddlewareProps {
 	children: React.ReactNode
@@ -15,13 +14,16 @@ interface RoleMiddlewareProps {
  * This serves as a backup to the ProtectedRoute component.
  */
 const RoleMiddleware: React.FC<RoleMiddlewareProps> = ({ children }) => {
-	const { isAuthenticated, user } = useAuth()
+	const { isAuthenticated, user, getParentRoleName, getEffectiveRoleName } = useAuth()
 	const navigate = useNavigate()
 	const location = useLocation()
 	const [isRedirecting, setIsRedirecting] = useState(false)
 	const [redirectPath, setRedirectPath] = useState<string | null>(null)
 	const [redirectMessage, setRedirectMessage] = useState('')
 	const [initialCheckDone, setInitialCheckDone] = useState(false)
+
+	// Define the primary roles
+	const PRIMARY_ROLES = ['admin', 'teacher', 'student', 'parent']
 
 	useEffect(() => {
 		// Reset redirecting state on location change
@@ -43,42 +45,37 @@ const RoleMiddleware: React.FC<RoleMiddlewareProps> = ({ children }) => {
 			return
 		}
 
-		// Get the user role as a string
-		const userRoleValue = getUserRole()
-		// Get the parent role for users with nested roles
-		const parentRoleValue = getUserParentRole()
+		// Get user's effective role (the primary role or parent role)
+		let effectiveRole: string
 
-		// Ensure the role is a string, not an object
-		const userRole =
-			typeof userRoleValue === 'string'
-				? userRoleValue.toLowerCase()
-				: typeof userRoleValue === 'object' && userRoleValue !== null && 'name' in userRoleValue
-				? String(userRoleValue.name).toLowerCase()
-				: 'unknown'
+		// Get parent role if it exists
+		let parentRole = null
+		if (user.role && typeof user.role === 'object') {
+			parentRole = getParentRoleName(user.role)
+		}
 
-		// For RoleManager, use their parent role for routing
-		const isUserRoleManager = isRoleManager()
-		const effectiveRole =
-			isUserRoleManager && parentRoleValue ? parentRoleValue.toLowerCase() : userRole
+		// If parent role exists and is one of the primary roles, use that
+		if (parentRole && PRIMARY_ROLES.includes(parentRole.toLowerCase())) {
+			effectiveRole = parentRole.toLowerCase()
+			console.log(`Using parent role: ${effectiveRole} for navigation`)
+		} else {
+			// Otherwise get the direct role
+			const directRole =
+				typeof user.role === 'string'
+					? user.role
+					: user.role && typeof user.role === 'object' && user.role.name
+					? user.role.name
+					: 'unknown'
 
-		// Safety check to ensure we have a valid role
-		if (
-			![
-				'admin',
-				'superadmin',
-				'teacher',
-				'moduleleader',
-				'student',
-				'parent',
-				'rolemanager',
-			].includes(effectiveRole)
-		) {
+			effectiveRole = directRole.toLowerCase()
+			console.log(`Using direct role: ${effectiveRole} for navigation`)
+		}
+
+		// If role is not one of the primary roles and has no valid parent,
+		// default to student for safety
+		if (!PRIMARY_ROLES.includes(effectiveRole)) {
 			console.error(`Invalid role detected: "${effectiveRole}". Defaulting to student.`)
-			setRedirectMessage(`Redirecting you to the student dashboard...`)
-			setRedirectPath('/student/dashboard')
-			setIsRedirecting(true)
-			setInitialCheckDone(true)
-			return
+			effectiveRole = 'student'
 		}
 
 		const path = location.pathname
@@ -92,31 +89,15 @@ const RoleMiddleware: React.FC<RoleMiddlewareProps> = ({ children }) => {
 		let shouldRedirect = false
 		let redirectTarget = `/${effectiveRole}/dashboard`
 
-		// Special case for RoleManager with Admin parent role
-		if (isUserRoleManager && parentRoleValue === 'Admin') {
-			redirectTarget = '/admin/dashboard'
-
-			// If trying to access another role's dashboard when should be on Admin, redirect
-			if (!isAccessingAdmin) {
-				shouldRedirect = true
-			}
-		}
-		// Standard role checks
-		else {
-			// Only allow access to the path matching the user's role
-			if (isAccessingAdmin && effectiveRole !== 'admin' && effectiveRole !== 'superadmin') {
-				shouldRedirect = true
-			} else if (
-				isAccessingTeacher &&
-				effectiveRole !== 'teacher' &&
-				effectiveRole !== 'moduleleader'
-			) {
-				shouldRedirect = true
-			} else if (isAccessingStudent && effectiveRole !== 'student') {
-				shouldRedirect = true
-			} else if (isAccessingParent && effectiveRole !== 'parent') {
-				shouldRedirect = true
-			}
+		// Only allow access to the path matching the user's effective role
+		if (isAccessingAdmin && effectiveRole !== 'admin') {
+			shouldRedirect = true
+		} else if (isAccessingTeacher && effectiveRole !== 'teacher') {
+			shouldRedirect = true
+		} else if (isAccessingStudent && effectiveRole !== 'student') {
+			shouldRedirect = true
+		} else if (isAccessingParent && effectiveRole !== 'parent') {
+			shouldRedirect = true
 		}
 
 		// Track that we've done the initial check
@@ -129,7 +110,7 @@ const RoleMiddleware: React.FC<RoleMiddlewareProps> = ({ children }) => {
 			setRedirectPath(redirectTarget)
 			setIsRedirecting(true)
 		}
-	}, [location.pathname, isAuthenticated, user, navigate])
+	}, [location.pathname, isAuthenticated, user, navigate, getParentRoleName, getEffectiveRoleName])
 
 	// Show nothing until the initial check is complete to prevent flicker
 	if (!initialCheckDone) {

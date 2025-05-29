@@ -434,6 +434,23 @@ const Users: React.FC = () => {
 		setIsLoading(true)
 
 		try {
+			// Get the role_id from the roles table based on the role name
+			let roleId: string | null = null
+			if (userData.role) {
+				const { data: roleData, error: roleError } = await supabase
+					.from('roles')
+					.select('id')
+					.eq('name', userData.role)
+					.single()
+
+				if (roleError) {
+					console.error('Error fetching role_id:', roleError)
+				} else if (roleData) {
+					roleId = roleData.id
+					console.log(`Found role_id ${roleId} for role ${userData.role}`)
+				}
+			}
+
 			if (currentUser && currentUser.id) {
 				// If updating, check if changing to an email that already exists
 				if (userData.email !== currentUser.email) {
@@ -457,6 +474,7 @@ const Users: React.FC = () => {
 						lastName: userData.lastName,
 						email: userData.email,
 						role: userData.role,
+						role_id: roleId, // Include role_id in the update
 						status: userData.status,
 					})
 					.eq('id', currentUser.id)
@@ -480,6 +498,7 @@ const Users: React.FC = () => {
 							? {
 									...user,
 									...userData,
+									role_id: roleId || undefined, // Include role_id in the state update
 							  }
 							: user
 					)
@@ -572,12 +591,11 @@ const Users: React.FC = () => {
 				// Log detailed information about the user table structure for debugging
 				console.log('Attempting to insert user with data:', {
 					id: userId,
-					firstName: userData.firstName, // Try both camelCase and snake_case since we're not sure
+					firstName: userData.firstName,
 					lastName: userData.lastName,
-					first_name: userData.firstName,
-					last_name: userData.lastName,
 					email: userData.email,
 					role: userData.role,
+					role_id: roleId, // Include role_id in the insert
 					status: userData.status,
 					password: userData.password,
 				})
@@ -586,13 +604,13 @@ const Users: React.FC = () => {
 				try {
 					const { error: dbError } = await supabase.from('users').insert({
 						id: userId,
-						firstName: userData.firstName, // Use camelCase instead of snake_case
+						firstName: userData.firstName,
 						lastName: userData.lastName,
 						email: userData.email,
 						role: userData.role,
+						role_id: roleId, // Include role_id in the insert
 						status: userData.status,
 						password: userData.password, // Add password field to satisfy NOT NULL constraint
-						// Removed created_at as it's not in the schema
 					})
 
 					if (dbError) {
@@ -604,6 +622,7 @@ const Users: React.FC = () => {
 							lastName: userData.lastName,
 							email: userData.email,
 							role: userData.role,
+							role_id: roleId,
 							status: userData.status,
 							password: userData.password ? '(provided)' : '(missing)',
 						})
@@ -654,6 +673,8 @@ const Users: React.FC = () => {
 					lastName: userData.lastName || '',
 					email: userData.email || '',
 					role: userData.role || 'Student',
+					// @ts-ignore
+					role_id: roleId || undefined, // Include role_id in the new user
 					effectiveRole: userData.role as string, // Set effective role same as role for new users
 					status: (userData.status as 'active' | 'inactive') || 'active',
 					lastLogin: 'Never',

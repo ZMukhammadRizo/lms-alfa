@@ -2,6 +2,7 @@ import supabase from '../config/supabaseClient'
 
 // Cache for role permissions to avoid repetitive database queries
 const permissionsCache: Record<string, string[]> = {}
+const directPermissionsCache: Record<string, string[]> = {}
 
 /**
  * Gets all permissions for a role, including inherited permissions
@@ -91,11 +92,75 @@ export const getRolePermissionsWithInheritance = async (
 }
 
 /**
+ * Gets ONLY the direct permissions for a role WITHOUT any inheritance from parent roles.
+ * This ensures we only store the permissions directly assigned to a role.
+ *
+ * @param roleId The role ID to get direct permissions for
+ * @param useCache Whether to use cached permissions (default: true)
+ * @returns Array of direct permission names for this role only
+ */
+export const getDirectRolePermissions = async (
+	roleId: string,
+	useCache: boolean = true
+): Promise<string[]> => {
+	// Check cache first if enabled
+	if (useCache && directPermissionsCache[roleId]) {
+		return directPermissionsCache[roleId]
+	}
+
+	// Array to store permission names
+	const permissionNames: string[] = []
+
+	try {
+		// Get direct permissions for this role from role_permissions table
+		const { data: rolePermissions, error: permissionsError } = await supabase
+			.from('role_permissions')
+			.select(
+				`
+				permission_id,
+				permissions:permission_id (name)
+			`
+			)
+			.eq('role_id', roleId)
+
+		if (permissionsError) {
+			console.error('Error fetching direct role permissions:', permissionsError)
+		} else if (rolePermissions && rolePermissions.length > 0) {
+			// Add permission names to array
+			rolePermissions.forEach(item => {
+				if (
+					item.permissions &&
+					typeof item.permissions === 'object' &&
+					'name' in item.permissions
+				) {
+					const permName = item.permissions.name
+					if (permName && typeof permName === 'string') {
+						permissionNames.push(permName)
+					}
+				}
+			})
+		}
+	} catch (error) {
+		console.error('Error fetching direct permissions:', error)
+	}
+
+	// Cache the result
+	if (useCache) {
+		directPermissionsCache[roleId] = permissionNames
+	}
+
+	return permissionNames
+}
+
+/**
  * Clears the permissions cache - call this when roles or permissions are updated
  */
 export const clearPermissionsCache = () => {
 	Object.keys(permissionsCache).forEach(key => {
 		delete permissionsCache[key]
+	})
+	Object.keys(directPermissionsCache).forEach(key => {
+		delete directPermissionsCache[key]
 	})
 }
 
@@ -107,38 +172,57 @@ export const clearPermissionsCache = () => {
  */
 export const getUserRoleId = async (userId: string): Promise<string | null> => {
 	try {
-		// Get user's primary role
-		const { data, error } = await supabase
-			.from('user_roles')
-			.select('role_id, roles!inner(id, "isPrimary")')
-			.eq('user_id', userId)
-			.eq('roles.isPrimary', true)
+		// Get user's role directly from the users table
+		const { data: userData, error: userError } = await supabase
+			.from('users')
+			.select('role_id')
+			.eq('id', userId)
 			.single()
 
-		if (error) {
-			// Handle the specific "no rows" error gracefully
-			if (error.code === 'PGRST116') {
-				console.log(`No primary role found for user ${userId}, checking for any role`)
-				// If no primary role, get any role
-				const { data: anyRole, error: anyRoleError } = await supabase
-					.from('user_roles')
-					.select('role_id')
-					.eq('user_id', userId)
-					.maybeSingle() // Use maybeSingle instead of single to avoid errors when no rows exist
+		if (userError) {
+			console.error('Error fetching user role_id:', userError)
 
-				if (anyRoleError) {
-					console.error('Error fetching any user role:', anyRoleError)
-					return null
-				}
+			// If no direct role_id, try to get role from the role name
+			const { data: userWithRole, error: roleNameError } = await supabase
+				.from('users')
+				.select('role')
+				.eq('id', userId)
+				.single()
 
-				return anyRole?.role_id || null
+			if (roleNameError || !userWithRole || !userWithRole.role) {
+				console.error('Error fetching user role name:', roleNameError)
+				return null
 			}
 
-			console.error('Error fetching user role:', error)
-			return null
+			// Get the role name (could be string or object)
+			const roleName =
+				typeof userWithRole.role === 'string'
+					? userWithRole.role
+					: typeof userWithRole.role === 'object' && userWithRole.role?.name
+					? userWithRole.role.name
+					: null
+
+			if (!roleName) {
+				console.error('Could not determine role name')
+				return null
+			}
+
+			// Get the role_id from the roles table using the name
+			const { data: roleData, error: roleError } = await supabase
+				.from('roles')
+				.select('id')
+				.eq('name', roleName)
+				.single()
+
+			if (roleError) {
+				console.error('Error fetching role by name:', roleError)
+				return null
+			}
+
+			return roleData?.id || null
 		}
 
-		return data.role_id
+		return userData?.role_id || null
 	} catch (error) {
 		console.error('Error getting user role ID:', error)
 		return null
@@ -196,6 +280,7 @@ export const getUserPermissions = async (userId: string): Promise<string[]> => {
 
 /**
  * Checks if the current authenticated user has the required permission
+ * based on their role's assigned permissions
  *
  * @param requiredPermission The permission to check
  * @returns Boolean indicating if user has permission
@@ -206,14 +291,6 @@ export const checkUserPermission = async (requiredPermission: string): Promise<b
 
 	try {
 		const parsedInfo = JSON.parse(userInfo)
-
-		// SuperAdmin bypass
-		if (
-			parsedInfo.role === 'SuperAdmin' ||
-			(typeof parsedInfo.role === 'object' && parsedInfo.role.name === 'SuperAdmin')
-		) {
-			return true
-		}
 
 		// Get user's role ID - either from cache or fetch it
 		let roleId = parsedInfo.role_id
@@ -228,19 +305,41 @@ export const checkUserPermission = async (requiredPermission: string): Promise<b
 			localStorage.setItem('lms_user', JSON.stringify(parsedInfo))
 		}
 
-		// Get all permissions for this role including inherited ones
-		const permissions = await getRolePermissionsWithInheritance(roleId)
+		// Check cached permissions first
+		if (parsedInfo.permissions && Array.isArray(parsedInfo.permissions)) {
+			const hasPermission = parsedInfo.permissions.includes(requiredPermission)
+			console.log(
+				`Permission check for "${requiredPermission}": ${
+					hasPermission ? 'Granted' : 'Denied'
+				} (from cached direct role permissions)`
+			)
+			return hasPermission
+		}
 
-		// Check if the required permission is in the list
-		return permissions.includes(requiredPermission)
+		// If no cached permissions, fetch them from the database
+		// Get ONLY direct permissions specific to this role WITHOUT inheritance
+		const permissions = await getDirectRolePermissions(roleId)
+
+		// Update local storage with permissions
+		parsedInfo.permissions = permissions
+		localStorage.setItem('lms_user', JSON.stringify(parsedInfo))
+
+		const hasPermission = permissions.includes(requiredPermission)
+		console.log(
+			`Permission check for "${requiredPermission}": ${
+				hasPermission ? 'Granted' : 'Denied'
+			} (from freshly fetched direct role permissions)`
+		)
+		return hasPermission
 	} catch (error) {
-		console.error('Error checking permission:', error)
+		console.error('Error checking user permission:', error)
 		return false
 	}
 }
 
 /**
  * Gets all permissions for the current authenticated user
+ * Only fetches direct permissions specific to the user's role WITHOUT inheritance
  *
  * @returns Array of permission names the user has
  */
@@ -250,20 +349,6 @@ export const getCurrentUserPermissions = async (): Promise<string[]> => {
 
 	try {
 		const parsedInfo = JSON.parse(userInfo)
-
-		// SuperAdmin has all permissions
-		if (
-			parsedInfo.role === 'SuperAdmin' ||
-			(typeof parsedInfo.role === 'object' && parsedInfo.role.name === 'SuperAdmin')
-		) {
-			// Fetch all permission names from the database for SuperAdmin
-			const { data, error } = await supabase.from('permissions').select('name')
-			if (error) {
-				console.error('Error fetching all permissions:', error)
-				return []
-			}
-			return data.map(p => p.name)
-		}
 
 		// Get user's role ID - either from cache or fetch it
 		let roleId = parsedInfo.role_id
@@ -278,8 +363,8 @@ export const getCurrentUserPermissions = async (): Promise<string[]> => {
 			localStorage.setItem('lms_user', JSON.stringify(parsedInfo))
 		}
 
-		// Get all permissions for this role including inherited ones
-		return await getRolePermissionsWithInheritance(roleId)
+		// Get ONLY the direct permissions specifically assigned to this role WITHOUT inheritance
+		return await getDirectRolePermissions(roleId)
 	} catch (error) {
 		console.error('Error getting user permissions:', error)
 		return []
@@ -289,6 +374,7 @@ export const getCurrentUserPermissions = async (): Promise<string[]> => {
 /**
  * Syncs the user's permissions in local storage with the latest from the database
  * Call this after role changes or permission updates
+ * Only stores direct permissions specific to the user's role WITHOUT inheritance
  *
  * @returns Updated array of user permissions
  */
@@ -307,17 +393,20 @@ export const syncUserPermissions = async (): Promise<string[]> => {
 		const roleId = await getUserRoleId(parsedInfo.id)
 		if (!roleId) return []
 
-		// Get permissions including inherited ones
-		const permissions = await getRolePermissionsWithInheritance(roleId, false)
+		// Get ONLY the direct permissions specific to this role WITHOUT inheritance
+		const permissions = await getDirectRolePermissions(roleId, false)
 
-		// Update local storage with role ID and permissions
+		// Update local storage with role ID and direct role-specific permissions
 		const updatedUserInfo = {
 			...parsedInfo,
 			role_id: roleId,
-			permissions,
+			permissions, // Store ONLY the direct permissions relevant to the user's role
 		}
 
 		localStorage.setItem('lms_user', JSON.stringify(updatedUserInfo))
+		console.log(
+			`Synced ${permissions.length} direct role-specific permissions for user with role ID ${roleId}`
+		)
 
 		return permissions
 	} catch (error) {
@@ -441,13 +530,6 @@ export function hasPermission({
 	currentUserPermissions: string[]
 	requiredPermission: string
 }): boolean {
-	// Always allow Admin and SuperAdmin roles full access
-	const fullAccessRoles = ['Admin', 'SuperAdmin']
-
-	if (fullAccessRoles.includes(currentUserRole)) {
-		return true
-	}
-
-	// Otherwise, check if the user has the specific permission
+	// Check if the user has the specific permission in their role-specific permissions
 	return currentUserPermissions.includes(requiredPermission)
 }

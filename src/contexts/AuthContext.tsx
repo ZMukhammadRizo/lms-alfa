@@ -80,87 +80,44 @@ interface AuthProviderProps {
 export const getDashboardRoute = (role: UserRole): string => {
 	console.log(`Role in the getDashboardRoute:`, role)
 
-	// First, ensure we have a valid string role
-	let roleName: string
+	// Define primary roles that have their own dashboards
+	const PRIMARY_ROLES = ['admin', 'student', 'parent', 'teacher']
 
 	try {
-		// Check if the role indicates a RoleManager with Admin parent
-		if (typeof role === 'object' && role !== null) {
-			// If it has a parent property and the parent is Admin
-			if (
-				role.parent &&
-				typeof role.parent === 'object' &&
-				role.parent.name &&
-				role.parent.name.toLowerCase() === 'admin'
-			) {
-				return '/admin/dashboard'
-			}
-
-			// If it's a RoleManager and we have a parent role
-			if (
-				role.name &&
-				role.name.toLowerCase() === 'rolemanager' &&
-				role.parent &&
-				typeof role.parent === 'object' &&
-				role.parent.name
-			) {
-				return `/${role.parent.name.toLowerCase()}/dashboard`
-			}
-		}
-
-		// If role is already a string
+		// Case 1: Role is a string (simple case)
 		if (typeof role === 'string') {
-			roleName = role.toLowerCase()
-		}
-		// If role is an object with name property
-		else if (role && typeof role === 'object') {
-			// Check for parent role first
-			if (role.parent && typeof role.parent === 'object' && role.parent.name) {
-				roleName = role.parent.name.toLowerCase()
-			}
-			// Then check for role name
-			else if (role.name && typeof role.name === 'string') {
-				roleName = role.name.toLowerCase()
-			}
-			// If we can't determine the role from the object, use a default
-			else {
-				console.warn('Could not determine role name from object:', role)
-				roleName = 'student' // Safe default
+			const roleLower = role.toLowerCase()
+
+			// If it's a primary role, use its dashboard
+			if (PRIMARY_ROLES.includes(roleLower)) {
+				return `/${roleLower}/dashboard`
 			}
 		}
-		// Fallback for unexpected values
-		else {
-			console.warn('Unexpected role type in getDashboardRoute:', typeof role, role)
-			roleName = 'student' // Safe default
+
+		// Case 2: Role is an object
+		if (typeof role === 'object' && role !== null && role.name) {
+			const roleLower = role.name.toLowerCase()
+
+			// If it's a primary role by name
+			if (PRIMARY_ROLES.includes(roleLower)) {
+				return `/${roleLower}/dashboard`
+			}
+
+			// Not a primary role, check for parent role
+			const parentRole = getParentRoleName(role)
+			if (parentRole) {
+				// Use parent's dashboard route
+				return `/${parentRole.toLowerCase()}/dashboard`
+			}
 		}
 
-		// Safe check to ensure role is one of the valid roles
-		if (
-			![
-				'admin',
-				'superadmin',
-				'teacher',
-				'moduleleader',
-				'student',
-				'parent',
-				'rolemanager',
-			].includes(roleName)
-		) {
-			console.warn(
-				`Invalid role "${roleName}" detected in getDashboardRoute. Defaulting to student.`
-			)
-			roleName = 'student'
-		}
-
-		// Special handling for 'rolemanager' - use admin as the parent role by default
-		if (roleName === 'rolemanager') {
-			return '/admin/dashboard'
-		}
-
-		return `/${roleName}/dashboard`
+		// If we get here, we couldn't determine a valid route
+		// Default to student dashboard as a fallback
+		console.warn('Could not determine dashboard route, defaulting to student dashboard')
+		return '/student/dashboard'
 	} catch (error) {
 		console.error('Error in getDashboardRoute:', error)
-		return '/student/dashboard' // Safe default if anything goes wrong
+		return '/student/dashboard'
 	}
 }
 
@@ -170,8 +127,11 @@ export const getRoleName = (role: UserRole): string => {
 		return role
 	}
 
-	if (role && typeof role === 'object' && role.name) {
-		return role.name
+	if (role && typeof role === 'object') {
+		// First check if role has a name property
+		if ('name' in role && role.name) {
+			return role.name
+		}
 	}
 
 	return 'Unknown'
@@ -179,8 +139,26 @@ export const getRoleName = (role: UserRole): string => {
 
 // Helper function to get parent role name
 export const getParentRoleName = (role: UserRole): string | null => {
-	if (role && typeof role === 'object' && role.parent && role.parent.name) {
-		return role.parent.name
+	if (typeof role === 'object' && role !== null) {
+		// Check if parent exists and has a name property
+		if (
+			'parent' in role &&
+			role.parent &&
+			typeof role.parent === 'object' &&
+			'name' in role.parent
+		) {
+			return role.parent.name
+		}
+
+		// Also check if there's a parent_role property for backward compatibility
+		if (
+			'parent_role' in role &&
+			role.parent_role &&
+			typeof role.parent_role === 'object' &&
+			'name' in role.parent_role
+		) {
+			return role.parent_role.name as string
+		}
 	}
 	return null
 }
@@ -258,14 +236,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 					.eq('id', refreshedSession.session.user.id)
 					.single()
 				if (userData && mounted) {
-					// Get role_id from user_roles table
-					const { data: userRoleData } = await supabase
-						.from('user_roles')
-						.select('role_id')
-						.eq('user_id', refreshedSession.session.user.id)
-						.maybeSingle()
+					// Get role_id directly from the roles table by role name
+					let roleId: string | null = null
+					if (userData.role && typeof userData.role === 'object' && userData.role.name) {
+						const { data: roleData, error: roleIdError } = await supabase
+							.from('roles')
+							.select('id')
+							.eq('name', userData.role.name)
+							.single()
 
-					const roleId = userRoleData?.role_id || null
+						if (!roleIdError && roleData) {
+							roleId = roleData.id
+						}
+					}
 
 					const userWithRole = {
 						...userData,
@@ -289,11 +272,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 					// Synchronize permissions using the role hierarchy
 					try {
-						// This function properly traverses the role hierarchy
+						// This function properly traverses the role hierarchy to get role-specific permissions
+						console.log(`Fetching role-specific permissions for user with role_id: ${roleId}`)
 						const permissions = await syncUserPermissions()
 
 						// If we got permissions, update the user object
 						if (permissions.length > 0) {
+							console.log(`Successfully loaded ${permissions.length} role-specific permissions`)
+
 							// Update user in state and localStorage with permissions
 							const updatedUserWithPermissions = {
 								...userWithRole,
@@ -305,9 +291,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 							// Update state
 							setUser(updatedUserWithPermissions)
+						} else {
+							console.warn('No permissions found for this role')
 						}
 					} catch (error) {
-						console.error('Error fetching permissions during session refresh:', error)
+						console.error('Error fetching role permissions during session refresh:', error)
 					}
 
 					// Only redirect if we're on an unauthenticated route (login, register, root)
@@ -410,29 +398,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		console.log('Parent role name:', getParentRoleName(role))
 		console.log('Effective role name:', getEffectiveRoleName(role))
 
-		// Get role_id first for permission inheritance
+		// Get role_id directly from the roles table by role name
 		let roleId: string | null = null
-		if (typeof role === 'object' && role.name) {
-			// First try to get role_id from user_roles table
-			const { data: userRoleData, error: userRoleError } = await supabase
-				.from('user_roles')
-				.select('role_id')
-				.eq('user_id', supabaseUser.id)
-				.maybeSingle()
+		if (role && typeof role === 'object' && role.name) {
+			const { data: roleData, error: roleIdError } = await supabase
+				.from('roles')
+				.select('id')
+				.eq('name', role.name)
+				.single()
 
-			if (!userRoleError && userRoleData) {
-				roleId = userRoleData.role_id
-			} else {
-				// Fallback: try to get role_id from roles table by name
-				const { data: roleData, error: roleIdError } = await supabase
-					.from('roles')
-					.select('id')
-					.eq('name', role.name)
-					.single()
-
-				if (!roleIdError && roleData) {
-					roleId = roleData.id
-				}
+			if (!roleIdError && roleData) {
+				roleId = roleData.id
 			}
 		}
 
@@ -457,16 +433,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 				// Store user first (without permissions) so syncUserPermissions can use it
 				localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(newUser))
 
-				// Get permissions including inherited ones
+				console.log(`Fetching role-specific permissions for user with role_id: ${roleId}`)
+				// Get role-specific permissions including inherited ones
 				const permissions = await syncUserPermissions()
 
 				// Update user with permissions
 				if (permissions.length > 0) {
+					console.log(
+						`Successfully loaded ${permissions.length} role-specific permissions for login`
+					)
 					newUser.permissions = permissions
+				} else {
+					console.warn('No permissions found for this role during login')
 				}
 			} catch (error) {
-				console.error('Error fetching permissions during login:', error)
+				console.error('Error fetching role permissions during login:', error)
 			}
+		} else {
+			console.warn('No role_id available, cannot fetch permissions for this user')
 		}
 
 		// Save to state and localStorage
