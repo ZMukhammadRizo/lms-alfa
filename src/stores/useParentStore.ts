@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
+	subscribeToAttendanceUpdates,
+	subscribeToScoresUpdates,
+	unsubscribeAll,
+} from '../services/notificationService'
+import {
 	Assignment,
 	AttendanceRecord,
 	Grade,
@@ -269,6 +274,7 @@ interface ParentStoreState {
 	notifications: ParentNotification[]
 	isLoading: boolean
 	error: string | null
+	realtimeInitialized: boolean
 
 	// Actions
 	setSelectedStudent: (studentId: string) => void
@@ -280,6 +286,9 @@ interface ParentStoreState {
 	fetchNotifications: () => Promise<ParentNotification[]>
 	markNotificationAsRead: (notificationId: string) => void
 	markAllNotificationsAsRead: () => void
+	initializeRealtimeUpdates: () => void
+	addNotification: (notification: ParentNotification) => void
+	cleanupRealtimeUpdates: () => void
 }
 
 // Create the store with persistence
@@ -287,7 +296,7 @@ export const useParentStore = create<ParentStoreState>()(
 	persist(
 		(set, get) => ({
 			// Initial state
-			selectedStudentId: MOCK_LINKED_STUDENTS.length > 0 ? MOCK_LINKED_STUDENTS[0].studentId : null,
+			selectedStudentId: null,
 			linkedStudents: MOCK_LINKED_STUDENTS,
 			studentData: MOCK_STUDENT_DATA,
 			assignments: MOCK_ASSIGNMENTS,
@@ -296,6 +305,7 @@ export const useParentStore = create<ParentStoreState>()(
 			notifications: MOCK_NOTIFICATIONS,
 			isLoading: false,
 			error: null,
+			realtimeInitialized: false,
 
 			// Actions
 			setSelectedStudent: studentId => {
@@ -488,6 +498,73 @@ export const useParentStore = create<ParentStoreState>()(
 						isRead: true,
 					})),
 				}))
+			},
+
+			// Add a new notification
+			addNotification: (notification: ParentNotification) => {
+				set(state => {
+					// Avoid duplicate notifications
+					const isDuplicate = state.notifications.some(
+						n =>
+							n.type === notification.type &&
+							n.studentId === notification.studentId &&
+							n.message === notification.message
+					)
+
+					if (isDuplicate) {
+						return state
+					}
+
+					// Add the new notification at the beginning of the array
+					return {
+						...state,
+						notifications: [notification, ...state.notifications],
+					}
+				})
+
+				// Play notification sound if available
+				try {
+					const audio = new Audio('/notification-sound.mp3')
+					audio.play()
+				} catch (error) {
+					console.log('Notification sound could not be played', error)
+				}
+			},
+
+			// Initialize realtime updates for child records
+			initializeRealtimeUpdates: () => {
+				const state = get()
+
+				// Don't initialize again if already done
+				if (state.realtimeInitialized) {
+					return
+				}
+
+				// Get all child IDs
+				const childIds = state.linkedStudents.map(student => student.studentId)
+
+				if (childIds.length === 0) {
+					return
+				}
+
+				// Subscribe to attendance updates
+				subscribeToAttendanceUpdates(childIds, notification => {
+					get().addNotification(notification)
+				})
+
+				// Subscribe to score updates
+				subscribeToScoresUpdates(childIds, notification => {
+					get().addNotification(notification)
+				})
+
+				// Mark as initialized
+				set({ realtimeInitialized: true })
+			},
+
+			// Cleanup realtime subscriptions
+			cleanupRealtimeUpdates: () => {
+				unsubscribeAll()
+				set({ realtimeInitialized: false })
 			},
 		}),
 		{

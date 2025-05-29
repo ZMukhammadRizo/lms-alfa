@@ -31,6 +31,7 @@ interface SubmissionData {
 	grade?: number | null
 	feedback?: string | null
 	status?: string | null
+	attempt_count?: number
 }
 
 const SingleAssignment: React.FC = () => {
@@ -134,6 +135,7 @@ const SingleAssignment: React.FC = () => {
 						grade: submissionData.grade,
 						feedback: submissionData.feedback,
 						status: submissionData.status,
+						attempt_count: submissionData.attempt_count || 1,
 					})
 				}
 			}
@@ -334,12 +336,19 @@ const SingleAssignment: React.FC = () => {
 			// Check if there's an existing submission
 			const { data: existing } = await supabase
 				.from('submissions')
-				.select('id, fileurl')
+				.select('id, fileurl, attempt_count')
 				.eq('assignmentid', assignmentId)
 				.eq('studentid', studentId)
 				.maybeSingle()
 
 			if (existing) {
+				// Check if the student has already submitted twice
+				if (existing.attempt_count && existing.attempt_count >= 2) {
+					throw new Error(
+						'You have reached the maximum number of submission attempts for this assignment'
+					)
+				}
+
 				// If record exists, update it
 				// Combine existing files with new file if they exist
 				const updatedFileUrls = fileUrl
@@ -350,11 +359,15 @@ const SingleAssignment: React.FC = () => {
 					? existing.fileurl.filter(url => url !== null)
 					: existing.fileurl
 
+				// Increment attempt count if this is a resubmission
+				const newAttemptCount = (existing.attempt_count || 1) + 1
+
 				const { error: updateError } = await supabase
 					.from('submissions')
 					.update({
 						fileurl: updatedFileUrls,
 						submittedat: new Date().toISOString(),
+						attempt_count: newAttemptCount,
 					})
 					.eq('id', existing.id)
 
@@ -369,6 +382,8 @@ const SingleAssignment: React.FC = () => {
 						studentid: studentId,
 						fileurl: fileUrl,
 						submittedat: new Date().toISOString(),
+						classid: assignment?.classid,
+						attempt_count: 1,
 					})
 					.select('id')
 					.single()
@@ -420,6 +435,7 @@ const SingleAssignment: React.FC = () => {
 				fileurl: existingSubmission ? [...existingSubmission.fileurl, fileUrl] : [fileUrl],
 				submittedat: new Date().toISOString(),
 				status: null,
+				attempt_count: existingSubmission ? (existingSubmission.attempt_count || 1) + 1 : 1,
 			})
 
 			setSelectedFile(null)
@@ -753,6 +769,20 @@ const SingleAssignment: React.FC = () => {
 									)}
 								</GradeFeedbackContainer>
 							) : null}
+
+							{existingSubmission && (
+								<SubmissionAttemptsInfo>
+									<AttemptsLabel>Submission attempts:</AttemptsLabel>
+									<AttemptsCount $attempts={existingSubmission.attempt_count || 1}>
+										{existingSubmission.attempt_count || 1}/2
+										{existingSubmission.attempt_count && existingSubmission.attempt_count >= 2 && (
+											<MaxAttemptsReached>
+												You have reached the maximum number of submission attempts
+											</MaxAttemptsReached>
+										)}
+									</AttemptsCount>
+								</SubmissionAttemptsInfo>
+							)}
 						</ExistingSubmission>
 					) : (
 						<ExistingSubmission>
@@ -792,7 +822,9 @@ const SingleAssignment: React.FC = () => {
 					)}
 
 					{assignment.status !== 'completed' &&
-						(!existingSubmission || existingSubmission.status === 'rejected') && (
+						(!existingSubmission ||
+							(existingSubmission.status === 'rejected' &&
+								(!existingSubmission.attempt_count || existingSubmission.attempt_count < 2))) && (
 							<SubmissionForm onSubmit={handleSubmit}>
 								<DropzoneContainer {...getRootProps()} $isDragActive={isDragActive}>
 									<input {...getInputProps()} />
@@ -856,6 +888,16 @@ const SingleAssignment: React.FC = () => {
 								: 'Your submission is currently under review by your teacher. You will be able to resubmit if it gets rejected.'}
 						</PendingReviewMessage>
 					)}
+
+					{existingSubmission &&
+						existingSubmission.status === 'rejected' &&
+						existingSubmission.attempt_count &&
+						existingSubmission.attempt_count >= 2 && (
+							<MaxAttemptsMessage>
+								Your submission was rejected and you have used all available submission attempts.
+								Please contact your teacher for further assistance.
+							</MaxAttemptsMessage>
+						)}
 				</Section>
 			</AssignmentCard>
 		</Container>
@@ -1574,6 +1616,54 @@ const PendingReviewMessage = styled.div`
 	padding: 16px;
 	background-color: ${props => props.theme.colors.info?.[50] || '#e0f2fe'};
 	color: ${props => props.theme.colors.info?.[600] || '#0284c7'};
+	border-radius: 6px;
+	font-size: 14px;
+	line-height: 1.5;
+	text-align: center;
+`
+
+const SubmissionAttemptsInfo = styled.div`
+	display: flex;
+	align-items: center;
+	margin-top: 16px;
+	padding: 12px 16px;
+	background-color: ${props => props.theme.colors.background.secondary || '#f9fafb'};
+	border-radius: 8px;
+`
+
+const AttemptsLabel = styled.span`
+	font-size: 14px;
+	font-weight: 600;
+	color: ${props => props.theme.colors.text.primary};
+	margin-right: 8px;
+`
+
+interface AttemptsCountProps {
+	$attempts: number
+}
+
+const AttemptsCount = styled.span<AttemptsCountProps>`
+	font-size: 14px;
+	font-weight: 700;
+	color: ${props => {
+		return props.$attempts >= 2
+			? props.theme.colors.danger?.[600] || '#dc2626'
+			: props.theme.colors.text.primary
+	}};
+`
+
+const MaxAttemptsReached = styled.span`
+	margin-left: 8px;
+	font-size: 14px;
+	font-weight: 500;
+	color: ${props => props.theme.colors.danger?.[600] || '#dc2626'};
+`
+
+const MaxAttemptsMessage = styled.div`
+	margin-top: 24px;
+	padding: 16px;
+	background-color: ${props => props.theme.colors.danger?.[50] || '#fee2e2'};
+	color: ${props => props.theme.colors.danger?.[600] || '#dc2626'};
 	border-radius: 6px;
 	font-size: 14px;
 	line-height: 1.5;

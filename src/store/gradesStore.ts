@@ -85,19 +85,19 @@ const useGradesStore = create<GradesState>((set, get) => ({
 	fetchTeacherLevels: async () => {
 		// Only prevent fetch if already loading
 		if (get().isLoadingLevels) {
-			console.log('[GradesStore] fetchTeacherLevels skipped (already loading).');
-			return;
+			console.log('[GradesStore] fetchTeacherLevels skipped (already loading).')
+			return
 		}
 
-		set({ isLoadingLevels: true });
+		set({ isLoadingLevels: true })
 		try {
 			const userResponse = await supabase.auth.getUser()
 			const userId = userResponse.data.user?.id
 
 			if (!userId) {
-				throw new Error("User not logged in.")
+				throw new Error('User not logged in.')
 			}
-			
+
 			// Get user role
 			const { data: userData, error: userRoleError } = await supabase
 				.from('users') // Assuming you have a 'users' table with a 'role' column
@@ -122,38 +122,52 @@ const useGradesStore = create<GradesState>((set, get) => ({
 					.select('level_id') // Select only level_id
 
 				if (allClassesError) {
-					console.error('[GradesStore] Error fetching all classes for levels (Admin):', allClassesError)
+					console.error(
+						'[GradesStore] Error fetching all classes for levels (Admin):',
+						allClassesError
+					)
 					throw allClassesError
 				}
 				if (allClasses && allClasses.length > 0) {
 					distinctLevelIds = [...new Set(allClasses.map(c => c.level_id).filter(id => id != null))]
 				}
-				console.log(`[GradesStore] Admin: Found distinct level IDs from all classes: ${distinctLevelIds.join(', ')}`)
-
-			} else { // Teacher logic
+				console.log(
+					`[GradesStore] Admin: Found distinct level IDs from all classes: ${distinctLevelIds.join(
+						', '
+					)}`
+				)
+			} else {
+				// Teacher logic
 				console.log(`[GradesStore] Teacher user: Fetching levels for teacher: ${userId}`)
-			const { data: teacherClasses, error: classesError } = await supabase
-				.from('classes')
+				const { data: teacherClasses, error: classesError } = await supabase
+					.from('classes')
 					.select('level_id')
 					.eq('teacherid', userId)
 
-			if (classesError) {
-					console.error('[GradesStore] Error fetching teacher-specific classes for levels:', classesError)
-					throw classesError 
-			}
-			if (!teacherClasses || teacherClasses.length === 0) {
+				if (classesError) {
+					console.error(
+						'[GradesStore] Error fetching teacher-specific classes for levels:',
+						classesError
+					)
+					throw classesError
+				}
+				if (!teacherClasses || teacherClasses.length === 0) {
 					console.log('[GradesStore] No classes found for this teacher to derive levels.')
 					set({ levels: [], isLoadingLevels: false })
 					return
 				}
-				distinctLevelIds = [...new Set(teacherClasses.map(c => c.level_id).filter(id => id != null))]
-				console.log(`[GradesStore] Teacher: Found distinct level IDs: ${distinctLevelIds.join(', ')}`)
+				distinctLevelIds = [
+					...new Set(teacherClasses.map(c => c.level_id).filter(id => id != null)),
+				]
+				console.log(
+					`[GradesStore] Teacher: Found distinct level IDs: ${distinctLevelIds.join(', ')}`
+				)
 			}
 
 			if (distinctLevelIds.length === 0) {
-				console.log('[GradesStore] No distinct levels found to fetch details for.');
-				set({ levels: [], isLoadingLevels: false }); // Set loading false here
-				return;
+				console.log('[GradesStore] No distinct levels found to fetch details for.')
+				set({ levels: [], isLoadingLevels: false }) // Set loading false here
+				return
 			}
 
 			const { data: levelsData, error: levelsError } = await supabase
@@ -165,15 +179,18 @@ const useGradesStore = create<GradesState>((set, get) => ({
 				console.error('[GradesStore] Error fetching level details by IDs:', levelsError)
 				throw levelsError
 			}
-			
-			const formattedLevels = levelsData?.map((level): GradeLevelOverview => ({
-				levelId: level.id,
-				levelName: level.name || `Level ${level.id}`,
-				classCount: 0, 
-				studentCount: 0,
-				subjectCount: 0,
-			})) || []
-			
+
+			const formattedLevels =
+				levelsData?.map(
+					(level): GradeLevelOverview => ({
+						levelId: level.id,
+						levelName: level.name || `Level ${level.id}`,
+						classCount: 0,
+						studentCount: 0,
+						subjectCount: 0,
+					})
+				) || []
+
 			console.log('[GradesStore] Setting formatted levels:', formattedLevels)
 			set({ levels: formattedLevels }) // Set data
 		} catch (error) {
@@ -233,17 +250,17 @@ const useGradesStore = create<GradesState>((set, get) => ({
 	fetchTeacherClasses: async () => {
 		// Only prevent fetch if already loading
 		if (get().isLoadingClasses) {
-			console.log('[GradesStore] fetchTeacherClasses skipped (already loading).');
-			return;
+			console.log('[GradesStore] fetchTeacherClasses skipped (already loading).')
+			return
 		}
 
-		set({ isLoadingClasses: true }); // Set loading true, but don't clear classes here
+		set({ isLoadingClasses: true }) // Set loading true, but don't clear classes here
 		try {
 			const userResponse = await supabase.auth.getUser()
 			const userId = userResponse.data.user?.id
 
 			if (!userId) {
-				throw new Error("User not logged in for fetchTeacherClasses.")
+				throw new Error('User not logged in for fetchTeacherClasses.')
 			}
 
 			const { data: userData, error: userRoleError } = await supabase
@@ -253,19 +270,26 @@ const useGradesStore = create<GradesState>((set, get) => ({
 				.single()
 
 			if (userRoleError) {
-				console.error('[GradesStore] Error fetching user role for fetchTeacherClasses:', userRoleError)
+				console.error(
+					'[GradesStore] Error fetching user role for fetchTeacherClasses:',
+					userRoleError
+				)
 				throw userRoleError
 			}
 			const isAdmin = userData?.role === 'Admin'
-			console.log(`[GradesStore] fetchTeacherClasses - User role: ${userData?.role}. IsAdmin: ${isAdmin}`)
+			console.log(
+				`[GradesStore] fetchTeacherClasses - User role: ${userData?.role}. IsAdmin: ${isAdmin}`
+			)
 
-			let fetchedClassesData = [];
+			let fetchedClassesData = []
 			if (isAdmin) {
-				console.log('[GradesStore] Admin user: fetching all classes using get_level_classes RPC with is_admin=true, lvl_id=null')
+				console.log(
+					'[GradesStore] Admin user: fetching all classes using get_level_classes RPC with is_admin=true, lvl_id=null'
+				)
 				const { data, error } = await supabase.rpc('get_level_classes', {
-					user_id: userId, 
-					lvl_id: null,    
-					is_admin: true
+					user_id: userId,
+					lvl_id: null,
+					is_admin: true,
 				})
 				if (error) {
 					console.error('[GradesStore] RPC error for admin get_level_classes:', error)
@@ -273,25 +297,28 @@ const useGradesStore = create<GradesState>((set, get) => ({
 				}
 				console.log('[GradesStore] Admin: Received all classes data via RPC:', data)
 				fetchedClassesData = data || []
-			} else { // Teacher Logic
-				console.log(`[GradesStore] Teacher user: fetching classes using get_teacher_classes RPC for teacher_uuid: ${userId}`)
-			const { data, error } = await supabase.rpc('get_teacher_classes', {
+			} else {
+				// Teacher Logic
+				console.log(
+					`[GradesStore] Teacher user: fetching classes using get_teacher_classes RPC for teacher_uuid: ${userId}`
+				)
+				const { data, error } = await supabase.rpc('get_teacher_classes', {
 					teacher_uuid: userId,
-			})
+				})
 				if (error) {
-					 console.error('[GradesStore] RPC error for teacher get_teacher_classes:', error)
+					console.error('[GradesStore] RPC error for teacher get_teacher_classes:', error)
 					throw error
 				}
 				console.log('[GradesStore] Teacher: Received classes data via RPC:', data)
 				fetchedClassesData = data || []
 			}
 
-			set({ classes: fetchedClassesData }); // Set data
+			set({ classes: fetchedClassesData }) // Set data
 		} catch (error) {
 			console.error('Error in fetchTeacherClasses (Admin/Teacher):', error)
-			set({ classes: [] }); // Clear classes on error
+			set({ classes: [] }) // Clear classes on error
 		} finally {
-			set({ isLoadingClasses: false }); // Ensure loading is false
+			set({ isLoadingClasses: false }) // Ensure loading is false
 		}
 	},
 
@@ -613,6 +640,7 @@ const useGradesStore = create<GradesState>((set, get) => ({
 			)
 
 			const userId = (await supabase.auth.getUser()).data.user?.id
+			const now = new Date().toISOString()
 
 			// Use upsert to either insert a new score or update an existing one
 			const { data, error } = await supabase.from('scores').upsert(
@@ -622,6 +650,8 @@ const useGradesStore = create<GradesState>((set, get) => ({
 					quarter_id: quarterId,
 					teacher_id: userId,
 					score: score,
+					updated_at: now,
+					created_at: now, // This will only be used for new records
 				},
 				{
 					onConflict: 'student_id,lesson_id,quarter_id',
