@@ -10,7 +10,9 @@ export interface Class {
 	subjects?: Subject
 	studentCount?: number
 	subjectCount?: number
-  [key: string]: any
+	level_id?: string
+	level_type_id?: number
+	[key: string]: any
 }
 
 export interface Video {
@@ -38,4 +40,10 @@ export interface ClassStudent {
 	studentId: string
 	created_at: string
 	user?: User
+}
+
+export interface ClassType {
+	id: number
+	name: string
+	created_at: string
 }
