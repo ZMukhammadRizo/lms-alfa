@@ -12,7 +12,7 @@ export interface Class {
 	subjectCount?: number
 	level_id?: string
 	level_type_id?: number
-	[key: string]: any
+  [key: string]: any
 }
 
 export interface Video {

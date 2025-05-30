@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import { FiChevronLeft, FiChevronRight, FiMenu, FiX } from 'react-icons/fi'
+import { FiChevronLeft, FiChevronRight, FiMenu } from 'react-icons/fi'
 import { NavLink, useLocation } from 'react-router-dom'
 import styled, { css } from 'styled-components'
 import { getModuleLeaderMenu, getSystemMenu, teacherMenu } from '../../constants/menuItems'
@@ -11,6 +11,7 @@ import {
 	hasPermission,
 } from '../../utils/authUtils'
 import LogoutButton from '../common/LogoutButton'
+import PermissionMenuItem from '../common/PermissionMenuItem'
 
 interface SidebarProps {
 	isCollapsed: boolean
@@ -164,13 +165,9 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 	return (
 		<>
 			{/* Mobile menu button */}
-			{isMobile && (
-				<MobileMenuButton
-					onClick={handleMobileToggle}
-					aria-label={isMobileOpen ? 'Close menu' : 'Open menu'}
-					aria-expanded={isMobileOpen}
-				>
-					{isMobileOpen ? <FiX /> : <FiMenu />}
+			{isMobile && !isMobileOpen && (
+				<MobileMenuButton onClick={handleMobileToggle} aria-label='Open menu' aria-expanded={false}>
+					<FiMenu />
 				</MobileMenuButton>
 			)}
 
@@ -197,17 +194,19 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 										initial={{ opacity: 0 }}
 										animate={{ opacity: 1 }}
 										transition={{ delay: 0.2 }}
+										style={{
+											opacity: 1,
+											display: 'inline-block',
+											overflow: 'visible',
+											whiteSpace: 'nowrap',
+										}}
 									>
 										Learning Management System
 									</motion.span>
 								</Logo>
 							)}
 
-							{isMobile ? (
-								<CloseButton onClick={handleMobileToggle}>
-									<FiX />
-								</CloseButton>
-							) : (
+							{!isMobile && (
 								<ToggleButton onClick={toggleSidebar}>
 									{isCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
 								</ToggleButton>
@@ -217,7 +216,7 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 						<MenuContainer>
 							<MenuSection>
 								{teacherMenu.map(item => (
-									<MenuItem
+									<PermissionMenuItem
 										key={item.path}
 										icon={item.icon}
 										label={item.label}
@@ -239,7 +238,7 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 										MODULE LEADER
 									</SectionLabel>
 									{getModuleLeaderMenu(parentRole, realRole).map(item => (
-										<MenuItem
+										<PermissionMenuItem
 											key={item.path}
 											icon={item.icon}
 											label={item.label}
@@ -266,7 +265,7 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 								</AnimatePresence>
 
 								{systemMenu.map(item => (
-									<MenuItem
+									<PermissionMenuItem
 										key={item.path}
 										icon={item.icon}
 										label={item.label}
@@ -279,21 +278,21 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 						</MenuContainer>
 
 						<ProfileSection $isCollapsed={isMobile ? false : isCollapsed}>
-							<ProfileAvatar>{getUserInitials()}</ProfileAvatar>
+							<ProfileImage>{getUserInitials()}</ProfileImage>
 							<AnimatePresence>
 								{(!isCollapsed || isMobile) && (
 									<ProfileInfo
 										initial={{ opacity: 0 }}
 										animate={{ opacity: 1 }}
 										exit={{ opacity: 0 }}
-										transition={{ delay: 0.1 }}
+										transition={{ duration: 0.2 }}
 									>
 										<ProfileName>{getFullName()}</ProfileName>
 										<ProfileRole>Teacher</ProfileRole>
 									</ProfileInfo>
 								)}
 							</AnimatePresence>
-							{(!isCollapsed || isMobile) && <LogoutButton />}
+							<LogoutButton />
 						</ProfileSection>
 
 						{isMobile && <MobileOverlay onClick={handleMobileToggle} />}
@@ -618,7 +617,7 @@ const ProfileSection = styled.div<CollapsibleProps>`
 		`}
 `
 
-const ProfileAvatar = styled.div`
+const ProfileImage = styled.div`
 	width: 36px;
 	height: 36px;
 	border-radius: 50%;

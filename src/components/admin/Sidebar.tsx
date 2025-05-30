@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import { FiBell, FiChevronDown, FiChevronLeft, FiChevronRight, FiMenu, FiX } from 'react-icons/fi'
+import { FiBell, FiChevronDown, FiChevronLeft, FiChevronRight, FiMenu } from 'react-icons/fi'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import styled, { css } from 'styled-components'
 import {
@@ -20,6 +20,13 @@ import {
 	hasRole,
 } from '../../utils/authUtils'
 import LogoutButton from '../common/LogoutButton'
+import PermissionMenuItem from '../common/PermissionMenuItem'
+
+// Map menu item paths to required permissions
+const pathPermissionMap: Record<string, string> = {
+	'/admin/dashboard': 'access_admin_dashboard',
+	// Add more paths and their required permissions here
+}
 
 interface SidebarProps {
 	isCollapsed: boolean
@@ -38,6 +45,14 @@ interface MenuItemProps {
 const MenuItem: React.FC<MenuItemProps> = ({ icon, label, to, isCollapsed, onMobileClick }) => {
 	const location = useLocation()
 	const isActive = location.pathname === to || location.pathname.startsWith(`${to}/`)
+
+	// Check if this menu item requires specific permissions
+	const requiredPermission = pathPermissionMap[to]
+
+	// If this path requires a permission, check if the user has it
+	if (requiredPermission && !hasPermission(requiredPermission)) {
+		return null // Don't render this menu item if the user doesn't have permission
+	}
 
 	const handleClick = () => {
 		if (onMobileClick) {
@@ -282,13 +297,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 	return (
 		<>
 			{/* Mobile menu button */}
-			{isMobile && (
-				<MobileMenuButton
-					onClick={handleMobileToggle}
-					aria-label={isMobileOpen ? 'Close menu' : 'Open menu'}
-					aria-expanded={isMobileOpen}
-				>
-					{isMobileOpen ? <FiX /> : <FiMenu />}
+			{isMobile && !isMobileOpen && (
+				<MobileMenuButton onClick={handleMobileToggle} aria-label='Open menu' aria-expanded={false}>
+					<FiMenu />
 				</MobileMenuButton>
 			)}
 
@@ -315,17 +326,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 										initial={{ opacity: 0 }}
 										animate={{ opacity: 1 }}
 										transition={{ delay: 0.2 }}
+										style={{
+											opacity: 1,
+											display: 'inline-block',
+											overflow: 'visible',
+											whiteSpace: 'nowrap',
+										}}
 									>
 										Learning Management System
 									</motion.span>
 								</Logo>
 							)}
 
-							{isMobile ? (
-								<CloseButton onClick={handleMobileToggle}>
-									<FiX />
-								</CloseButton>
-							) : (
+							{!isMobile && (
 								<ToggleButton onClick={toggleSidebar}>
 									{isCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
 								</ToggleButton>
@@ -334,10 +347,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 
 						<MenuContainer>
 							<MenuSection>
-								{role === 'Admin' && (
+								{(role === 'Admin' || parentRole === 'Admin') && (
 									<>
 										{adminMenu.map(item => (
-											<MenuItem
+											<PermissionMenuItem
 												key={item.path}
 												icon={item.icon}
 												label={item.label}
@@ -377,7 +390,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 										</AnimatePresence>
 
 										{managerMenu.map(item => (
-											<MenuItem
+											<PermissionMenuItem
 												key={item.path}
 												icon={item.icon}
 												label={item.label}
@@ -405,22 +418,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 										</AnimatePresence>
 
 										{moduleLeaderMenu.map(item => (
-											<MenuItem
+											<PermissionMenuItem
 												key={item.path}
 												icon={item.icon}
 												label={item.label}
 												to={item.path}
 												isCollapsed={isMobile ? false : isCollapsed}
+												onMobileClick={handleNavItemClick}
 											/>
 										))}
 									</>
-								) : (
-									''
-								)}
+								) : null}
 								{role === 'Teacher' && (
 									<>
 										{teacherMenu.map(item => (
-											<MenuItem
+											<PermissionMenuItem
 												key={item.path}
 												icon={item.icon}
 												label={item.label}
@@ -448,7 +460,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 								</AnimatePresence>
 
 								{systemMenu.map(item => (
-									<MenuItem
+									<PermissionMenuItem
 										key={item.path}
 										icon={item.icon}
 										label={item.label}
@@ -461,23 +473,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 						</MenuContainer>
 
 						<ProfileSection $isCollapsed={isMobile ? false : isCollapsed}>
-							<ProfileAvatar $isCollapsed={isMobile ? false : isCollapsed}>
-								{getUserInitials()}
-							</ProfileAvatar>
+							<ProfileImage>{getUserInitials()}</ProfileImage>
 							<AnimatePresence>
 								{(!isCollapsed || isMobile) && (
 									<ProfileInfo
 										initial={{ opacity: 0 }}
 										animate={{ opacity: 1 }}
 										exit={{ opacity: 0 }}
-										transition={{ delay: 0.1 }}
+										transition={{ duration: 0.2 }}
 									>
 										<ProfileName>{getFullName()}</ProfileName>
-										<ProfileRole>{getUserRole()}</ProfileRole>
+										<ProfileRole>{role}</ProfileRole>
 									</ProfileInfo>
 								)}
 							</AnimatePresence>
-							{(!isCollapsed || isMobile) && <LogoutButton />}
+							<LogoutButton />
 						</ProfileSection>
 
 						{isMobile && <MobileOverlay onClick={handleMobileToggle} />}
@@ -686,14 +696,6 @@ const ToggleButton = styled.button`
 	}
 `
 
-const CloseButton = styled(ToggleButton)`
-	color: ${props => props.theme.colors.text.secondary};
-
-	&:hover {
-		color: ${props => props.theme.colors.accent.red};
-	}
-`
-
 const MenuContainer = styled.div`
 	flex: 1;
 	overflow-y: auto;
@@ -825,7 +827,7 @@ const ProfileSection = styled.div<CollapsibleProps>`
 		`}
 `
 
-const ProfileAvatar = styled.div<CollapsibleProps>`
+const ProfileImage = styled.div`
 	width: 36px;
 	height: 36px;
 	border-radius: 50%;

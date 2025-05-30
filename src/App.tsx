@@ -3,6 +3,7 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-d
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { DefaultTheme, ThemeProvider } from 'styled-components'
+import PermissionGuard from './components/common/PermissionGuard'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import RoleMiddleware from './components/common/RoleMiddleware'
 import { AnnouncementProvider } from './contexts/AnnouncementContext'
@@ -132,7 +133,14 @@ function AppContent() {
 					<Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
 						<Route path='/admin' element={<AdminLayout />}>
 							<Route index element={<Navigate to='/admin/dashboard' replace />} />
-							<Route path='dashboard' element={<Dashboard />} />
+							<Route
+								path='dashboard'
+								element={
+									<PermissionGuard requiredPermission='access_admin_dashboard'>
+										<Dashboard />
+									</PermissionGuard>
+								}
+							/>
 							<Route path='users' element={<Users />} />
 							<Route path='roles' element={<Roles />} />
 							<Route path='subjects' element={<Subjects />} />

@@ -1,9 +1,10 @@
+import { formatDistanceToNow } from 'date-fns'
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useState } from 'react'
 import { FiBell, FiCheck, FiChevronRight } from 'react-icons/fi'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
-import { useParentStore } from '../../stores/useParentStore'
+import { useAnnouncements } from '../../stores/useAnnouncementStore'
 
 interface ParentNotificationBellProps {
 	basePath?: string
@@ -11,12 +12,28 @@ interface ParentNotificationBellProps {
 
 const ParentNotificationBell: React.FC<ParentNotificationBellProps> = ({ basePath = '' }) => {
 	const [isOpen, setIsOpen] = useState(false)
-	const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useParentStore()
-	const unreadCount = notifications.filter(notification => !notification.isRead).length
+	const {
+		announcements,
+		markAsRead: markAnnouncementAsRead,
+		markAllAsRead: markAllAnnouncementsAsRead,
+	} = useAnnouncements()
 
-	// Get 5 most recent notifications
-	const recentNotifications = [...notifications]
-		.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+	// Filter announcements for parent role
+	const parentAnnouncements =
+		announcements?.filter(
+			announcement =>
+				announcement?.targetAudience?.toLowerCase() === 'all' ||
+				announcement?.targetAudience?.toLowerCase() === 'parent'
+		) || []
+
+	// Get unread count
+	const unreadAnnouncementsCount = parentAnnouncements.filter(
+		announcement => !announcement.isRead
+	).length
+
+	// Get 5 most recent announcements
+	const recentAnnouncements = [...parentAnnouncements]
+		.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 		.slice(0, 5)
 
 	const toggleOpen = () => {
@@ -24,40 +41,22 @@ const ParentNotificationBell: React.FC<ParentNotificationBellProps> = ({ basePat
 	}
 
 	const formatDate = (dateString: string) => {
-		const date = new Date(dateString)
-		const now = new Date()
-		const diffMs = now.getTime() - date.getTime()
-		const diffMins = Math.floor(diffMs / 60000)
-		const diffHours = Math.floor(diffMins / 60)
-		const diffDays = Math.floor(diffHours / 24)
-
-		if (diffMins < 1) return 'Just now'
-		if (diffMins < 60) return `${diffMins}m ago`
-		if (diffHours < 24) return `${diffHours}h ago`
-		if (diffDays === 1) return 'Yesterday'
-		return date.toLocaleDateString()
-	}
-
-	const getNotificationIcon = (type: string) => {
-		switch (type) {
-			case 'Attendance':
-				return '👤'
-			case 'Grade':
-				return '📝'
-			case 'Assignment':
-				return '📚'
-			case 'Message':
-				return '✉️'
-			default:
-				return '🔔'
+		try {
+			const date = new Date(dateString)
+			if (isNaN(date.getTime())) {
+				return 'Invalid date'
+			}
+			return formatDistanceToNow(date, { addSuffix: true })
+		} catch (error) {
+			return 'Invalid date'
 		}
 	}
 
 	return (
 		<BellContainer>
-			<BellIconButton onClick={toggleOpen} aria-label='Notifications'>
+			<BellIconButton onClick={toggleOpen} aria-label='Announcements'>
 				<FiBell size={22} />
-				{unreadCount > 0 && <UnreadBadge>{unreadCount}</UnreadBadge>}
+				{unreadAnnouncementsCount > 0 && <UnreadBadge>{unreadAnnouncementsCount}</UnreadBadge>}
 			</BellIconButton>
 
 			<AnimatePresence>
@@ -70,56 +69,52 @@ const ParentNotificationBell: React.FC<ParentNotificationBellProps> = ({ basePat
 					>
 						<NotificationsHeader>
 							<div>
-								<NotificationsTitle>Notifications</NotificationsTitle>
-								{unreadCount > 0 && (
-									<NotificationsSubtitle>{unreadCount} unread</NotificationsSubtitle>
+								<NotificationsTitle>Announcements</NotificationsTitle>
+								{unreadAnnouncementsCount > 0 && (
+									<NotificationsSubtitle>{unreadAnnouncementsCount} unread</NotificationsSubtitle>
 								)}
 							</div>
-							{unreadCount > 0 && (
-								<MarkAllReadButton onClick={markAllNotificationsAsRead}>
+							{unreadAnnouncementsCount > 0 && (
+								<MarkAllReadButton onClick={markAllAnnouncementsAsRead}>
 									Mark all as read
 								</MarkAllReadButton>
 							)}
 						</NotificationsHeader>
 
 						<NotificationsList>
-							{recentNotifications.length > 0 ? (
-								recentNotifications.map(notification => (
-									<NotificationItem key={notification.id} $unread={!notification.isRead}>
-										<NotificationContent
-											onClick={() => markNotificationAsRead(notification.id)}
-											as={notification.link ? Link : 'div'}
-											to={notification.link || ''}
+							{recentAnnouncements.map(announcement => (
+								<NotificationItem key={announcement.id} $unread={!announcement.isRead}>
+									<NotificationContent onClick={() => markAnnouncementAsRead(announcement.id)}>
+										<NotificationIcon>📢</NotificationIcon>
+										<NotificationDetails>
+											<NotificationTitle>{announcement.title}</NotificationTitle>
+											<NotificationMessage>{announcement.content}</NotificationMessage>
+											<NotificationMeta>
+												<NotificationTime>{formatDate(announcement.created_at)}</NotificationTime>
+												<NotificationType>Announcement</NotificationType>
+											</NotificationMeta>
+										</NotificationDetails>
+									</NotificationContent>
+									{announcement.isRead && (
+										<MarkReadButton
+											onClick={e => {
+												e.stopPropagation()
+												markAnnouncementAsRead(announcement.id)
+											}}
 										>
-											<NotificationIcon>{getNotificationIcon(notification.type)}</NotificationIcon>
-											<NotificationDetails>
-												<NotificationTitle>{notification.title}</NotificationTitle>
-												<NotificationMessage>{notification.message}</NotificationMessage>
-												<NotificationMeta>
-													<NotificationTime>{formatDate(notification.createdAt)}</NotificationTime>
-													<NotificationType>{notification.type}</NotificationType>
-												</NotificationMeta>
-											</NotificationDetails>
-										</NotificationContent>
-										{!notification.isRead && (
-											<MarkReadButton
-												onClick={e => {
-													e.stopPropagation()
-													markNotificationAsRead(notification.id)
-												}}
-											>
-												<FiCheck size={16} />
-											</MarkReadButton>
-										)}
-									</NotificationItem>
-								))
-							) : (
-								<EmptyNotifications>No notifications</EmptyNotifications>
+											<FiCheck size={16} />
+										</MarkReadButton>
+									)}
+								</NotificationItem>
+							))}
+
+							{recentAnnouncements.length === 0 && (
+								<EmptyNotifications>No announcements</EmptyNotifications>
 							)}
 						</NotificationsList>
 
-						<ViewAllButton to={`${basePath}/notifications`}>
-							<span>View all notifications</span>
+						<ViewAllButton to={`${basePath}/announcements`}>
+							<span>View all announcements</span>
 							<FiChevronRight size={16} />
 						</ViewAllButton>
 					</NotificationsDropdown>
@@ -259,7 +254,7 @@ const NotificationItem = styled.div<NotificationItemProps>`
 	}
 `
 
-const NotificationContent = styled(Link)`
+const NotificationContent = styled.div`
 	display: flex;
 	align-items: flex-start;
 	flex: 1;

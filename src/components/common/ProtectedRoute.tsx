@@ -2,14 +2,17 @@ import React, { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import RedirectPage from '../../pages/auth/RedirectPage'
+import { checkUserPermission } from '../../utils/permissionUtils'
 
 interface ProtectedRouteProps {
 	allowedRoles: string[]
+	requiredPermission?: string
 	redirectPath?: string
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 	allowedRoles,
+	requiredPermission,
 	redirectPath = '/login',
 }) => {
 	const { isAuthenticated, user, getParentRoleName, loading } = useAuth()
@@ -18,6 +21,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 	const [redirectTo, setRedirectTo] = useState<string | null>(null)
 	const [redirectMessage, setRedirectMessage] = useState('')
 	const [initialCheckDone, setInitialCheckDone] = useState(false)
+	const [hasPermission, setHasPermission] = useState<boolean | null>(null)
 
 	// Define the primary roles
 	const PRIMARY_ROLES = ['admin', 'teacher', 'student', 'parent']
@@ -28,11 +32,36 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 		setRedirectTo(null)
 	}, [location.pathname])
 
+	// Check permission if requiredPermission is provided
+	useEffect(() => {
+		const checkPermission = async () => {
+			if (requiredPermission && user) {
+				try {
+					const hasAccess = await checkUserPermission(requiredPermission)
+					setHasPermission(hasAccess)
+				} catch (error) {
+					console.error('Error checking permission:', error)
+					setHasPermission(false)
+				}
+			} else if (!requiredPermission) {
+				// If no permission is required, set to true
+				setHasPermission(true)
+			}
+		}
+
+		checkPermission()
+	}, [requiredPermission, user])
+
 	// Check roles and permissions
 	useEffect(() => {
 		// If not authenticated or no user, don't proceed with role checks
 		if (!isAuthenticated || !user) {
 			setInitialCheckDone(true)
+			return
+		}
+
+		// If we're still checking permissions, don't proceed yet
+		if (requiredPermission && hasPermission === null) {
 			return
 		}
 
@@ -76,12 +105,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 			// Check if the effective role is in the allowed roles list
 			const hasAllowedRole = allowedRoles.some(role => role.toLowerCase() === effectiveRole)
 
-			if (!hasAllowedRole) {
+			// Check if user has the required permission (if specified)
+			const permissionCheck = requiredPermission ? hasPermission : true
+
+			if (!hasAllowedRole || !permissionCheck) {
 				console.log(
 					`Access denied: User with role "${effectiveRole}" attempted to access a route restricted to ${allowedRoles.join(
 						', '
 					)}`
 				)
+
+				if (!permissionCheck) {
+					console.log(`User lacks required permission: ${requiredPermission}`)
+				}
 
 				// Redirect to the appropriate dashboard for this role
 				const dashboardPath = `/${effectiveRole}/dashboard`
@@ -100,7 +136,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
 		// Mark initial check as complete
 		setInitialCheckDone(true)
-	}, [isAuthenticated, user, allowedRoles, location.pathname, getParentRoleName])
+	}, [
+		isAuthenticated,
+		user,
+		allowedRoles,
+		location.pathname,
+		getParentRoleName,
+		hasPermission,
+		requiredPermission,
+	])
 
 	// Check if user is authenticated - this must be done before any role checks
 	if (!loading && (!isAuthenticated || !user)) {
