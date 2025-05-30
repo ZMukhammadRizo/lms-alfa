@@ -172,7 +172,7 @@ export const getEffectiveRoleName = (role: UserRole): string => {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 	const [user, setUser] = useState<User | null>(null)
 	const [isAuthenticated, setIsAuthenticated] = useState(false)
-	const [loading, setLoading] = useState(false)
+	const [loading, setLoading] = useState(true) // Start with true to prevent premature redirects
 	const navigate = useNavigate()
 	const location = useLocation()
 
@@ -186,26 +186,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		}
 	}
 
+	// Initialize auth state from localStorage if available
+	useEffect(() => {
+		// First try to restore user from localStorage
+		try {
+			const storedUser = localStorage.getItem(LOCAL_USER_KEY)
+			if (storedUser) {
+				const parsedUser = JSON.parse(storedUser)
+				setUser(parsedUser)
+				setIsAuthenticated(true)
+				console.log('Restored user from localStorage:', parsedUser.id)
+			}
+		} catch (error) {
+			console.error('Error restoring user from localStorage:', error)
+		}
+	}, [])
+
 	useEffect(() => {
 		let mounted = true
 
 		const refreshSession = async () => {
 			try {
+				setLoading(true) // Ensure loading is true when checking authentication
+
+				// First check if we have a session
 				const {
 					data: { session },
 				} = await supabase.auth.getSession()
 
+				// If no session and no user in localStorage, we're definitely logged out
 				if (!session) {
-					console.warn('No session found. Redirecting to login.')
-					if (mounted) {
-						setUser(null)
-						setIsAuthenticated(false)
-						localStorage.removeItem(LOCAL_USER_KEY)
-						navigate('/login', { replace: true })
+					const storedUser = localStorage.getItem(LOCAL_USER_KEY)
+					if (!storedUser) {
+						console.log('No session and no stored user. Logged out state confirmed.')
+						if (mounted) {
+							setUser(null)
+							setIsAuthenticated(false)
+
+							// Only redirect to login if we're on a protected route
+							const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password']
+							if (!publicRoutes.includes(location.pathname) && location.pathname !== '/') {
+								navigate('/login', { replace: true })
+							}
+						}
+						return
+					} else {
+						// We have a stored user but no session - this can happen during page loads
+						// Let's try to refresh the session
+						console.log('Found stored user but no session. Attempting to refresh...')
 					}
-					return
 				}
 
+				// Try to refresh the session
 				const { data: refreshedSession, error } = await supabase.auth.refreshSession()
 
 				if (error || !refreshedSession.session) {
@@ -214,7 +246,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 						setUser(null)
 						setIsAuthenticated(false)
 						localStorage.removeItem(LOCAL_USER_KEY)
-						navigate('/login', { replace: true })
+
+						// Only redirect to login if we're on a protected route
+						const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password']
+						if (!publicRoutes.includes(location.pathname) && location.pathname !== '/') {
+							navigate('/login', { replace: true })
+						}
 					}
 					return
 				}
@@ -315,10 +352,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 			} catch (err) {
 				console.error('Unexpected error during session refresh:', err)
 				if (mounted) {
-					setUser(null)
-					setIsAuthenticated(false)
-					localStorage.removeItem(LOCAL_USER_KEY)
-					navigate('/login', { replace: true })
+					// Don't immediately clear user and redirect - this could be a temporary network issue
+					// Instead, check if we have a user in localStorage
+					const storedUser = localStorage.getItem(LOCAL_USER_KEY)
+					if (!storedUser) {
+						// No stored user, so we're definitely logged out
+						setUser(null)
+						setIsAuthenticated(false)
+
+						// Only redirect to login if we're on a protected route
+						const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password']
+						if (!publicRoutes.includes(location.pathname) && location.pathname !== '/') {
+							navigate('/login', { replace: true })
+						}
+					} else {
+						// We have a stored user, so we might still be logged in
+						// Let the ProtectedRoute component handle this
+						console.log('Network error, but we have a stored user. Continuing...')
+					}
 				}
 			} finally {
 				if (mounted) setLoading(false)
@@ -330,7 +381,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		return () => {
 			mounted = false
 		}
-	}, [navigate])
+	}, [navigate, location.pathname])
 
 	const login = async (
 		email: string,

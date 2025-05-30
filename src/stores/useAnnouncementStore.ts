@@ -29,12 +29,12 @@ export interface UpdateAnnouncementData {
 	content?: string
 	isImportant?: boolean
 	targetAudience?: string
-	photo_url?: string | null | undefined; // Allow null and undefined
-	video_url?: string | null | undefined; // Allow null and undefined
-	photo_file?: File | null 
-	video_file?: File | null 
-	photo_name?: string | null 
-	video_name?: string | null 
+	photo_url?: string | null | undefined // Allow null and undefined
+	video_url?: string | null | undefined // Allow null and undefined
+	photo_file?: File | null
+	video_file?: File | null
+	photo_name?: string | null
+	video_name?: string | null
 }
 
 // Mock function to simulate announcement creation in Supabase
@@ -66,7 +66,10 @@ interface AnnouncementState {
 	// Actions
 	fetchAnnouncements: (targetAudience: string) => Promise<void>
 	createAnnouncement: (
-		announcement: Omit<Announcement, 'id' | 'createdAt' | 'isRead'> & { photo_file?: File | null, video_file?: File | null }
+		announcement: Omit<Announcement, 'id' | 'createdAt' | 'isRead'> & {
+			photo_file?: File | null
+			video_file?: File | null
+		}
 	) => Promise<boolean>
 	updateAnnouncement: (id: string, data: UpdateAnnouncementData) => Promise<boolean>
 	deleteAnnouncement: (id: string) => Promise<boolean>
@@ -91,7 +94,7 @@ export const useAnnouncementStore = create<AnnouncementState>()(
 					let targetAudienceArray = []
 
 					if (targetAudience === 'All') {
-						targetAudienceArray = ['All', 'Student', 'Teacher', 'Admin', "Parent"]
+						targetAudienceArray = ['All', 'Student', 'Teacher', 'Admin', 'Parent']
 					} else {
 						targetAudienceArray = [targetAudience, 'All']
 					}
@@ -124,23 +127,25 @@ export const useAnnouncementStore = create<AnnouncementState>()(
 					}
 
 					// Get read announcement IDs from 'read-announcement-ids' in localStorage
-					let readAnnouncementIds = [];
+					let readAnnouncementIds = []
 					try {
-						const readIdsStr = localStorage.getItem('read-announcement-ids');
+						const readIdsStr = localStorage.getItem('read-announcement-ids')
 						if (readIdsStr) {
-							const parsed = JSON.parse(readIdsStr);
-							readAnnouncementIds = Array.isArray(parsed) ? parsed : [];
+							const parsed = JSON.parse(readIdsStr)
+							readAnnouncementIds = Array.isArray(parsed) ? parsed : []
 						}
 					} catch (error) {
-						console.error('Error parsing read announcement IDs:', error);
-						readAnnouncementIds = [];
+						console.error('Error parsing read announcement IDs:', error)
+						readAnnouncementIds = []
 					}
-
 
 					const announcementsWithIsRead =
 						data?.map(a => ({
 							...a,
-							isRead: Array.isArray(readAnnouncementIds) && readAnnouncementIds.includes(a.id) ? true : false,
+							isRead:
+								Array.isArray(readAnnouncementIds) && readAnnouncementIds.includes(a.id)
+									? true
+									: false,
 						})) || []
 
 					set({
@@ -158,256 +163,276 @@ export const useAnnouncementStore = create<AnnouncementState>()(
 			// Subscribe to real-time updates for announcements
 			subscribeToAnnouncements: async () => {
 				// Get user from localStorage
-				let user = null;
+				let user = null
 				try {
-					const userStr = localStorage.getItem('lms_user');
+					const userStr = localStorage.getItem('lms_user')
 					if (userStr) {
-						user = JSON.parse(userStr);
+						user = JSON.parse(userStr)
 					}
 				} catch (error) {
-					console.error('Error parsing user from localStorage:', error);
-					return;
+					console.error('Error parsing user from localStorage:', error)
+					return
 				}
 
-				if (!user) return;
+				if (!user) return
 
-				console.log("Setting up real-time subscription for announcements");
+				console.log('Setting up real-time subscription for announcements')
 
-				// Get user role for filtering
-				const userRole = user.role?.toLowerCase();
+				// Get user role for filtering - handle different role formats safely
+				let userRole = 'unknown'
+				try {
+					if (user.role) {
+						if (typeof user.role === 'string') {
+							userRole = user.role.toLowerCase()
+						} else if (typeof user.role === 'object') {
+							// Handle case where role is an object
+							if (user.role.name && typeof user.role.name === 'string') {
+								userRole = user.role.name.toLowerCase()
+							}
+						}
+					}
+					console.log('User role for announcements:', userRole)
+				} catch (error) {
+					console.error('Error processing user role:', error)
+				}
 
 				try {
 					// Unsubscribe from any existing subscription
 					if (supabase.getChannels().length > 0) {
-						supabase.removeAllChannels();
+						supabase.removeAllChannels()
 					}
 
 					// Subscribe to the 'announcements' table
 					const channel = supabase
 						.channel('public:announcements')
-						.on('postgres_changes', {
-							event: '*',
-							schema: 'public',
-							table: 'announcements'
-						}, async (payload) => {
-							console.log('Real-time announcement update:', payload);
+						.on(
+							'postgres_changes',
+							{
+								event: '*',
+								schema: 'public',
+								table: 'announcements',
+							},
+							async payload => {
+								console.log('Real-time announcement update:', payload)
 
-							// Handle INSERT event - new announcement
-							if (payload.eventType === 'INSERT') {
-								const newAnnouncement = payload.new;
+								// Handle INSERT event - new announcement
+								if (payload.eventType === 'INSERT') {
+									const newAnnouncement = payload.new
 
-								// Check if this announcement is targeted to the current user's role
-								if (
-									newAnnouncement.targetAudience === 'all' ||
-									newAnnouncement.targetAudience === userRole
-								) {
-									// Fetch the creator's name
-									let creatorName = 'Unknown';
-									try {
-										const { data: userData } = await supabase
-											.from('users')
-											.select('firstName, lastName')
-											.eq('id', newAnnouncement.created_by)
-											.single();
+									// Check if this announcement is targeted to the current user's role
+									if (
+										newAnnouncement.targetAudience === 'all' ||
+										newAnnouncement.targetAudience === userRole
+									) {
+										// Fetch the creator's name
+										let creatorName = 'Unknown'
+										try {
+											const { data: userData } = await supabase
+												.from('users')
+												.select('firstName, lastName')
+												.eq('id', newAnnouncement.created_by)
+												.single()
 
-										if (userData) {
-											creatorName = `${userData.firstName} ${userData.lastName}`;
+											if (userData) {
+												creatorName = `${userData.firstName} ${userData.lastName}`
+											}
+										} catch (err) {
+											console.error('Error fetching creator name:', err)
 										}
-									} catch (err) {
-										console.error('Error fetching creator name:', err);
+
+										// Create the complete announcement object
+										const announcement = {
+											...newAnnouncement,
+											created_by_name: creatorName,
+											isRead: false,
+										}
+
+										// Update state with the new announcement
+
+										set(state => {
+											const newState = {
+												...state,
+												announcements: [announcement, ...state.announcements],
+												unreadCount: state.unreadCount + 1,
+											}
+											return newState as AnnouncementState
+										})
+
+										// Play notification sound
+										playNotificationSound()
 									}
+								}
 
-									// Create the complete announcement object
-									const announcement = {
-										...newAnnouncement,
-										created_by_name: creatorName,
-										isRead: false,
-									};
-
-									// Update state with the new announcement
+								// Handle DELETE event - deleted announcement
+								if (payload.eventType === 'DELETE') {
+									const deletedId = payload.old.id
 
 									set(state => {
-										const newState = {
-											...state,
-											announcements: [announcement, ...state.announcements],
-											unreadCount: state.unreadCount + 1,
-										};
-										return newState as AnnouncementState;
-									});
+										// Check if the deleted announcement was unread
+										const wasUnread = state.announcements.find(a => a.id === deletedId && !a.isRead)
 
-									// Play notification sound
-									playNotificationSound();
+										return {
+											...state,
+											announcements: state.announcements.filter(a => a.id !== deletedId),
+											unreadCount: wasUnread
+												? Math.max(0, state.unreadCount - 1)
+												: state.unreadCount,
+										}
+									})
+								}
+
+								// Handle UPDATE event if needed
+								if (payload.eventType === 'UPDATE') {
+									const updatedAnnouncement = payload.new
+
+									set(state => ({
+										...state,
+										announcements: state.announcements.map(a =>
+											a.id === updatedAnnouncement.id ? { ...a, ...updatedAnnouncement } : a
+										),
+									}))
 								}
 							}
-
-							// Handle DELETE event - deleted announcement
-							if (payload.eventType === 'DELETE') {
-								const deletedId = payload.old.id;
-
-								set(state => {
-									// Check if the deleted announcement was unread
-									const wasUnread = state.announcements.find(
-										a => a.id === deletedId && !a.isRead
-									);
-
-									return {
-										...state,
-										announcements: state.announcements.filter(a => a.id !== deletedId),
-										unreadCount: wasUnread ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
-									};
-								});
-							}
-
-							// Handle UPDATE event if needed
-							if (payload.eventType === 'UPDATE') {
-								const updatedAnnouncement = payload.new;
-
-								set(state => ({
-									...state,
-									announcements: state.announcements.map(a =>
-										a.id === updatedAnnouncement.id
-											? { ...a, ...updatedAnnouncement }
-											: a
-									),
-								}));
-							}
-						})
-						.subscribe();
+						)
+						.subscribe()
 
 					return () => {
-						supabase.removeChannel(channel);
-					};
+						supabase.removeChannel(channel)
+					}
 				} catch (error) {
-					console.error('Error setting up real-time subscription:', error);
+					console.error('Error setting up real-time subscription:', error)
 				}
 			},
 
 			updateAnnouncement: async (id, updateData) => {
-				set({ isLoading: true, error: null });
+				set({ isLoading: true, error: null })
 				try {
-					const currentAnnouncement = get().announcements.find(ann => ann.id === id);
-					let photo_url = currentAnnouncement?.photo_url;
-					let video_url = currentAnnouncement?.video_url;
-					let photo_name = currentAnnouncement?.photo_name;
-					let video_name = currentAnnouncement?.video_name;
+					const currentAnnouncement = get().announcements.find(ann => ann.id === id)
+					let photo_url = currentAnnouncement?.photo_url
+					let video_url = currentAnnouncement?.video_url
+					let photo_name = currentAnnouncement?.photo_name
+					let video_name = currentAnnouncement?.video_name
 
 					// Handle photo upload/removal
 					if (updateData.photo_file) {
 						// If there was an old photo, delete it
 						if (photo_name) {
-							await supabase.storage.from('lms').remove([photo_name]);
+							await supabase.storage.from('lms').remove([photo_name])
 						}
-						const newPhotoName = `announcement_photos/${Date.now()}_${updateData.photo_file.name}`;
+						const newPhotoName = `announcement_photos/${Date.now()}_${updateData.photo_file.name}`
 						const { error: photoUploadError } = await supabase.storage
 							.from('lms')
-							.upload(newPhotoName, updateData.photo_file);
-						if (photoUploadError) throw photoUploadError;
-						photo_url = `${supabase.storage.from('lms').getPublicUrl(newPhotoName).data.publicUrl}`;
-						photo_name = newPhotoName;
+							.upload(newPhotoName, updateData.photo_file)
+						if (photoUploadError) throw photoUploadError
+						photo_url = `${supabase.storage.from('lms').getPublicUrl(newPhotoName).data.publicUrl}`
+						photo_name = newPhotoName
 					} else if (updateData.photo_url === null && photo_name) {
-                        // If photo_url is explicitly set to null (meaning remove photo) and there was a photo
-                        await supabase.storage.from('lms').remove([photo_name]);
-                        photo_url = null; // Explicitly set to null for database update
-                        photo_name = null; // Explicitly set to null for database update
-                    }
+						// If photo_url is explicitly set to null (meaning remove photo) and there was a photo
+						await supabase.storage.from('lms').remove([photo_name])
+						photo_url = null // Explicitly set to null for database update
+						photo_name = null // Explicitly set to null for database update
+					}
 
 					// Handle video upload/removal
 					if (updateData.video_file) {
 						// If there was an old video, delete it
 						if (video_name) {
-							await supabase.storage.from('lms').remove([video_name]);
+							await supabase.storage.from('lms').remove([video_name])
 						}
-						const newVideoName = `announcement_videos/${Date.now()}_${updateData.video_file.name}`;
+						const newVideoName = `announcement_videos/${Date.now()}_${updateData.video_file.name}`
 						const { error: videoUploadError } = await supabase.storage
 							.from('lms')
-							.upload(newVideoName, updateData.video_file);
-						if (videoUploadError) throw videoUploadError;
-						video_url = `${supabase.storage.from('lms').getPublicUrl(newVideoName).data.publicUrl}`;
-						video_name = newVideoName;
+							.upload(newVideoName, updateData.video_file)
+						if (videoUploadError) throw videoUploadError
+						video_url = `${supabase.storage.from('lms').getPublicUrl(newVideoName).data.publicUrl}`
+						video_name = newVideoName
 					} else if (updateData.video_url === null && video_name) {
-                        // If video_url is explicitly set to null (meaning remove video) and there was a video
-                        await supabase.storage.from('lms').remove([video_name]);
-                        video_url = null; // Explicitly set to null for database update
-                        video_name = null; // Explicitly set to null for database update
-                    }
+						// If video_url is explicitly set to null (meaning remove video) and there was a video
+						await supabase.storage.from('lms').remove([video_name])
+						video_url = null // Explicitly set to null for database update
+						video_name = null // Explicitly set to null for database update
+					}
 
-					const { title, content, isImportant, targetAudience } = updateData;
+					const { title, content, isImportant, targetAudience } = updateData
 					const updatePayload: any = {
 						title,
 						content,
 						isImportant,
-						targetAudience: targetAudience ? targetAudience.charAt(0).toUpperCase() + targetAudience.slice(1) : undefined,
+						targetAudience: targetAudience
+							? targetAudience.charAt(0).toUpperCase() + targetAudience.slice(1)
+							: undefined,
 						photo_url, // This will be null if removed, or the new URL if updated, or existing if unchanged
 						video_url, // This will be null if removed, or the new URL if updated, or existing if unchanged
 						photo_name, // This will be null if removed, or the new name if updated, or existing if unchanged
 						video_name, // This will be null if removed, or the new name if updated, or existing if unchanged
-					};
+					}
 
 					// Remove undefined fields from payload to prevent overwriting with null IF NOT PROVIDED
-                    // but keep nulls if they were explicitly set (e.g. for removal)
+					// but keep nulls if they were explicitly set (e.g. for removal)
 					Object.keys(updatePayload).forEach(key => {
-                        if (updatePayload[key] === undefined) {
-                           delete updatePayload[key];
-                        }
-                    });
+						if (updatePayload[key] === undefined) {
+							delete updatePayload[key]
+						}
+					})
 
 					const { data: updatedDbAnnouncement, error: updateError } = await supabase
 						.from('announcements')
 						.update(updatePayload)
 						.eq('id', id)
 						.select()
-						.single();
+						.single()
 
-					if (updateError) throw updateError;
+					if (updateError) throw updateError
 
 					set(state => ({
-						announcements: state.announcements.map(ann =>
-							ann.id === id ? { ...ann, ...updatedDbAnnouncement, isRead: ann.isRead } : ann // Preserve isRead status
+						announcements: state.announcements.map(
+							ann =>
+								ann.id === id ? { ...ann, ...updatedDbAnnouncement, isRead: ann.isRead } : ann // Preserve isRead status
 						),
-					}));
-					showSuccess('Announcement updated successfully!');
-					return true;
+					}))
+					showSuccess('Announcement updated successfully!')
+					return true
 				} catch (error) {
 					const errorMessage =
-						error instanceof Error ? error.message : 'Failed to update announcement';
-					set({ error: errorMessage });
-					console.error('Error updating announcement:', error);
-					showError(errorMessage);
-					return false;
+						error instanceof Error ? error.message : 'Failed to update announcement'
+					set({ error: errorMessage })
+					console.error('Error updating announcement:', error)
+					showError(errorMessage)
+					return false
 				} finally {
-					set({ isLoading: false });
+					set({ isLoading: false })
 				}
 			},
 
-			createAnnouncement: async (announcementInput) => {
+			createAnnouncement: async announcementInput => {
 				set({ isLoading: true, error: null })
 				try {
-					let photo_url: string | undefined = undefined;
-					let video_url: string | undefined = undefined;
-					let photo_name: string | undefined = undefined;
-					let video_name: string | undefined = undefined;
-					const { photo_file, video_file, ...restOfAnnouncement } = announcementInput;
+					let photo_url: string | undefined = undefined
+					let video_url: string | undefined = undefined
+					let photo_name: string | undefined = undefined
+					let video_name: string | undefined = undefined
+					const { photo_file, video_file, ...restOfAnnouncement } = announcementInput
 
 					// Handle photo upload
 					if (photo_file) {
-						const newPhotoName = `announcement_photos/${Date.now()}_${photo_file.name}`;
+						const newPhotoName = `announcement_photos/${Date.now()}_${photo_file.name}`
 						const { error: photoUploadError } = await supabase.storage
 							.from('lms')
-							.upload(newPhotoName, photo_file);
-						if (photoUploadError) throw photoUploadError;
-						photo_url = `${supabase.storage.from('lms').getPublicUrl(newPhotoName).data.publicUrl}`;
-						photo_name = newPhotoName;
+							.upload(newPhotoName, photo_file)
+						if (photoUploadError) throw photoUploadError
+						photo_url = `${supabase.storage.from('lms').getPublicUrl(newPhotoName).data.publicUrl}`
+						photo_name = newPhotoName
 					}
 
 					// Handle video upload
 					if (video_file) {
-						const newVideoName = `announcement_videos/${Date.now()}_${video_file.name}`;
+						const newVideoName = `announcement_videos/${Date.now()}_${video_file.name}`
 						const { error: videoUploadError } = await supabase.storage
 							.from('lms')
-							.upload(newVideoName, video_file);
-						if (videoUploadError) throw videoUploadError;
-						video_url = `${supabase.storage.from('lms').getPublicUrl(newVideoName).data.publicUrl}`;
-						video_name = newVideoName;
+							.upload(newVideoName, video_file)
+						if (videoUploadError) throw videoUploadError
+						video_url = `${supabase.storage.from('lms').getPublicUrl(newVideoName).data.publicUrl}`
+						video_name = newVideoName
 					}
 
 					const announcementToCreate = {
@@ -416,7 +441,7 @@ export const useAnnouncementStore = create<AnnouncementState>()(
 						video_url,
 						photo_name,
 						video_name,
-					};
+					}
 
 					const { data: newAnnouncement, error: createError } = await supabase
 						.from('announcements')
@@ -525,24 +550,24 @@ export const useAnnouncementStore = create<AnnouncementState>()(
 					// Update the read IDs in dedicated localStorage key
 					try {
 						// Get existing read IDs
-						let readIds = [];
-						const readIdsStr = localStorage.getItem('read-announcement-ids');
+						let readIds = []
+						const readIdsStr = localStorage.getItem('read-announcement-ids')
 						if (readIdsStr) {
 							try {
-								const parsed = JSON.parse(readIdsStr);
-								readIds = Array.isArray(parsed) ? parsed : [];
+								const parsed = JSON.parse(readIdsStr)
+								readIds = Array.isArray(parsed) ? parsed : []
 							} catch (e) {
-								readIds = [];
+								readIds = []
 							}
 						}
 
 						// Add the new ID if not already in the list
 						if (!readIds.includes(id)) {
-							readIds.push(id);
-							localStorage.setItem('read-announcement-ids', JSON.stringify(readIds));
+							readIds.push(id)
+							localStorage.setItem('read-announcement-ids', JSON.stringify(readIds))
 						}
 					} catch (error) {
-						console.error('Error updating read announcements in localStorage:', error);
+						console.error('Error updating read announcements in localStorage:', error)
 					}
 
 					return {
@@ -554,17 +579,17 @@ export const useAnnouncementStore = create<AnnouncementState>()(
 
 			markAllAsRead: () => {
 				set(state => {
-					const updatedAnnouncements = state.announcements.map(a => ({ ...a, isRead: true }));
+					const updatedAnnouncements = state.announcements.map(a => ({ ...a, isRead: true }))
 
 					// Update all read IDs in dedicated localStorage key
 					try {
 						// Get all announcement IDs
-						const allIds = updatedAnnouncements.map(a => a.id);
+						const allIds = updatedAnnouncements.map(a => a.id)
 
 						// Store directly to the dedicated localStorage key
-						localStorage.setItem('read-announcement-ids', JSON.stringify(allIds));
+						localStorage.setItem('read-announcement-ids', JSON.stringify(allIds))
 					} catch (error) {
-						console.error('Error updating all read announcements in localStorage:', error);
+						console.error('Error updating all read announcements in localStorage:', error)
 					}
 
 					return {
@@ -613,31 +638,31 @@ export const useAnnouncements = () => {
 	// Set up real-time subscription when the hook is first used
 	useEffect(() => {
 		// Fetch the user role from localStorage
-		let userRole = 'All';
+		let userRole = 'All'
 		try {
-			const user = JSON.parse(localStorage.getItem('lms_user') || '{}');
+			const user = JSON.parse(localStorage.getItem('lms_user') || '{}')
 			if (user && user.role) {
-				userRole = user.role;
+				userRole = user.role
 			}
 		} catch (error) {
-			console.error('Error parsing user from localStorage:', error);
+			console.error('Error parsing user from localStorage:', error)
 		}
 
 		// Initial fetch of announcements
 		if (store.announcements.length === 0) {
-			store.fetchAnnouncements(userRole);
+			store.fetchAnnouncements(userRole)
 		}
 
 		// Subscribe to real-time updates
-		const subscription = store.subscribeToAnnouncements();
+		const subscription = store.subscribeToAnnouncements()
 
 		// Clean up subscription when the component unmounts
 		return () => {
 			if (typeof subscription === 'function') {
-				subscription();
+				subscription()
 			}
-		};
-	}, []);
+		}
+	}, [])
 
 	return {
 		announcements: store.announcements,
@@ -657,12 +682,12 @@ export const useAnnouncements = () => {
 // Play a notification sound when a new announcement is received
 const playNotificationSound = () => {
 	try {
-		const audio = new Audio('/sounds/notification.mp3');
-		audio.volume = 0.5;
+		const audio = new Audio('/sounds/notification.mp3')
+		audio.volume = 0.5
 		audio.play().catch(err => {
-			console.log('Could not play notification sound:', err);
-		});
+			console.log('Could not play notification sound:', err)
+		})
 	} catch (err) {
-		console.error('Error playing notification sound:', err);
+		console.error('Error playing notification sound:', err)
 	}
-};
+}
