@@ -270,48 +270,17 @@ const RoleForm: React.FC<RoleFormProps> = ({
 	const handleNextStep = async () => {
 		if (!validateForm()) return
 
-		try {
-			const { data: newRole, error: createError } = await supabase
-				.from('roles')
-				.insert([
-					{
-						name: formData.name,
-						description: formData.description,
-						parent_role: formData.parent_role || null,
-					},
-				])
-				.select('id, name, description, created_at, parent_role')
-				.single()
+		// Pass the data back to the parent component without creating the role directly
+		onSubmit({
+			name: formData.name,
+			description: formData.description,
+			permissions: [],
+			parent_role: formData.parent_role,
+		})
 
-			if (createError) {
-				console.error('Error creating role:', createError)
-				toast.error('Failed to create role. Please try again.')
-				return
-			}
-
-			// Create an empty role_permissions array for the new role
-			const updatedRole = {
-				...newRole,
-				role_permissions: [],
-				usersCount: 0,
-			}
-
-			// Pass the data back to the parent component
-			onSubmit({
-				name: formData.name,
-				description: formData.description,
-				permissions: [],
-				parent_role: formData.parent_role,
-			})
-
-			// Reset form and close modal
-			setFormData({ name: '', description: '', parent_role: '' })
-			onClose()
-			toast.success('Role created successfully!')
-		} catch (error) {
-			console.error('Error creating role:', error)
-			toast.error('An unexpected error occurred. Please try again.')
-		}
+		// Reset form and close modal
+		setFormData({ name: '', description: '', parent_role: '' })
+		onClose()
 	}
 
 	const handlePreviousStep = () => {

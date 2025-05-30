@@ -69,6 +69,10 @@ const UserForm: React.FC<UserFormProps> = ({
 	const [availableStudents, setAvailableStudents] = useState<User[]>([])
 	const [isLoadingStudents, setIsLoadingStudents] = useState(false)
 
+	// State for all available roles
+	const [availableRoles, setAvailableRoles] = useState<{ id: string; name: string }[]>([])
+	const [isLoadingRoles, setIsLoadingRoles] = useState(false)
+
 	// Validation state
 	const [errors, setErrors] = useState<Record<string, string>>({})
 	const [isSubmitting, setIsSubmitting] = useState(false)
@@ -339,6 +343,34 @@ const UserForm: React.FC<UserFormProps> = ({
 		}
 	}, [formData.role])
 
+	// Fetch all roles from Supabase
+	const fetchAllRoles = async () => {
+		setIsLoadingRoles(true)
+		try {
+			const { data, error } = await supabase.from('roles').select('id, name').order('name')
+
+			if (error) {
+				console.error('Error fetching roles:', error)
+				toast.error('Failed to fetch roles')
+				return
+			}
+
+			setAvailableRoles(data || [])
+		} catch (err) {
+			console.error('Unexpected error fetching roles:', err)
+			toast.error('Failed to fetch roles')
+		} finally {
+			setIsLoadingRoles(false)
+		}
+	}
+
+	// Fetch roles when form opens
+	useEffect(() => {
+		if (isOpen) {
+			fetchAllRoles()
+		}
+	}, [isOpen])
+
 	// Handle input changes
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
 		const { name, value } = e.target
@@ -535,12 +567,21 @@ const UserForm: React.FC<UserFormProps> = ({
 		}
 	}
 
-	// Check if user can create a parent user
+	// Check if user has permission to create a parent user
 	const canCreateParent = () => {
 		return canCreateUserWithRole({
 			currentUserRole,
 			currentUserPermissions,
 			newUserRole: 'Parent',
+		})
+	}
+
+	// Check if user has permission to create a user with a specific role
+	const canCreateUserWithSpecificRole = (roleName: string) => {
+		return canCreateUserWithRole({
+			currentUserRole,
+			currentUserPermissions,
+			newUserRole: roleName,
 		})
 	}
 
@@ -676,14 +717,27 @@ const UserForm: React.FC<UserFormProps> = ({
 									value={formData.role || ''}
 									onChange={handleChange}
 									$hasError={!!errors.role}
+									disabled={isLoadingRoles}
 								>
 									<option value=''>Select a role</option>
-									<option value='Admin'>Admin</option>
-									<option value='Teacher'>Teacher</option>
-									<option value='Student'>Student</option>
-									<option value='Parent' disabled={!canCreateParent()}>
-										Parent {!canCreateParent() && '(No Permission)'}
-									</option>
+									{isLoadingRoles ? (
+										<option value='' disabled>
+											Loading roles...
+										</option>
+									) : (
+										availableRoles
+											.filter(role => role.name !== 'SuperAdmin')
+											.map(role => (
+												<option
+													key={role.id}
+													value={role.name}
+													disabled={!canCreateUserWithSpecificRole(role.name)}
+												>
+													{role.name}{' '}
+													{!canCreateUserWithSpecificRole(role.name) && '(No Permission)'}
+												</option>
+											))
+									)}
 								</FormSelect>
 								{errors.role && <ErrorMessage>{errors.role}</ErrorMessage>}
 							</FormGroup>

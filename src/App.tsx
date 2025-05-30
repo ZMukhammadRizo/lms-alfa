@@ -17,14 +17,12 @@ import AdminAssignments from './pages/admin/Assignments'
 import { Classes } from './pages/admin/Classes'
 import Dashboard from './pages/admin/Dashboard'
 import AdminGradesModule from './pages/admin/GradesModule'
-import GroupStudents from './pages/admin/GroupStudents'
 import LessonDetail from './pages/admin/LessonDetail'
 import LessonsManagePage from './pages/admin/LessonsManagePage'
 import NewClassPage from './pages/admin/NewClassPage'
 import ProfilePage from './pages/admin/ProfilePage'
 import Roles from './pages/admin/Roles'
 import Settings from './pages/admin/Settings'
-import SubjectGroups from './pages/admin/SubjectGroups'
 import Subjects from './pages/admin/Subjects'
 import AdminSubmissions from './pages/admin/Submissions'
 import Timetables from './pages/admin/Timetables'
@@ -131,7 +129,7 @@ function AppContent() {
 					<Route path='/redirect/:targetPath' element={<RedirectPage />} />
 
 					{/* Admin routes - protected for Admin role only */}
-					<Route element={<ProtectedRoute allowedRoles={['Admin', 'SuperAdmin']} />}>
+					<Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
 						<Route path='/admin' element={<AdminLayout />}>
 							<Route index element={<Navigate to='/admin/dashboard' replace />} />
 							<Route path='dashboard' element={<Dashboard />} />
@@ -154,7 +152,7 @@ function AppContent() {
 					</Route>
 
 					{/* Teacher routes - protected for Teacher role only */}
-					<Route element={<ProtectedRoute allowedRoles={['Teacher', 'ModuleLeader']} />}>
+					<Route element={<ProtectedRoute allowedRoles={['Teacher']} />}>
 						<Route path='/teacher' element={<TeacherLayout />}>
 							<Route path='subjects' element={<SubjectsManagePage />} />
 							<Route path='new-class' element={<NewClassPage />} />
