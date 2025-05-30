@@ -15,7 +15,6 @@ import {
 	FiPlus,
 	FiSettings,
 	FiShield,
-	FiSunrise,
 	FiUser,
 	FiUsers,
 } from 'react-icons/fi'
