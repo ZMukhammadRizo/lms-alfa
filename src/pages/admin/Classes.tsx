@@ -3292,43 +3292,47 @@ export const Classes: React.FC = () => {
 					return
 				}
 
+				if (!selectedClassType || !selectedClassType.id) {
+					toast.error('No class type selected. Cannot create level.');
+					console.error('Attempted to save new level without a selectedClassType.');
+					setIsCreateClassModalOpen(false); // Close modal
+					return;
+				}
+
 				try {
 					const randomColor = generateRandomColor()
 
-					// Try to insert with status field first
-					let insertData: { name: string; status?: string } = {
+					// Prepare insertData with name, type_id, and optionally status
+					let insertData: { name: string; type_id: string; status?: string } = {
 						name: className,
-						status: status,
+						type_id: selectedClassType.id, // Associate with the selected ClassType
 					}
 
 					let response = await supabase.from('levels').insert([insertData]).select()
 
-					// If there's an error about the column not existing, try again without status
+					// If there's an error specifically about the 'status' column not existing, try again without it
 					if (
 						response.error &&
-						(response.error.message.includes('column') ||
-							response.error.message.includes('field') ||
-							response.error.code === '42703')
+						response.error.code === '42703' && // PostgreSQL error code for undefined_column
+						response.error.message.toLowerCase().includes('column "status"') // Check if the message is about the "status" column
 					) {
-						console.log('Status field might not exist in the levels table, trying without it')
-
-						// Remove the status field but keep color
-						delete insertData.status
-
-						response = await supabase.from('levels').insert([insertData]).select()
+						console.log('Status field does not exist in the levels table, trying to insert without it.');
+						delete insertData.status; // Remove status from the data
+						// Retry insertion with { name, type_id }
+						response = await supabase.from('levels').insert([insertData]).select();
 					}
 
-					// If we still have an error, report it
+					// If we still have an error after potential retry, report it
 					if (response.error) {
-						console.error('Error saving new class:', response.error)
-						toast.error('Failed to create class')
+						console.error('Error saving new class (level):', response.error)
+						toast.error('Failed to create class (level)')
 						return
 					}
 
 					// Check if we have data
 					if (!response.data || response.data.length === 0) {
 						console.error('No data returned after insert')
-						toast.error('Failed to create class - no data returned')
+						toast.error('Failed to create class (level) - no data returned')
 						return
 					}
 
@@ -3337,23 +3341,23 @@ export const Classes: React.FC = () => {
 						id: newClassData.id,
 						classname: newClassData.name,
 						teacherName: 'No teacher assigned',
-						attendanceDays: [], // Not stored in database yet
-						attendanceTimes: [], // Not stored in database yet
-						formattedDays: 'Not scheduled', // Computed from attendanceDays
-						formattedTimes: 'Not scheduled', // Computed from attendanceTimes
-						students: 0, // Initialize with 0 students
-						status: status, // Use the provided status
+						attendanceDays: [], 
+						attendanceTimes: [], 
+						formattedDays: 'Not scheduled', 
+						formattedTimes: 'Not scheduled', 
+						students: 0, 
+						status: newClassData.status || status, // Use DB status if available, else modal status
 						color: randomColor,
-						sectionCount: 0, // Initialize with 0 sections
+						sectionCount: 0, 
 					}
 
 					setClasses([...classes, newClass])
-					setCurrentClass(newClass)
-					toast.success('Class created successfully')
-					console.log('New class saved:', newClass)
+					setCurrentClass(newClass) // This state might be for focusing/editing, ensure it's intended
+					toast.success('Class (Level) created successfully')
+					console.log('New class (level) saved:', newClass)
 				} catch (error) {
 					console.error('Error in handleSaveNewClass:', error)
-					toast.error('An unexpected error occurred')
+					toast.error('An unexpected error occurred while creating the class (level)')
 				}
 
 				setIsCreateClassModalOpen(false)
