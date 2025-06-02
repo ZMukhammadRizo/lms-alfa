@@ -70,19 +70,7 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({ requiredPermission, c
 	}
 
 	if (hasPermission === false) {
-		// For dashboard pages, show the AccessDenied component instead of redirecting
-		if (isDashboardPage) {
-			return <AccessDenied permission={requiredPermission} />
-		}
-
-		// For other pages, redirect to the user's dashboard
-		const dashboardPath = getDashboardPath()
-		return (
-			<RedirectPage
-				targetPath={dashboardPath}
-				message="You don't have permission to access this page. Redirecting to your dashboard..."
-			/>
-		)
+		return <AccessDenied permission={requiredPermission} />
 	}
 
 	return <>{children}</>

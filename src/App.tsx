@@ -64,6 +64,7 @@ import { TeacherSubjectDetails } from './pages/teacher/TeacherSubjectDetails'
 import TeacherSubmissions from './pages/teacher/TeacherSubmissions'
 import GlobalStyle from './styles/globalStyles'
 import { createTheme } from './styles/theme'
+import { menuItemPermissionMap } from './constants/menuItems'
 
 // Create a context for theme settings
 export interface ThemeContextType {
@@ -136,7 +137,7 @@ function AppContent() {
 							<Route
 								path='dashboard'
 								element={
-									<PermissionGuard requiredPermission='access_admin_dashboard'>
+									<PermissionGuard requiredPermission={menuItemPermissionMap['/admin/dashboard']}>
 										<Dashboard />
 									</PermissionGuard>
 								}
@@ -153,7 +154,9 @@ function AppContent() {
 							<Route
 								path='announcements'
 								element={
-									<PermissionGuard requiredPermission='access_admin_announcements'>
+									<PermissionGuard
+										requiredPermission={menuItemPermissionMap['/admin/announcements']}
+									>
 										<AdminAnnouncements />
 									</PermissionGuard>
 								}

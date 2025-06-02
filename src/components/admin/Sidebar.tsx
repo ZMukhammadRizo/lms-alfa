@@ -9,6 +9,7 @@ import {
 	getManagerMenu,
 	getModuleLeaderMenu,
 	getSystemMenu,
+	menuItemPermissionMap,
 	teacherMenu,
 } from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
@@ -98,8 +99,15 @@ interface MenuItemWithSubmenuProps {
 	icon: React.ReactNode
 	label: string
 	isCollapsed: boolean
-	subItems: { path: string; icon: React.ReactNode; label: string }[]
+	subItems: {
+		path: string
+		icon: React.ReactNode
+		label: string
+		requiredPermission?: string
+		[key: string]: any
+	}[]
 	onMobileClick?: () => void
+	requiredPermissions?: string[]
 }
 
 const MenuItemWithSubmenu: React.FC<MenuItemWithSubmenuProps> = ({
@@ -108,6 +116,7 @@ const MenuItemWithSubmenu: React.FC<MenuItemWithSubmenuProps> = ({
 	isCollapsed,
 	subItems,
 	onMobileClick,
+	requiredPermissions,
 }) => {
 	const [isOpen, setIsOpen] = useState(false)
 	const location = useLocation()
@@ -171,15 +180,34 @@ const MenuItemWithSubmenu: React.FC<MenuItemWithSubmenuProps> = ({
 						transition={{ duration: 0.2 }}
 					>
 						{subItems.map(item => (
-							<SubMenuItem
-								key={item.path}
-								to={item.path}
-								$isActive={location.pathname === item.path}
-								onClick={onMobileClick}
-							>
-								<SubMenuIcon>{item.icon}</SubMenuIcon>
-								<span>{item.label}</span>
-							</SubMenuItem>
+							<>
+								{item.requiredPermission &&
+								item.path === '/admin/announcements/create' &&
+								hasPermission(item.requiredPermission) ? (
+									<SubMenuItem
+										key={item.path}
+										to={item.path}
+										$isActive={location.pathname === item.path}
+										onClick={onMobileClick}
+									>
+										<SubMenuIcon>{item.icon}</SubMenuIcon>
+										<span>{item.label}</span>
+									</SubMenuItem>
+								) : null}
+								{item.requiredPermission &&
+								item.path === '/admin/announcements' &&
+								hasPermission(item.requiredPermission) ? (
+									<SubMenuItem
+										key={item.path}
+										to={item.path}
+										$isActive={location.pathname === item.path}
+										onClick={onMobileClick}
+									>
+										<SubMenuIcon>{item.icon}</SubMenuIcon>
+										<span>{item.label}</span>
+									</SubMenuItem>
+								) : null}
+							</>
 						))}
 					</SubMenu>
 				)}
@@ -359,19 +387,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 												onMobileClick={handleNavItemClick}
 											/>
 										))}
+										{hasPermission(
+											menuItemPermissionMap['/admin/announcements/create'] ??
+												menuItemPermissionMap['/admin/announcements']
+										) ? (
+											<MenuItemWithSubmenu
+												icon={<FiBell />}
+												label='Announcements'
+												isCollapsed={isMobile ? false : isCollapsed}
+												subItems={announcementsSubItems}
+												onMobileClick={handleNavItemClick}
+											/>
+										) : null}
 									</>
 								)}
-								{/* Render Announcements for users with read_announcements permission */}
-								{hasAnnouncementPermission('read') ? (
-									<MenuItemWithSubmenu
-										icon={<FiBell />}
-										label='Announcements'
-										isCollapsed={isMobile ? false : isCollapsed}
-										subItems={announcementsSubItems}
-										onMobileClick={handleNavItemClick}
-									/>
-								) : null}
-								{hasPermission('manage_roles') ||
+								{hasPermission('access_admin_subjects') ||
 								hasRole('RoleManager') ||
 								hasRole('Admin') ||
 								hasRole('SuperAdmin') ? (
@@ -429,20 +459,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 										))}
 									</>
 								) : null}
-								{role === 'Teacher' && (
-									<>
-										{teacherMenu.map(item => (
-											<PermissionMenuItem
-												key={item.path}
-												icon={item.icon}
-												label={item.label}
-												to={item.path}
-												isCollapsed={isMobile ? false : isCollapsed}
-												onMobileClick={handleNavItemClick}
-											/>
-										))}
-									</>
-								)}
 							</MenuSection>
 
 							<MenuSection>

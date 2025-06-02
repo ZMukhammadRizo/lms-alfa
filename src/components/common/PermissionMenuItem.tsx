@@ -5,7 +5,6 @@ import styled, { css } from 'styled-components'
 import { menuItemPermissionMap } from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
 import { hasPermission } from '../../utils/authUtils'
-import { PermissionGuard } from '../permissions/PermissionGuard'
 
 interface PermissionMenuItemProps {
 	icon: React.ReactNode
@@ -93,37 +92,40 @@ const PermissionMenuItem: React.FC<PermissionMenuItemProps> = ({
 
 	// Check if this is the module leader's subject management page
 	const isModuleLeaderSubjectsPage =
-		to.includes('/subjects') && typeof user?.role === 'object' && user.role.name === 'ModuleLeader'
+		to.includes('/subjects') &&
+		typeof user?.role === 'object' &&
+		user.role.name === 'ModuleLeader' &&
+		user.role.parent?.name === 'Teacher'
+
+	const hasAccess = hasPermission(requiredPermission)
 
 	// For admin routes, use permission checks
-	if (isAdminRoute) {
+	if (isAdminRoute && hasAccess) {
 		return (
-			<PermissionGuard permission={requiredPermission}>
-				<MenuItemContainer
-					to={to}
-					$isActive={isActive}
-					$isCollapsed={isCollapsed}
-					onClick={handleClick}
-				>
-					<IconWrapper>{icon}</IconWrapper>
-					{!isCollapsed && <MenuLabel>{label}</MenuLabel>}
-					{isActive && (
-						<ActiveIndicator
-							layoutId='activeIndicator'
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							transition={{ duration: 0.2 }}
-						/>
-					)}
-				</MenuItemContainer>
-			</PermissionGuard>
+			<MenuItemContainer
+				to={to}
+				$isActive={isActive}
+				$isCollapsed={isCollapsed}
+				onClick={handleClick}
+			>
+				<IconWrapper>{icon}</IconWrapper>
+				{!isCollapsed && <MenuLabel>{label}</MenuLabel>}
+				{isActive && (
+					<ActiveIndicator
+						layoutId='activeIndicator'
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 0.2 }}
+					/>
+				)}
+			</MenuItemContainer>
 		)
 	}
 
 	// For module leader's subject management page, check manage_subjects permission
 	if (isModuleLeaderSubjectsPage) {
-		if (!hasPermission('manage_subjects')) {
+		if (!hasPermission('access_teacher_subjects')) {
 			return null
 		}
 	}

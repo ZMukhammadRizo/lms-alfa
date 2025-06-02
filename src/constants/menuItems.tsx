@@ -24,6 +24,7 @@ export interface MenuItem {
 	path: string
 	icon: React.ReactNode
 	label: string
+	requiredPermission?: string
 }
 
 // Admin menu items
@@ -40,8 +41,18 @@ export const adminMenu: MenuItem[] = [
 
 // Announcements submenu for admin
 export const announcementsSubItems: MenuItem[] = [
-	{ path: '/admin/announcements', icon: <FiList />, label: 'View All' },
-	{ path: '/admin/announcements/create', icon: <FiPlus />, label: 'Create New' },
+	{
+		path: '/admin/announcements',
+		icon: <FiList />,
+		label: 'View All',
+		requiredPermission: 'access_admin_announcements',
+	},
+	{
+		path: '/admin/announcements/create',
+		icon: <FiPlus />,
+		label: 'Create New',
+		requiredPermission: 'access_admin_announcements_create',
+	},
 ]
 
 // Teacher menu items
@@ -121,21 +132,31 @@ export const getSystemMenu = (rolePath: string): MenuItem[] => [
 
 // Map menu item paths to required permissions
 export const menuItemPermissionMap: Record<string, string> = {
+	// Admin menu items
 	'/admin/dashboard': 'access_admin_dashboard',
-	'/admin/users': 'manage_users',
-	'/admin/subjects': 'manage_subjects',
-	'/admin/classes': 'manage_classes',
-	'/admin/assignments': 'manage_assignments',
-	'/admin/submissions': 'manage_submissions',
-	'/admin/grades': 'manage_grades',
-	'/admin/timetables': 'manage_timetables',
+	'/admin/users': 'access_admin_users',
+	'/admin/roles': 'access_admin_roles',
+	'/admin/subjects': 'access_admin_subjects',
+	'/admin/classes': 'access_admin_classes',
+	'/admin/assignments': 'access_admin_assignments',
+	'/admin/grades': 'access_admin_grades',
+	'/admin/timetables': 'access_admin_timetables',
+	'/admin/settings': 'access_admin_settings',
+	'/admin/profile': 'access_admin_profile',
+	'/admin/announcements': 'access_admin_announcements',
+	'/admin/announcements/create': 'access_admin_announcements_create',
+	'/admin/subjects/:subjectId/lessons': 'access_admin_lessons',
+	'/admin/lessons/:id': 'access_admin_lesson_detail',
+	'/admin/submissions': 'access_admin_submissions',
+	// Teacher menu items
 	'/teacher/dashboard': 'access_teacher_dashboard',
 	'/teacher/classes': 'view_classes',
 	'/teacher/assignments': 'manage_assignments',
-	'/teacher/submissions': 'manage_submissions',	
+	'/teacher/submissions': 'manage_submissions',
 	'/teacher/grades': 'manage_grades',
 	'/teacher/schedule': 'view_schedule',
 	'/teacher/messages': 'send_messages',
+	// Student menu items
 	'/student/dashboard': 'access_student_dashboard',
 	'/student/announcements': 'read_announcements',
 	'/student/courses': 'view_courses',
@@ -145,6 +166,7 @@ export const menuItemPermissionMap: Record<string, string> = {
 	'/student/messages': 'send_messages',
 	'/student/tests': 'take_tests',
 	'/student/flashcards': 'use_flashcards',
+	// Parent menu items
 	'/parent/dashboard': 'access_parent_dashboard',
 	'/parent/students': 'view_students',
 	'/parent/assignments': 'view_assignments',
