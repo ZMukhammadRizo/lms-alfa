@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import RedirectPage from '../../pages/auth/RedirectPage'
 import { checkUserPermission } from '../../utils/permissionUtils'
 import AccessDenied from './AccessDenied'
+import { CheckingPermission } from './PermissionCheck'
 
 interface PermissionGuardProps {
 	requiredPermission: string
@@ -41,6 +42,7 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({ requiredPermission, c
 
 	// Get the user's dashboard path
 	const getDashboardPath = (): string => {
+		setIsLoading(true)
 		if (!user || !user.role) return '/login'
 
 		// Basic role extraction
@@ -48,18 +50,23 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({ requiredPermission, c
 		if (typeof user.role === 'string') {
 			roleName = user.role.toLowerCase()
 		} else if (typeof user.role === 'object' && user.role?.name) {
-			roleName = user.role.name.toLowerCase()
+			if (user.role.parent && user.role.parent.name) {
+				roleName = user.role.parent.name.toLowerCase()
+			} else {
+				roleName = user.role.name
+			}
 		} else {
 			// Default to student
 			roleName = 'student'
 		}
 
+		setIsLoading(false)
 		return `/${roleName}/dashboard`
 	}
 
 	if (isLoading) {
 		// You can show a loading indicator here if needed
-		return null
+		return <CheckingPermission />
 	}
 
 	if (hasPermission === false) {

@@ -150,7 +150,14 @@ function AppContent() {
 							<Route path='timetables' element={<Timetables />} />
 							<Route path='settings' element={<Settings />} />
 							<Route path='profile' element={<ProfilePage />} />
-							<Route path='announcements' element={<AdminAnnouncements />} />
+							<Route
+								path='announcements'
+								element={
+									<PermissionGuard requiredPermission='access_admin_announcements'>
+										<AdminAnnouncements />
+									</PermissionGuard>
+								}
+							/>
 							<Route path='announcements/create' element={<AnnouncementCreate />} />
 							<Route path='subjects/:subjectId/lessons' element={<LessonsManagePage />} />
 							<Route path='subjects' element={<SubjectsManagePage />} />
