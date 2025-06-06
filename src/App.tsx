@@ -150,7 +150,7 @@ function AppContent() {
 					<Route path='/redirect/:targetPath' element={<RedirectPage />} />
 
 					{/* Admin routes - protected for Admin role only */}
-					<Route element={<ProtectedRoute allowedRoles={['Admin', 'SuperAdmin']} />}>
+					<Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
 						<Route path='/admin' element={<AdminLayout />}>
 							<Route index element={<Navigate to='/admin/dashboard' replace />} />
 							<Route path='dashboard' element={<Dashboard />} />
@@ -174,7 +174,7 @@ function AppContent() {
 					</Route>
 
 					{/* Teacher routes - protected for Teacher role only */}
-					<Route element={<ProtectedRoute allowedRoles={['Teacher', 'ModuleLeader']} />}>
+					<Route element={<ProtectedRoute allowedRoles={['Teacher']} />}>
 						<Route path='/teacher' element={<TeacherLayout />}>
 							<Route path='subjects' element={<SubjectsManagePage />} />
 							<Route path='new-class' element={<NewClassPage />} />

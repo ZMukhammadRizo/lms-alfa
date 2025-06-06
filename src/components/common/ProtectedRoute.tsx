@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import RedirectPage from '../../pages/auth/RedirectPage'
-import { getUserParentRole, getUserRole, isRoleManager } from '../../utils/authUtils'
 
 interface ProtectedRouteProps {
 	allowedRoles: string[]
@@ -13,12 +12,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 	allowedRoles,
 	redirectPath = '/login',
 }) => {
-	const { isAuthenticated, user } = useAuth()
+	const { isAuthenticated, user, getParentRoleName, loading } = useAuth()
 	const location = useLocation()
 	const [isRedirecting, setIsRedirecting] = useState(false)
 	const [redirectTo, setRedirectTo] = useState<string | null>(null)
 	const [redirectMessage, setRedirectMessage] = useState('')
 	const [initialCheckDone, setInitialCheckDone] = useState(false)
+
+	// Define the primary roles
+	const PRIMARY_ROLES = ['admin', 'teacher', 'student', 'parent']
 
 	// Reset redirecting state on location change
 	useEffect(() => {
@@ -26,96 +28,94 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 		setRedirectTo(null)
 	}, [location.pathname])
 
+	// Check roles and permissions
 	useEffect(() => {
-		// If not authenticated yet, wait for auth state to settle
-		if (!isAuthenticated && !user) {
+		// If not authenticated or no user, don't proceed with role checks
+		if (!isAuthenticated || !user) {
+			setInitialCheckDone(true)
 			return
 		}
 
-		// Get user's role and parent role (if any)
-		const userRole = getUserRole()
-		const parentRole = getUserParentRole()
-		const isUserRoleManager = isRoleManager()
+		try {
+			// Get user's effective role (the primary role or parent role)
+			let effectiveRole: string
 
-		// For RoleManager users, parent role should be checked first for permissions
-		let effectiveRoleForAccess = userRole
-		if (isUserRoleManager && parentRole) {
-			effectiveRoleForAccess = parentRole
-		}
+			// Only try to access role properties if user exists
+			// Get parent role if it exists
+			let parentRole = null
+			if (user && user.role && typeof user.role === 'object') {
+				parentRole = getParentRoleName(user.role)
+			}
 
-		// Log access attempt
-		if (isAuthenticated && user) {
-			// For RoleManager, prioritize parent role for permissions
-			const effectiveRoleForPermission = isUserRoleManager && parentRole ? parentRole : userRole
+			// If parent role exists and is one of the primary roles, use that
+			if (parentRole && PRIMARY_ROLES.includes(parentRole.toLowerCase())) {
+				effectiveRole = parentRole.toLowerCase()
+				console.log(`Using parent role: ${parentRole} for access control`)
+			} else {
+				// Otherwise get the direct role, with additional null checks
+				const directRole =
+					user && user.role
+						? typeof user.role === 'string'
+							? user.role
+							: user.role && typeof user.role === 'object' && user.role.name
+							? user.role.name
+							: 'unknown'
+						: 'unknown'
 
-			const hasAllowedRole = allowedRoles.some(
-				role => role.toLowerCase() === effectiveRoleForPermission.toLowerCase()
-			)
+				effectiveRole = directRole.toLowerCase()
+				console.log(`Using direct role: ${directRole} for access control`)
+			}
+
+			// If role is not one of the primary roles and has no valid parent,
+			// default to student for safety
+			if (!PRIMARY_ROLES.includes(effectiveRole)) {
+				console.warn(`Role ${effectiveRole} is not a primary role. Using 'student' as fallback.`)
+				effectiveRole = 'student'
+			}
+
+			// Check if the effective role is in the allowed roles list
+			const hasAllowedRole = allowedRoles.some(role => role.toLowerCase() === effectiveRole)
 
 			if (!hasAllowedRole) {
 				console.log(
-					`Access denied: User with role "${effectiveRoleForPermission}" attempted to access a route restricted to ${allowedRoles.join(
+					`Access denied: User with role "${effectiveRole}" attempted to access a route restricted to ${allowedRoles.join(
 						', '
 					)}`
 				)
+
+				// Redirect to the appropriate dashboard for this role
+				const dashboardPath = `/${effectiveRole}/dashboard`
+				console.log(`Access denied: Redirecting to: ${dashboardPath}`)
+
+				// Set redirecting state and path
+				setRedirectMessage(
+					`You don't have permission to access this area. Redirecting to your dashboard...`
+				)
+				setRedirectTo(dashboardPath)
+				setIsRedirecting(true)
 			}
-		}
-
-		// Check if user's effective role (prioritizing parent role for RoleManager) is allowed
-		const hasAllowedRole = allowedRoles.some(
-			role => role.toLowerCase() === effectiveRoleForAccess.toLowerCase()
-		)
-
-		if (!hasAllowedRole) {
-			// Ensure effectiveRoleForAccess is a string and not an object
-			const roleName =
-				typeof effectiveRoleForAccess === 'string'
-					? effectiveRoleForAccess.toLowerCase()
-					: typeof effectiveRoleForAccess === 'object' &&
-					  effectiveRoleForAccess !== null &&
-					  'name' in effectiveRoleForAccess
-					? String(effectiveRoleForAccess.name).toLowerCase()
-					: 'unknown'
-
-			// Safe fallback if we can't determine the role
-			const safeRoleName = ['admin', 'teacher', 'student', 'parent'].includes(roleName)
-				? roleName
-				: 'student'
-
-			// Set up for redirection
-			const dashboardPath = `/${safeRoleName}/dashboard`
-			console.log(`Access denied: Redirecting to: ${dashboardPath}`)
-
-			// Set redirecting state and path
-			setRedirectMessage(
-				`You don't have permission to access this area. Redirecting to your dashboard...`
-			)
-			setRedirectTo(dashboardPath)
-			setIsRedirecting(true)
+		} catch (error) {
+			console.error('Error in ProtectedRoute:', error)
 		}
 
 		// Mark initial check as complete
 		setInitialCheckDone(true)
-	}, [isAuthenticated, user, allowedRoles, location.pathname])
+	}, [isAuthenticated, user, allowedRoles, location.pathname, getParentRoleName])
 
-	// Don't render anything until we've completed our initial check
-	if (!initialCheckDone) {
-		return null
-	}
-
-	// Check if user is authenticated
-	if (!isAuthenticated || !user) {
+	// Check if user is authenticated - this must be done before any role checks
+	if (!loading && (!isAuthenticated || !user)) {
 		console.log('User is not authenticated, redirecting to login')
 		// Redirect to login page with the return url
 		return <Navigate to={redirectPath} state={{ from: location }} replace />
 	}
 
-	// If we're redirecting due to role mismatch
-	if (isRedirecting && redirectTo) {
+	// If we're redirecting due to role mismatch (AFTER role check is done)
+	if (initialCheckDone && isRedirecting && redirectTo) {
 		return <RedirectPage targetPath={redirectTo} message={redirectMessage} />
 	}
 
-	// If user is authenticated and has an allowed role, render the outlet
+	// Render the outlet even while loading, to preserve layout and sidebar
+	// Role-based redirects will happen after the check completes
 	return <Outlet />
 }
 

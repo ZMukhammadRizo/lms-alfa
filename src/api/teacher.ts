@@ -1,18 +1,21 @@
-import type { Class, ClassStudent, Video } from '../types/teacher'
 import supabase from '../config/supabaseClient'
+import type { Class, ClassStudent, Video } from '../types/teacher'
 
 export const getTeacherClasses = async (teacherId: string) => {
 	const { data, error } = await supabase
 		.from('classes')
-		.select(`
+		.select(
+			`
 			*,
 			classstudents ( count ),
-            classsubjects ( count )
-		`)
+            classsubjects ( count ),
+            levels ( id, name, type_id )
+		`
+		)
 		.eq('teacherid', teacherId)
 
 	if (error) {
-		console.error("Error fetching teacher classes with counts:", error);
+		console.error('Error fetching teacher classes with counts:', error)
 		throw error
 	}
 
@@ -21,19 +24,19 @@ export const getTeacherClasses = async (teacherId: string) => {
 		...cls,
 		// @ts-ignore Supabase typings might not recognize the count directly
 		studentCount: cls.classstudents?.[0]?.count ?? 0, // Use optional chaining and nullish coalescing
-        // @ts-ignore 
-        subjectCount: cls.classsubjects?.[0]?.count ?? 0   // Add subjectCount
-	}));
-	
-	return classesWithCounts as Class[]; // Ensure the return type matches the updated Class type
+		// @ts-ignore
+		subjectCount: cls.classsubjects?.[0]?.count ?? 0, // Add subjectCount
+		// @ts-ignore
+		level_id: cls.level_id, // Ensure level_id is directly accessible
+		// @ts-ignore
+		level_type_id: cls.levels?.type_id, // Add level type ID
+	}))
+
+	return classesWithCounts as Class[] // Ensure the return type matches the updated Class type
 }
 
 export const getClassById = async (classId: string) => {
-	const { data, error } = await supabase
-		.from('classes')
-		.select('*')
-		.eq('id', classId)
-		.single()
+	const { data, error } = await supabase.from('classes').select('*').eq('id', classId).single()
 
 	if (error) throw error
 	return data as Class
@@ -106,20 +109,20 @@ export const getClassSubjects = async (classId: string) => {
 			.eq('classid', classId)
 
 		if (relationError) throw relationError
-		
+
 		if (!relationData || relationData.length === 0) {
 			return []
 		}
-		
+
 		const subjectIds = relationData.map(item => item.subjectid)
-		
+
 		const { data: subjectsData, error: subjectsError } = await supabase
 			.from('subjects')
 			.select('*')
 			.in('id', subjectIds)
-		
+
 		if (subjectsError) throw subjectsError
-		
+
 		return subjectsData || []
 	} catch (error) {
 		console.error('Error fetching class subjects:', error)

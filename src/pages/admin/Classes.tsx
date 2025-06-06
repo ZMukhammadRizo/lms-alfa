@@ -39,13 +39,13 @@ const withPermissionCheck = (
 ) => {
 	console.warn(
 		`withPermissionCheck: Permission check for '${permissionName}' is currently bypassed. Assuming permission is granted.`
-	);
-	callbackIfPermitted(); // Directly execute the permitted callback
+	)
+	callbackIfPermitted() // Directly execute the permitted callback
 	// Example of how you might handle the not permitted case in a real implementation:
 	// if (!hasPermission(permissionName) && callbackIfNotPermitted) {
 	//   callbackIfNotPermitted();
 	// }
-};
+}
 
 // Interfaces
 interface Student {
@@ -90,9 +90,9 @@ interface Class {
 
 // New Interface for ClassType
 interface ClassType {
-  id: string;
-  name: string;
-  created_at: string;
+	id: string
+	name: string
+	created_at: string
 }
 
 // Interface for subject teacher assignments - DEFINED HERE
@@ -1694,20 +1694,22 @@ const StudentItem = styled.div<{ $isSelected: boolean; $isExcluded?: boolean }>`
 	align-items: center;
 	padding: 12px 16px;
 	border-bottom: 1px solid #e5e7eb;
-	cursor: ${props => props.$isExcluded ? 'not-allowed' : 'pointer'};
-	background-color: ${props => 
-    props.$isExcluded ? '#f3f4f6' : // Different background for excluded
-    props.$isSelected ? '#EEF2FF' : 'white'};
-  opacity: ${props => props.$isExcluded ? 0.7 : 1};
+	cursor: ${props => (props.$isExcluded ? 'not-allowed' : 'pointer')};
+	background-color: ${props =>
+		props.$isExcluded
+			? '#f3f4f6' // Different background for excluded
+			: props.$isSelected
+			? '#EEF2FF'
+			: 'white'};
+	opacity: ${props => (props.$isExcluded ? 0.7 : 1)};
 
 	&:last-child {
 		border-bottom: none;
 	}
 
 	&:hover {
-		background-color: ${props => 
-      props.$isExcluded ? '#f3f4f6' : 
-      props.$isSelected ? '#EEF2FF' : '#F9FAFB'};
+		background-color: ${props =>
+			props.$isExcluded ? '#f3f4f6' : props.$isSelected ? '#EEF2FF' : '#F9FAFB'};
 	}
 `
 
@@ -1834,10 +1836,10 @@ export const Classes: React.FC = () => {
 		useState<Section | null>(null)
 
 	// New state for ClassTypes
-	const [classTypes, setClassTypes] = useState<ClassType[]>([]);
-	const [selectedClassType, setSelectedClassType] = useState<ClassType | null>(null);
-	const [isLoadingClassTypes, setIsLoadingClassTypes] = useState(true);
-	const [classTypesError, setClassTypesError] = useState<string | null>(null);
+	const [classTypes, setClassTypes] = useState<ClassType[]>([])
+	const [selectedClassType, setSelectedClassType] = useState<ClassType | null>(null)
+	const [isLoadingClassTypes, setIsLoadingClassTypes] = useState(true)
+	const [classTypesError, setClassTypesError] = useState<string | null>(null)
 
 	// Add click outside listener for filter dropdowns
 	useEffect(() => {
@@ -2091,34 +2093,31 @@ export const Classes: React.FC = () => {
 	// Fetch classes data from Supabase
 	useEffect(() => {
 		const fetchClassTypes = async () => {
-			setIsLoadingClassTypes(true);
-			setClassTypesError(null);
+			setIsLoadingClassTypes(true)
+			setClassTypesError(null)
 			try {
-				const { data, error } = await supabase
-					.from('class_types')
-					.select('*')
-					.order('name');
+				const { data, error } = await supabase.from('class_types').select('*').order('name')
 
-				if (error) throw error;
-				setClassTypes(data || []);
+				if (error) throw error
+				setClassTypes(data || [])
 			} catch (error: any) {
-				console.error('Error fetching class types:', error);
-				toast.error('Failed to load class types');
-				setClassTypesError(error.message);
+				console.error('Error fetching class types:', error)
+				toast.error('Failed to load class types')
+				setClassTypesError(error.message)
 			} finally {
-				setIsLoadingClassTypes(false);
+				setIsLoadingClassTypes(false)
 			}
-		};
+		}
 
-		fetchClassTypes();
-	}, []);
+		fetchClassTypes()
+	}, [])
 
 	useEffect(() => {
 		const fetchClasses = async () => {
 			if (!selectedClassType) {
-				setClasses([]); // Clear levels if no class type is selected
-				setIsLoading(false); // Ensure loading is set to false
-				return;
+				setClasses([]) // Clear levels if no class type is selected
+				setIsLoading(false) // Ensure loading is set to false
+				return
 			}
 
 			setIsLoading(true)
@@ -2553,20 +2552,20 @@ export const Classes: React.FC = () => {
 	const handleBackToClasses = () => {
 		if (showStudents) {
 			setShowStudents(false)
-      // selectedGradeForSections should still be set to the current level/grade
-      // selectedSection should also persist to show the correct section view initially
+			// selectedGradeForSections should still be set to the current level/grade
+			// selectedSection should also persist to show the correct section view initially
 			// No need to explicitly set showSections to true, as the main render logic will handle it
 		} else if (showSections) {
 			setShowSections(false)
-      setSelectedGradeForSections(null); // Clear selected grade when going back to levels view
-      setSections([]); // Clear sections
+			setSelectedGradeForSections(null) // Clear selected grade when going back to levels view
+			setSections([]) // Clear sections
 		} else if (selectedClassType) {
-      // This case means we are in the Levels view and want to go back to Class Types
-      // This is usually handled by a dedicated button, but added for completeness
-      setSelectedClassType(null);
-      setClasses([]); // Clear levels
-      setSelectedGradeForSections(null);
-    }
+			// This case means we are in the Levels view and want to go back to Class Types
+			// This is usually handled by a dedicated button, but added for completeness
+			setSelectedClassType(null)
+			setClasses([]) // Clear levels
+			setSelectedGradeForSections(null)
+		}
 	}
 
 	const handleCardClick = (cls: Class) => {
@@ -3148,22 +3147,22 @@ export const Classes: React.FC = () => {
 		try {
 			console.log(`Deleting section with ID: ${sectionToDelete.id}, name: ${sectionToDelete.name}`)
 
-      // Step 1: Delete associated student enrollments from classstudents
-      console.log(`Deleting student enrollments for class ID: ${sectionToDelete.id}`);
-      const { error: studentDeleteError } = await supabase
-        .from('classstudents')
-        .delete()
-        .eq('classid', sectionToDelete.id);
+			// Step 1: Delete associated student enrollments from classstudents
+			console.log(`Deleting student enrollments for class ID: ${sectionToDelete.id}`)
+			const { error: studentDeleteError } = await supabase
+				.from('classstudents')
+				.delete()
+				.eq('classid', sectionToDelete.id)
 
-      if (studentDeleteError) {
-        console.error('Supabase error when deleting student enrollments:', studentDeleteError);
-        // If it's a foreign key constraint on a table that references classstudents, this might be more complex.
-        // For now, we'll assume direct deletion is okay or it might fail if other tables depend on classstudents.
-        toast.error(`Failed to remove student enrollments: ${studentDeleteError.message}`);
-        // Do not throw here if you want to attempt section deletion anyway, 
-        // or throw if this step is critical before section deletion.
-        // For now, we'll let it proceed to section deletion attempt but log the error.
-      }
+			if (studentDeleteError) {
+				console.error('Supabase error when deleting student enrollments:', studentDeleteError)
+				// If it's a foreign key constraint on a table that references classstudents, this might be more complex.
+				// For now, we'll assume direct deletion is okay or it might fail if other tables depend on classstudents.
+				toast.error(`Failed to remove student enrollments: ${studentDeleteError.message}`)
+				// Do not throw here if you want to attempt section deletion anyway,
+				// or throw if this step is critical before section deletion.
+				// For now, we'll let it proceed to section deletion attempt but log the error.
+			}
 
 			// Step 2: Delete section from database - correct table name is 'classes', not 'sections'
 			const { error } = await supabase.from('classes').delete().eq('id', sectionToDelete.id)
@@ -3190,12 +3189,19 @@ export const Classes: React.FC = () => {
 			toast.success('Section deleted successfully')
 		} catch (error) {
 			console.error('Error deleting section:', error)
-      // Check if the error is the specific foreign key violation we encountered
-      if (error && typeof error === 'object' && 'code' in error && (error as any).code === '23503') {
-        toast.error('Failed to delete section: Ensure all dependent data (like student enrollments) is removed first or set up cascading deletes in your database.');
-      } else {
-        toast.error('Failed to delete section')
-      }
+			// Check if the error is the specific foreign key violation we encountered
+			if (
+				error &&
+				typeof error === 'object' &&
+				'code' in error &&
+				(error as any).code === '23503'
+			) {
+				toast.error(
+					'Failed to delete section: Ensure all dependent data (like student enrollments) is removed first or set up cascading deletes in your database.'
+				)
+			} else {
+				toast.error('Failed to delete section')
+			}
 		}
 	}
 
@@ -3293,13 +3299,14 @@ export const Classes: React.FC = () => {
 				}
 
 				if (!selectedClassType || !selectedClassType.id) {
-					toast.error('No class type selected. Cannot create level.');
-					console.error('Attempted to save new level without a selectedClassType.');
-					setIsCreateClassModalOpen(false); // Close modal
-					return;
+					toast.error('No class type selected. Cannot create level.')
+					console.error('Attempted to save new level without a selectedClassType.')
+					setIsCreateClassModalOpen(false) // Close modal
+					return
 				}
 
 				try {
+					setIsLoading(true) // Show loading state
 					const randomColor = generateRandomColor()
 
 					// Prepare insertData with name, type_id, and optionally status
@@ -3316,10 +3323,12 @@ export const Classes: React.FC = () => {
 						response.error.code === '42703' && // PostgreSQL error code for undefined_column
 						response.error.message.toLowerCase().includes('column "status"') // Check if the message is about the "status" column
 					) {
-						console.log('Status field does not exist in the levels table, trying to insert without it.');
-						delete insertData.status; // Remove status from the data
+						console.log(
+							'Status field does not exist in the levels table, trying to insert without it.'
+						)
+						delete insertData.status // Remove status from the data
 						// Retry insertion with { name, type_id }
-						response = await supabase.from('levels').insert([insertData]).select();
+						response = await supabase.from('levels').insert([insertData]).select()
 					}
 
 					// If we still have an error after potential retry, report it
@@ -3341,26 +3350,30 @@ export const Classes: React.FC = () => {
 						id: newClassData.id,
 						classname: newClassData.name,
 						teacherName: 'No teacher assigned',
-						attendanceDays: [], 
-						attendanceTimes: [], 
-						formattedDays: 'Not scheduled', 
-						formattedTimes: 'Not scheduled', 
-						students: 0, 
+						attendanceDays: [],
+						attendanceTimes: [],
+						formattedDays: 'Not scheduled',
+						formattedTimes: 'Not scheduled',
+						students: 0,
 						status: newClassData.status || status, // Use DB status if available, else modal status
 						color: randomColor,
-						sectionCount: 0, 
+						sectionCount: 0,
 					}
 
-					setClasses([...classes, newClass])
-					setCurrentClass(newClass) // This state might be for focusing/editing, ensure it's intended
+					// Update state with the new class
+					setClasses(prevClasses => [...prevClasses, newClass])
+
+					// Close the modal AFTER the state is updated
+					setIsCreateClassModalOpen(false)
+
 					toast.success('Class (Level) created successfully')
 					console.log('New class (level) saved:', newClass)
 				} catch (error) {
 					console.error('Error in handleSaveNewClass:', error)
 					toast.error('An unexpected error occurred while creating the class (level)')
+				} finally {
+					setIsLoading(false) // Always hide loading state
 				}
-
-				setIsCreateClassModalOpen(false)
 			},
 			() => {
 				// This runs if the user lacks permission
@@ -3403,10 +3416,16 @@ export const Classes: React.FC = () => {
 			<ClassesContainer>
 				<div style={{ textAlign: 'center', color: 'red', marginTop: '20px' }}>
 					<p>Error loading class types: {classTypesError}</p>
-					<button onClick={() => { /* Implement refetch logic */ }}>Try Again</button>
+					<button
+						onClick={() => {
+							/* Implement refetch logic */
+						}}
+					>
+						Try Again
+					</button>
 				</div>
 			</ClassesContainer>
-		);
+		)
 	}
 
 	return (
@@ -3426,9 +3445,15 @@ export const Classes: React.FC = () => {
 							{/* Button to create class type */}
 						</EmptyState>
 					)}
-					<ClassGrid> {/* Re-using ClassGrid for ClassTypes for now, might need a new style */}
+					<ClassGrid>
+						{' '}
+						{/* Re-using ClassGrid for ClassTypes for now, might need a new style */}
 						{classTypes.map(ct => (
-							<ClassCard key={ct.id} $color={generateRandomColor()} onClick={() => setSelectedClassType(ct)}>
+							<ClassCard
+								key={ct.id}
+								$color={generateRandomColor()}
+								onClick={() => setSelectedClassType(ct)}
+							>
 								<CardHeader $color={generateRandomColor()}>
 									<ClassName color={generateRandomColor()}>{ct.name}</ClassName>
 								</CardHeader>
@@ -3442,7 +3467,12 @@ export const Classes: React.FC = () => {
 				<HeaderSection>
 					<div>
 						<PageTitleWithBack>
-							<BackButton onClick={() => { setSelectedClassType(null); setClasses([]); /* Clear other states if needed */ }}>
+							<BackButton
+								onClick={() => {
+									setSelectedClassType(null)
+									setClasses([]) /* Clear other states if needed */
+								}}
+							>
 								<FiArrowLeft />
 								Back to Class Types
 							</BackButton>
@@ -3465,7 +3495,8 @@ export const Classes: React.FC = () => {
 							<PageTitleWithBack>
 								<BackButton onClick={handleBackToClasses}>
 									<FiArrowLeft />
-									Back to {selectedClassType?.name ? `${selectedClassType.name} - Levels` : 'Levels'}
+									Back to{' '}
+									{selectedClassType?.name ? `${selectedClassType.name} - Levels` : 'Levels'}
 								</BackButton>
 							</PageTitleWithBack>
 							<PageTitle>{selectedSection} Students</PageTitle>
@@ -3499,7 +3530,7 @@ export const Classes: React.FC = () => {
 									}
 								}}
 							>
-								<FiBookOpen /> 
+								<FiBookOpen />
 								<span>Manage Subject Teachers</span>
 							</AddButton>
 							<ExportDataButton>
@@ -3688,11 +3719,13 @@ export const Classes: React.FC = () => {
 						grade={selectedGradeForSections!}
 						onSearchChange={handleSectionSearchChange}
 						onViewStudents={setViewingStudents}
-						onBackToGrades={() => {setShowSections(false); /*setSelectedGradeForSections(null);*/} } // Keep selectedGradeForSections to know which level we are in
-							onCreateNewSection={handleCreateNewSection}
-							onEditSection={handleEditSection}
-							onAssignTeacher={handleAssignTeacher}
-							onDeleteSection={handleDeleteSection}
+						onBackToGrades={() => {
+							setShowSections(false) /*setSelectedGradeForSections(null);*/
+						}} // Keep selectedGradeForSections to know which level we are in
+						onCreateNewSection={handleCreateNewSection}
+						onEditSection={handleEditSection}
+						onAssignTeacher={handleAssignTeacher}
+						onDeleteSection={handleDeleteSection}
 					/>
 				)
 			) : (
@@ -3741,7 +3774,8 @@ export const Classes: React.FC = () => {
 							{filteredClasses.length === 0 && !isLoading && (
 								<EmptyState>
 									<EmptyStateText>
-										No levels found for {selectedClassType?.name}. Try adjusting your search or filters.
+										No levels found for {selectedClassType?.name}. Try adjusting your search or
+										filters.
 									</EmptyStateText>
 								</EmptyState>
 							)}
@@ -3753,7 +3787,9 @@ export const Classes: React.FC = () => {
 											<CardHeader $color={cls.color}>
 												<ClassName color={cls.color}>
 													{!isNaN(Number(cls.classname)) ? (
-														<ClassNumberDisplay color={cls.color}>{cls.classname}</ClassNumberDisplay>
+														<ClassNumberDisplay color={cls.color}>
+															{cls.classname}
+														</ClassNumberDisplay>
 													) : (
 														cls.classname
 													)}
@@ -3825,7 +3861,11 @@ export const Classes: React.FC = () => {
 										<div className='actions'>Actions</div>
 									</ClassTableHeader>
 									{filteredClasses.map(cls => (
-										<ClassTableRow key={cls.id} color={cls.color} onClick={() => handleCardClick(cls)}>
+										<ClassTableRow
+											key={cls.id}
+											color={cls.color}
+											onClick={() => handleCardClick(cls)}
+										>
 											<div className='class-number'>
 												{!isNaN(Number(cls.classname)) ? (
 													<ClassNumberDisplay color={cls.color}>{cls.classname}</ClassNumberDisplay>
@@ -4009,14 +4049,16 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 	}, [])
 
 	// Count selected students (excluding those already in this section)
-	const selectedCount = availableStudents.filter(student => student.selected && !excludedStudentIds.includes(student.id)).length
+	const selectedCount = availableStudents.filter(
+		student => student.selected && !excludedStudentIds.includes(student.id)
+	).length
 
 	// Effect to load available students
 	useEffect(() => {
 		const fetchAvailableStudents = async () => {
 			setIsLoading(true)
 			try {
-				console.log('Fetching all students with role Student...');
+				console.log('Fetching all students with role Student...')
 
 				// Fetch ALL users with the 'Student' role
 				const { data: allStudentsData, error: allStudentsError } = await supabase
@@ -4064,7 +4106,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 			fetchAvailableStudents()
 		}
 	}, [isOpen]) // excludedStudentIds is not strictly needed here as a dependency for fetching ALL students
-                 // It will be used for UI rendering and selection logic.
+	// It will be used for UI rendering and selection logic.
 
 	// Filter students based on search term
 	useEffect(() => {
@@ -4072,8 +4114,8 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 			const lowerCaseSearch = searchTerm.toLowerCase()
 			const filtered = availableStudents.filter(
 				student =>
-						student.name.toLowerCase().includes(lowerCaseSearch) ||
-						student.email.toLowerCase().includes(lowerCaseSearch)
+					student.name.toLowerCase().includes(lowerCaseSearch) ||
+					student.email.toLowerCase().includes(lowerCaseSearch)
 			)
 			setFilteredStudents(filtered)
 		} else {
@@ -4088,11 +4130,11 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 
 	// Toggle student selection
 	const toggleStudentSelection = (studentId: string) => {
-    // Prevent selection if student is already in this specific section
-    if (excludedStudentIds.includes(studentId)) {
-      toast.info('This student is already in this section.');
-      return;
-    }
+		// Prevent selection if student is already in this specific section
+		if (excludedStudentIds.includes(studentId)) {
+			toast.info('This student is already in this section.')
+			return
+		}
 		setAvailableStudents(prevStudents =>
 			prevStudents.map(student =>
 				student.id === studentId ? { ...student, selected: !student.selected } : student
@@ -4151,8 +4193,8 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 									<StudentItem
 										key={student.id}
 										$isSelected={student.selected}
-                    // Pass a new prop to indicate if the student is already in this section
-                    $isExcluded={excludedStudentIds.includes(student.id)}
+										// Pass a new prop to indicate if the student is already in this section
+										$isExcluded={excludedStudentIds.includes(student.id)}
 										onClick={() => toggleStudentSelection(student.id)}
 									>
 										<StudentCheckbox
@@ -4160,7 +4202,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 											checked={student.selected}
 											onChange={() => toggleStudentSelection(student.id)}
 											onClick={e => e.stopPropagation()}
-                      disabled={excludedStudentIds.includes(student.id)} // Disable if excluded
+											disabled={excludedStudentIds.includes(student.id)} // Disable if excluded
 										/>
 										<StudentInfo>
 											<ModalStudentName>{student.name}</ModalStudentName>
@@ -4171,11 +4213,18 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 														({student.role})
 													</span>
 												)}
-                            {excludedStudentIds.includes(student.id) && (
-                              <span style={{ marginLeft: '10px', fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic' }}>
-                                (Already in this section)
-                              </span>
-                            )}
+												{excludedStudentIds.includes(student.id) && (
+													<span
+														style={{
+															marginLeft: '10px',
+															fontSize: '0.75rem',
+															color: '#6b7280',
+															fontStyle: 'italic',
+														}}
+													>
+														(Already in this section)
+													</span>
+												)}
 											</ModalStudentEmail>
 										</StudentInfo>
 									</StudentItem>
@@ -5060,15 +5109,6 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ isOpen, onClose, onSave
 	)
 }
 
-// Define ErrorMessage component
-const ErrorMessage = styled.div`
-	color: #e53e3e;
-	margin-bottom: 10px;
-	font-size: 14px;
-	text-align: left;
-	width: 100%;
-`
-
 // Rename this to CreateClassCancelButton to avoid redeclaration
 const CreateClassCancelButton = styled.button`
 	padding: 8px 16px;
@@ -5096,6 +5136,16 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({ isOpen, onClose, on
 	const [status, setStatus] = useState('active')
 	const [error, setError] = useState('')
 
+	// Add useEffect to reset form state when modal opens/closes
+	useEffect(() => {
+		// Reset form state when modal closes
+		if (!isOpen) {
+			setClassName('')
+			setStatus('active')
+			setError('')
+		}
+	}, [isOpen])
+
 	const handleSave = () => {
 		if (!className.trim()) {
 			setError('Class name is required')
@@ -5103,9 +5153,18 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({ isOpen, onClose, on
 		}
 
 		onSave(className, status)
+		// Reset form immediately after saving
 		setClassName('')
 		setStatus('active')
 		setError('')
+	}
+
+	// Create a proper close handler that resets state
+	const handleClose = () => {
+		setClassName('')
+		setStatus('active')
+		setError('')
+		onClose()
 	}
 
 	const customModalStyles = {
@@ -5131,14 +5190,14 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({ isOpen, onClose, on
 	return (
 		<Modal
 			isOpen={isOpen}
-			onRequestClose={onClose}
+			onRequestClose={handleClose}
 			style={customModalStyles}
 			contentLabel='Create New Class'
 			ariaHideApp={false}
 		>
 			<ModalHeader>
 				<h2>Create New Class</h2>
-				<CloseButton onClick={onClose}>&times;</CloseButton>
+				<CloseButton onClick={handleClose}>&times;</CloseButton>
 			</ModalHeader>
 			<ModalBody>
 				{error && <ErrorMessage>{error}</ErrorMessage>}
@@ -5172,7 +5231,7 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({ isOpen, onClose, on
 					</select>
 				</FormGroup>
 				<ButtonGroup>
-					<CreateClassCancelButton type='button' onClick={onClose}>
+					<CreateClassCancelButton type='button' onClick={handleClose}>
 						Cancel
 					</CreateClassCancelButton>
 					<SaveButton type='button' onClick={handleSave}>
@@ -5198,6 +5257,15 @@ const ModalHeader = styled.div`
 		font-weight: 600;
 		color: #1e293b;
 	}
+`
+
+const ErrorMessage = styled.div`
+	color: #ef4444;
+	background-color: #fee2e2;
+	border-radius: 4px;
+	padding: 8px 12px;
+	font-size: 14px;
+	margin-bottom: 8px;
 `
 
 const ModalBody = styled.div`
