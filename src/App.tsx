@@ -3,7 +3,6 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-d
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { DefaultTheme, ThemeProvider } from 'styled-components'
-import PermissionGuard from './components/common/PermissionGuard'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import RoleMiddleware from './components/common/RoleMiddleware'
 import { AnnouncementProvider } from './contexts/AnnouncementContext'
@@ -16,6 +15,9 @@ import AnnouncementCreate from './pages/admin/AnnouncementCreate'
 import AdminAnnouncements from './pages/admin/Announcements'
 import AdminAssignments from './pages/admin/Assignments'
 import { Classes } from './pages/admin/Classes'
+import AdminDailyAttendance from './pages/admin/DailyAttendance/AdminDailyAttendance'
+import AdminDailyAttendanceClass from './pages/admin/DailyAttendance/AdminDailyAttendanceClass'
+import AdminDailyAttendanceLevel from './pages/admin/DailyAttendance/AdminDailyAttendanceLevel'
 import Dashboard from './pages/admin/Dashboard'
 import AdminGradesModule from './pages/admin/GradesModule'
 import LessonDetail from './pages/admin/LessonDetail'
@@ -50,6 +52,9 @@ import SingleAssignment from './pages/student/SingleAssignment'
 import StudentDashboard from './pages/student/StudentDashboard'
 import StudentSchedule from './pages/student/StudentSchedule'
 import TeacherAnnouncements from './pages/teacher/Announcements'
+import TeacherDailyAttendance from './pages/teacher/DailyAttendance/TeacherDailyAttendance'
+import TeacherDailyAttendanceClass from './pages/teacher/DailyAttendance/TeacherDailyAttendanceClass'
+import TeacherDailyAttendanceLevel from './pages/teacher/DailyAttendance/TeacherDailyAttendanceLevel'
 import TeacherGradesModule from './pages/teacher/GradesModule'
 import SubjectsManagePage from './pages/teacher/SubjectsManagePage'
 import TeacherAssignmentFiles from './pages/teacher/TeacherAssignmentFiles'
@@ -64,7 +69,6 @@ import { TeacherSubjectDetails } from './pages/teacher/TeacherSubjectDetails'
 import TeacherSubmissions from './pages/teacher/TeacherSubmissions'
 import GlobalStyle from './styles/globalStyles'
 import { createTheme } from './styles/theme'
-import { menuItemPermissionMap } from './constants/menuItems'
 
 // Create a context for theme settings
 export interface ThemeContextType {
@@ -134,33 +138,23 @@ function AppContent() {
 					<Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
 						<Route path='/admin' element={<AdminLayout />}>
 							<Route index element={<Navigate to='/admin/dashboard' replace />} />
-							<Route
-								path='dashboard'
-								element={
-									<PermissionGuard requiredPermission={menuItemPermissionMap['/admin/dashboard']}>
-										<Dashboard />
-									</PermissionGuard>
-								}
-							/>
+							<Route path='dashboard' element={<Dashboard />} />
 							<Route path='users' element={<Users />} />
 							<Route path='roles' element={<Roles />} />
 							<Route path='subjects' element={<Subjects />} />
 							<Route path='classes' element={<Classes />} />
 							<Route path='assignments' element={<AdminAssignments />} />
 							<Route path='grades/*' element={<AdminGradesModule />} />
+							<Route path='daily-attendance' element={<AdminDailyAttendance />} />
+							<Route path='daily-attendance/:levelId' element={<AdminDailyAttendanceLevel />} />
+							<Route
+								path='daily-attendance/:levelId/classes/:classId'
+								element={<AdminDailyAttendanceClass />}
+							/>
 							<Route path='timetables' element={<Timetables />} />
 							<Route path='settings' element={<Settings />} />
 							<Route path='profile' element={<ProfilePage />} />
-							<Route
-								path='announcements'
-								element={
-									<PermissionGuard
-										requiredPermission={menuItemPermissionMap['/admin/announcements']}
-									>
-										<AdminAnnouncements />
-									</PermissionGuard>
-								}
-							/>
+							<Route path='announcements' element={<AdminAnnouncements />} />
 							<Route path='announcements/create' element={<AnnouncementCreate />} />
 							<Route path='subjects/:subjectId/lessons' element={<LessonsManagePage />} />
 							<Route path='subjects' element={<SubjectsManagePage />} />
@@ -197,6 +191,12 @@ function AppContent() {
 							<Route path='subjects/:subjectId/lessons' element={<LessonsManagePage />} />
 							<Route path='grades' element={<TeacherGrades />} />
 							<Route path='grades/*' element={<TeacherGradesModule />} />
+							<Route path='daily-attendance' element={<TeacherDailyAttendance />} />
+							<Route path='daily-attendance/:levelId' element={<TeacherDailyAttendanceLevel />} />
+							<Route
+								path='daily-attendance/:levelId/classes/:classId'
+								element={<TeacherDailyAttendanceClass />}
+							/>
 						</Route>
 					</Route>
 

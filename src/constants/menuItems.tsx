@@ -36,6 +36,7 @@ export const adminMenu: MenuItem[] = [
 	{ path: '/admin/assignments', icon: <FiFileText />, label: 'Assignments' },
 	{ path: '/admin/submissions', icon: <FiClipboard />, label: 'Submissions' },
 	{ path: '/admin/grades', icon: <FiClipboard />, label: 'Grades' },
+	{ path: '/admin/daily-attendance', icon: <FiCheckSquare />, label: 'Daily Attendance' },
 	{ path: '/admin/timetables', icon: <FiCalendar />, label: 'Timetables' },
 ]
 
@@ -62,6 +63,7 @@ export const teacherMenu: MenuItem[] = [
 	{ path: '/teacher/assignments', icon: <FiClipboard />, label: 'Assignments' },
 	{ path: '/teacher/submissions', icon: <FiFileText />, label: 'Submissions' },
 	{ path: '/teacher/grades', icon: <FiCheckSquare />, label: 'Grades' },
+	{ path: '/teacher/daily-attendance', icon: <FiCheckSquare />, label: 'Daily Attendance' },
 	{ path: '/teacher/schedule', icon: <FiCalendar />, label: 'Schedule' },
 	{ path: '/teacher/messages', icon: <FiMessageSquare />, label: 'Messages' },
 ]
@@ -140,6 +142,7 @@ export const menuItemPermissionMap: Record<string, string> = {
 	'/admin/classes': 'access_admin_classes',
 	'/admin/assignments': 'access_admin_assignments',
 	'/admin/grades': 'access_admin_grades',
+	'/admin/daily-attendance': 'access_admin_daily_attendance',
 	'/admin/timetables': 'access_admin_timetables',
 	'/admin/settings': 'access_admin_settings',
 	'/admin/profile': 'access_admin_profile',
@@ -154,6 +157,7 @@ export const menuItemPermissionMap: Record<string, string> = {
 	'/teacher/assignments': 'manage_assignments',
 	'/teacher/submissions': 'manage_submissions',
 	'/teacher/grades': 'manage_grades',
+	'/teacher/daily-attendance': 'manage_daily_attendance',
 	'/teacher/schedule': 'view_schedule',
 	'/teacher/messages': 'send_messages',
 	// Student menu items

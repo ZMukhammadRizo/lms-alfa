@@ -10,24 +10,11 @@ import {
 	getModuleLeaderMenu,
 	getSystemMenu,
 	menuItemPermissionMap,
-	teacherMenu,
 } from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
-import {
-	getUserParentRole,
-	getUserRole,
-	hasAnnouncementPermission,
-	hasPermission,
-	hasRole,
-} from '../../utils/authUtils'
+import { getUserParentRole, getUserRole, hasPermission, hasRole } from '../../utils/authUtils'
 import LogoutButton from '../common/LogoutButton'
 import PermissionMenuItem from '../common/PermissionMenuItem'
-
-// Map menu item paths to required permissions
-const pathPermissionMap: Record<string, string> = {
-	'/admin/dashboard': 'access_admin_dashboard',
-	// Add more paths and their required permissions here
-}
 
 interface SidebarProps {
 	isCollapsed: boolean
@@ -46,14 +33,6 @@ interface MenuItemProps {
 const MenuItem: React.FC<MenuItemProps> = ({ icon, label, to, isCollapsed, onMobileClick }) => {
 	const location = useLocation()
 	const isActive = location.pathname === to || location.pathname.startsWith(`${to}/`)
-
-	// Check if this menu item requires specific permissions
-	const requiredPermission = pathPermissionMap[to]
-
-	// If this path requires a permission, check if the user has it
-	if (requiredPermission && !hasPermission(requiredPermission)) {
-		return null // Don't render this menu item if the user doesn't have permission
-	}
 
 	const handleClick = () => {
 		if (onMobileClick) {
@@ -180,34 +159,15 @@ const MenuItemWithSubmenu: React.FC<MenuItemWithSubmenuProps> = ({
 						transition={{ duration: 0.2 }}
 					>
 						{subItems.map(item => (
-							<>
-								{item.requiredPermission &&
-								item.path === '/admin/announcements/create' &&
-								hasPermission(item.requiredPermission) ? (
-									<SubMenuItem
-										key={item.path}
-										to={item.path}
-										$isActive={location.pathname === item.path}
-										onClick={onMobileClick}
-									>
-										<SubMenuIcon>{item.icon}</SubMenuIcon>
-										<span>{item.label}</span>
-									</SubMenuItem>
-								) : null}
-								{item.requiredPermission &&
-								item.path === '/admin/announcements' &&
-								hasPermission(item.requiredPermission) ? (
-									<SubMenuItem
-										key={item.path}
-										to={item.path}
-										$isActive={location.pathname === item.path}
-										onClick={onMobileClick}
-									>
-										<SubMenuIcon>{item.icon}</SubMenuIcon>
-										<span>{item.label}</span>
-									</SubMenuItem>
-								) : null}
-							</>
+							<SubMenuItem
+								key={item.path}
+								to={item.path}
+								$isActive={location.pathname === item.path}
+								onClick={onMobileClick}
+							>
+								<SubMenuIcon>{item.icon}</SubMenuIcon>
+								<span>{item.label}</span>
+							</SubMenuItem>
 						))}
 					</SubMenu>
 				)}
@@ -378,7 +338,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 								{(role === 'Admin' || parentRole === 'Admin') && (
 									<>
 										{adminMenu.map(item => (
-											<PermissionMenuItem
+											<MenuItem
 												key={item.path}
 												icon={item.icon}
 												label={item.label}
@@ -387,21 +347,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 												onMobileClick={handleNavItemClick}
 											/>
 										))}
-										{hasPermission(
-											menuItemPermissionMap['/admin/announcements/create'] ??
-												menuItemPermissionMap['/admin/announcements']
-										) ? (
-											<MenuItemWithSubmenu
-												icon={<FiBell />}
-												label='Announcements'
-												isCollapsed={isMobile ? false : isCollapsed}
-												subItems={announcementsSubItems}
-												onMobileClick={handleNavItemClick}
-											/>
-										) : null}
+
+										<MenuItemWithSubmenu
+											icon={<FiBell />}
+											label='Announcements'
+											isCollapsed={isMobile ? false : isCollapsed}
+											subItems={announcementsSubItems}
+											onMobileClick={handleNavItemClick}
+										/>
 									</>
 								)}
-								{hasPermission('access_admin_subjects') ||
+								{hasPermission('access_admin_roles') ||
 								hasRole('RoleManager') ||
 								hasRole('Admin') ||
 								hasRole('SuperAdmin') ? (
@@ -420,7 +376,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 										</AnimatePresence>
 
 										{managerMenu.map(item => (
-											<PermissionMenuItem
+											<MenuItem
 												key={item.path}
 												icon={item.icon}
 												label={item.label}
@@ -432,7 +388,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 									</>
 								) : null}
 
-								{hasPermission('manage_subjects') || role === 'Admin' || role === 'SuperAdmin' ? (
+								{hasPermission('access_admin_subjects') ||
+								hasRole('RoleManager') ||
+								role === 'Admin' ||
+								role === 'SuperAdmin' ? (
 									<>
 										<AnimatePresence>
 											{(!isCollapsed || isMobile) && (
@@ -448,7 +407,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 										</AnimatePresence>
 
 										{moduleLeaderMenu.map(item => (
-											<PermissionMenuItem
+											<MenuItem
 												key={item.path}
 												icon={item.icon}
 												label={item.label}
@@ -476,7 +435,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 								</AnimatePresence>
 
 								{systemMenu.map(item => (
-									<PermissionMenuItem
+									<MenuItem
 										key={item.path}
 										icon={item.icon}
 										label={item.label}
