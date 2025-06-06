@@ -10,6 +10,7 @@ import {
 	FiUserPlus,
 	FiUsers,
 	FiX,
+	FiSearch,
 } from 'react-icons/fi'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
@@ -30,6 +31,7 @@ interface User {
 	parent_id?: string // ID of parent user if this user is a child
 	childrenIds?: string[] // For parent-child relationships
 	password?: string // Password for new user creation
+	birthday?: string // Date of birth
 }
 
 interface UserFormProps {
@@ -58,16 +60,14 @@ const UserForm: React.FC<UserFormProps> = ({
 		email: '',
 		role: 'Student',
 		status: 'active',
+		birthday: '',
 	})
-
-	// Password fields (only for new users)
-	const [password, setPassword] = useState('')
-	const [confirmPassword, setConfirmPassword] = useState('')
 
 	// States for parent-child relationship
 	const [selectedChildren, setSelectedChildren] = useState<string[]>([])
 	const [availableStudents, setAvailableStudents] = useState<User[]>([])
 	const [isLoadingStudents, setIsLoadingStudents] = useState(false)
+	const [childSearchTerm, setChildSearchTerm] = useState('') // New state for child search
 
 	// State for all available roles
 	const [availableRoles, setAvailableRoles] = useState<{ id: string; name: string }[]>([])
@@ -284,11 +284,20 @@ const UserForm: React.FC<UserFormProps> = ({
 					...initialData,
 					firstName,
 					lastName,
+					// Format the birthday for the date input if it exists
+					birthday: initialData.birthday ? new Date(initialData.birthday).toISOString().split('T')[0] : '',
 				})
 			} else {
 				setFormData({
 					...initialData,
+					// Format the birthday for the date input if it exists
+					birthday: initialData.birthday ? new Date(initialData.birthday).toISOString().split('T')[0] : '',
 				})
+			}
+
+			// Initialize selected children if this is a parent user with childrenIds
+			if (initialData.role === 'Parent' && initialData.childrenIds) {
+				setSelectedChildren(initialData.childrenIds as string[])
 			}
 		} else {
 			// Reset form data when creating a new user
@@ -298,7 +307,10 @@ const UserForm: React.FC<UserFormProps> = ({
 				email: '',
 				role: 'Student',
 				status: 'active',
+				birthday: '',
 			})
+			// Reset selected children
+			setSelectedChildren([])
 		}
 	}, [initialData])
 
@@ -343,6 +355,33 @@ const UserForm: React.FC<UserFormProps> = ({
 		}
 	}, [formData.role])
 
+	// Filter and sort children based on search term and selection status
+	const filteredAndSortedChildren = React.useMemo(() => {
+		// First filter by search term
+		const filtered = availableStudents.filter(student => {
+			const fullName = `${student.firstName} ${student.lastName}`.toLowerCase()
+			const email = student.email.toLowerCase()
+			const search = childSearchTerm.toLowerCase()
+			
+			return fullName.includes(search) || email.includes(search)
+		})
+
+		// Then sort: selected children first, then alphabetically by name
+		return filtered.sort((a, b) => {
+			const aSelected = selectedChildren.includes(a.id)
+			const bSelected = selectedChildren.includes(b.id)
+			
+			// If one is selected and the other isn't, the selected one comes first
+			if (aSelected && !bSelected) return -1
+			if (!aSelected && bSelected) return 1
+			
+			// If both are selected or both are unselected, sort alphabetically
+			const aName = `${a.firstName} ${a.lastName}`.toLowerCase()
+			const bName = `${b.firstName} ${b.lastName}`.toLowerCase()
+			return aName.localeCompare(bName)
+		})
+	}, [availableStudents, selectedChildren, childSearchTerm])
+      
 	// Fetch all roles from Supabase
 	const fetchAllRoles = async () => {
 		setIsLoadingRoles(true)
@@ -408,33 +447,11 @@ const UserForm: React.FC<UserFormProps> = ({
 		}
 	}
 
-	// Handle password changes
-	const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setPassword(e.target.value)
-		if (errors.password) {
-			setErrors(prev => {
-				const newErrors = { ...prev }
-				delete newErrors.password
-				return newErrors
-			})
-		}
-	}
-
-	const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setConfirmPassword(e.target.value)
-		if (errors.confirmPassword) {
-			setErrors(prev => {
-				const newErrors = { ...prev }
-				delete newErrors.confirmPassword
-				return newErrors
-			})
-		}
-	}
-
 	// Form validation
 	const validateForm = (): boolean => {
 		const newErrors: Record<string, string> = {}
 
+		// Validate required fields
 		if (!formData.firstName?.trim()) {
 			newErrors.firstName = 'First name is required'
 		}
@@ -456,32 +473,40 @@ const UserForm: React.FC<UserFormProps> = ({
 		if (!formData.status) {
 			newErrors.status = 'Status is required'
 		}
-
-		// Password validation (only for new users)
-		if (!initialData?.id) {
-			if (!password) {
-				newErrors.password = 'Password is required'
-			} else if (password.length < 8) {
-				newErrors.password = 'Password must be at least 8 characters'
-			} else if (!/[A-Z]/.test(password)) {
-				newErrors.password = 'Password must contain at least one uppercase letter'
-			} else if (!/[0-9]/.test(password)) {
-				newErrors.password = 'Password must contain at least one number'
-			}
-
-			if (password !== confirmPassword) {
-				newErrors.confirmPassword = 'Passwords do not match'
-			}
-		}
-
+			
 		// Add validation for parent-child relationship
 		if (formData.role === 'Parent' && selectedChildren.length === 0) {
 			newErrors.children = 'Please select at least one child'
 		}
 
+		// Validate birthday if provided
+		if (formData.birthday) {
+			const birthdayDate = new Date(formData.birthday)
+			const today = new Date()
+			
+			// Check if birthday is in the future
+			if (birthdayDate > today) {
+				newErrors.birthday = 'Date of birth cannot be in the future'
+			}
+			
+			// Check if person is too old (over 120 years)
+			const maxAge = new Date()
+			maxAge.setFullYear(today.getFullYear() - 120)
+			if (birthdayDate < maxAge) {
+				newErrors.birthday = 'Please enter a valid date of birth'
+			}
+		}
+
 		// Check if we already have submission errors related to email
 		if (errors.submit?.includes('Email address')) {
 			newErrors.email = 'This email is already registered'
+		}
+
+		// Validate password for new user
+		if (!initialData?.id && !formData.password?.trim()) {
+			newErrors.password = 'Password is required for new users'
+		} else if (formData.password && formData.password.length < 8) {
+			newErrors.password = 'Password must be at least 8 characters'
 		}
 
 		setErrors(newErrors)
@@ -514,9 +539,10 @@ const UserForm: React.FC<UserFormProps> = ({
 				userData.childrenIds = selectedChildren
 			}
 
-			// For new users, ensure password is included
+			// For new users, set default password
 			if (!initialData?.id) {
-				userData.password = password
+				userData.password = '12345678' // Set default password
+				toast.info('New user will be created with default password: 12345678')
 			}
 
 			// Submit the updated user data
@@ -548,19 +574,60 @@ const UserForm: React.FC<UserFormProps> = ({
 		try {
 			console.log('Assigning children to parent:', { parentId, childrenIds })
 
-			// Update each child's parent_id to point to this parent
-			const { data, error } = await supabase
+			// First, fetch all children currently assigned to this parent
+			const { data: currentChildren, error: fetchError } = await supabase
 				.from('users')
-				.update({ parent_id: parentId })
-				.in('id', childrenIds)
+				.select('id')
+				.eq('parent_id', parentId)
 
-			if (error) {
-				console.error('Error assigning children to parent:', error)
-				throw error
+			if (fetchError) {
+				console.error('Error fetching current children:', fetchError)
+				throw fetchError
 			}
 
-			console.log('Successfully assigned children to parent:', data)
-			return data
+			// Extract IDs of current children
+			const currentChildrenIds = currentChildren?.map(child => child.id) || []
+
+			// Find children to remove (those in currentChildrenIds but not in new childrenIds)
+			const childrenToRemove = currentChildrenIds.filter(id => !childrenIds.includes(id))
+
+			// Find children to add (those in new childrenIds but not already assigned)
+			const childrenToAdd = childrenIds.filter(id => !currentChildrenIds.includes(id))
+
+			// Create a batch of promises to update all changes at once
+			const updatePromises = []
+
+			// Remove parent_id from children that should no longer be assigned to this parent
+			if (childrenToRemove.length > 0) {
+				const removePromise = supabase
+					.from('users')
+					.update({ parent_id: null })
+					.in('id', childrenToRemove)
+				updatePromises.push(removePromise)
+			}
+
+			// Assign parent_id to new children
+			if (childrenToAdd.length > 0) {
+				const addPromise = supabase
+				.from('users')
+				.update({ parent_id: parentId })
+					.in('id', childrenToAdd)
+				updatePromises.push(addPromise)
+			}
+
+			// Execute all updates
+			const results = await Promise.all(updatePromises)
+			
+			// Check for errors
+			for (const result of results) {
+				if (result.error) {
+					console.error('Error updating parent-child relationships:', result.error)
+					throw result.error
+				}
+			}
+
+			console.log('Successfully updated parent-child relationships')
+			return results
 		} catch (err) {
 			console.error('Error in assignChildrenToParent:', err)
 			throw err
@@ -707,6 +774,22 @@ const UserForm: React.FC<UserFormProps> = ({
 							</FormGroup>
 
 							<FormGroup>
+								<FormLabel htmlFor='birthday'>
+									<FiCalendar />
+									<span>Date of Birth</span>
+								</FormLabel>
+								<FormInput
+									id='birthday'
+									name='birthday'
+									type='date'
+									value={formData.birthday || ''}
+									onChange={handleChange}
+									$hasError={!!errors.birthday}
+								/>
+								{errors.birthday && <ErrorMessage>{errors.birthday}</ErrorMessage>}
+							</FormGroup>
+
+							<FormGroup>
 								<FormLabel htmlFor='role'>
 									<FiShield />
 									<span>Role</span>
@@ -748,39 +831,9 @@ const UserForm: React.FC<UserFormProps> = ({
 						<FormSection>
 							<SectionTitle>Security</SectionTitle>
 							<FormGrid>
-								<FormGroup>
-									<FormLabel htmlFor='password'>
-										<FiLock />
-										<span>Password</span>
-									</FormLabel>
-									<FormInput
-										id='password'
-										name='password'
-										type='password'
-										value={password}
-										onChange={handlePasswordChange}
-										placeholder='Enter password'
-										$hasError={!!errors.password}
-									/>
-									{errors.password && <ErrorMessage>{errors.password}</ErrorMessage>}
-								</FormGroup>
-
-								<FormGroup>
-									<FormLabel htmlFor='confirmPassword'>
-										<FiLock />
-										<span>Confirm Password</span>
-									</FormLabel>
-									<FormInput
-										id='confirmPassword'
-										name='confirmPassword'
-										type='password'
-										value={confirmPassword}
-										onChange={handleConfirmPasswordChange}
-										placeholder='Confirm password'
-										$hasError={!!errors.confirmPassword}
-									/>
-									{errors.confirmPassword && <ErrorMessage>{errors.confirmPassword}</ErrorMessage>}
-								</FormGroup>
+								<FormNote>
+									New users will be created with the default password: <strong>12345678</strong>
+								</FormNote>
 							</FormGrid>
 						</FormSection>
 					)}
@@ -871,12 +924,29 @@ const UserForm: React.FC<UserFormProps> = ({
 									<span>Select Children</span>
 								</FormLabel>
 
+								{/* Search bar for children */}
+								<ChildSearchContainer>
+									<SearchIcon>
+										<FiSearch />
+									</SearchIcon>
+									<SearchInput
+										placeholder="Search children by name or email..."
+										value={childSearchTerm}
+										onChange={(e) => setChildSearchTerm(e.target.value)}
+									/>
+									{childSearchTerm && (
+										<ClearSearchButton onClick={() => setChildSearchTerm('')}>
+											<FiX />
+										</ClearSearchButton>
+									)}
+								</ChildSearchContainer>
+
 								{isLoadingStudents ? (
 									<LoadingIndicator>Loading students...</LoadingIndicator>
-								) : availableStudents.length > 0 ? (
+								) : filteredAndSortedChildren.length > 0 ? (
 									<>
 										<ChildrenSelectionContainer>
-											{availableStudents.map(student => (
+											{filteredAndSortedChildren.map(student => (
 												<ChildCard
 													key={student.id}
 													$isSelected={selectedChildren.includes(student.id)}
@@ -911,6 +981,8 @@ const UserForm: React.FC<UserFormProps> = ({
 											)}
 										</SelectionSummary>
 									</>
+								) : childSearchTerm ? (
+									<EmptyChildrenMessage>No students match your search</EmptyChildrenMessage>
 								) : (
 									<EmptyChildrenMessage>No students available for selection</EmptyChildrenMessage>
 								)}
@@ -1509,6 +1581,74 @@ const FormErrorMessage = styled.div`
 	color: ${props => props.theme.colors.danger[700]};
 	font-size: 0.95rem;
 	line-height: 1.5;
+`
+
+// New styled component for form note
+const FormNote = styled.div`
+	padding: 0.75rem;
+	background-color: ${props => props.theme.colors.primary[50]};
+	border: 1px solid ${props => props.theme.colors.primary[100]};
+	border-radius: 0.375rem;
+	color: ${props => props.theme.colors.primary[700]};
+	font-size: 0.9rem;
+	width: 100%;
+	margin: 0.5rem 0;
+`
+
+// Add these new styled components at the appropriate location in the styled components section
+const ChildSearchContainer = styled.div`
+	position: relative;
+	margin-bottom: ${props => props.theme.spacing[3]};
+`
+
+const SearchIcon = styled.div`
+	position: absolute;
+	left: ${props => props.theme.spacing[3]};
+	top: 50%;
+	transform: translateY(-50%);
+	color: ${props => props.theme.colors.text.secondary};
+	z-index: 1;
+`
+
+const SearchInput = styled.input`
+	width: 100%;
+	padding: ${props => props.theme.spacing[3]} ${props => props.theme.spacing[3]} ${props => props.theme.spacing[3]} ${props => props.theme.spacing[9]};
+	border: 1px solid ${props => props.theme.colors.neutral[300]};
+	border-radius: ${props => props.theme.borderRadius.md};
+	font-size: 0.95rem;
+	background-color: ${props => props.theme.colors.background.primary};
+	color: ${props => props.theme.colors.text.primary};
+
+	&:focus {
+		outline: none;
+		border-color: ${props => props.theme.colors.primary[400]};
+		box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+	}
+
+	&::placeholder {
+		color: ${props => props.theme.colors.text.tertiary};
+	}
+`
+
+const ClearSearchButton = styled.button`
+	position: absolute;
+	right: ${props => props.theme.spacing[3]};
+	top: 50%;
+	transform: translateY(-50%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	background: none;
+	color: ${props => props.theme.colors.text.secondary};
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 50%;
+
+	&:hover {
+		background-color: ${props => props.theme.colors.background.tertiary};
+		color: ${props => props.theme.colors.text.primary};
+	}
 `
 
 export default UserForm

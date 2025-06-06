@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -6,7 +6,7 @@ import { DefaultTheme, ThemeProvider } from 'styled-components'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import RoleMiddleware from './components/common/RoleMiddleware'
 import { AnnouncementProvider } from './contexts/AnnouncementContext'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import AdminLayout from './layouts/AdminLayout'
 import ParentLayout from './layouts/ParentLayout'
 import StudentLayout from './layouts/StudentLayout'
@@ -27,6 +27,7 @@ import Subjects from './pages/admin/Subjects'
 import AdminSubmissions from './pages/admin/Submissions'
 import Timetables from './pages/admin/Timetables'
 import Users from './pages/admin/Users'
+import UserProfile from './pages/admin/UserProfile'
 import Debug from './pages/auth/Debug'
 import Login from './pages/auth/Login'
 import RedirectPage from './pages/auth/RedirectPage'
@@ -63,6 +64,7 @@ import { TeacherSubjectDetails } from './pages/teacher/TeacherSubjectDetails'
 import TeacherSubmissions from './pages/teacher/TeacherSubmissions'
 import GlobalStyle from './styles/globalStyles'
 import { createTheme } from './styles/theme'
+import { debugCheckTables } from './services/gradesService'
 
 // Create a context for theme settings
 export interface ThemeContextType {
@@ -86,6 +88,8 @@ export const useThemeContext = () => {
 function AppContent() {
 	const [isDarkMode, setIsDarkMode] = useState(false)
 	const [primaryColor, setPrimaryColor] = useState('#0ea5e9')
+	const { isAuthenticated, loading, user } = useAuth()
+	const [tablesChecked, setTablesChecked] = useState(false)
 
 	const toggleTheme = () => {
 		setIsDarkMode(!isDarkMode)
@@ -100,6 +104,23 @@ function AppContent() {
 		toggleTheme,
 		primaryColor,
 		setPrimaryColor,
+	}
+
+	useEffect(() => {
+		// Check database tables once when authenticated
+		if (isAuthenticated && !tablesChecked) {
+			const checkTables = async () => {
+				console.log('Checking database tables structure at app startup...')
+				await debugCheckTables()
+				setTablesChecked(true)
+			}
+			
+			checkTables()
+		}
+	}, [isAuthenticated, tablesChecked])
+
+	if (loading) {
+		return <div className="loading-container">Loading...</div>
 	}
 
 	return (
@@ -134,6 +155,7 @@ function AppContent() {
 							<Route index element={<Navigate to='/admin/dashboard' replace />} />
 							<Route path='dashboard' element={<Dashboard />} />
 							<Route path='users' element={<Users />} />
+							<Route path='users/:userId' element={<UserProfile />} />
 							<Route path='roles' element={<Roles />} />
 							<Route path='subjects' element={<Subjects />} />
 							<Route path='classes' element={<Classes />} />
