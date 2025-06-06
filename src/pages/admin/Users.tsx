@@ -22,6 +22,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { User as UserType } from '../../types/User'
 import { formatDateToLocal } from '../../utils/formatDate'
 import { canCreateUserWithRole } from '../../utils/permissions'
+import { useNavigate } from 'react-router-dom'
 
 // User interface
 interface User extends UserType {
@@ -56,6 +57,7 @@ const Users: React.FC = () => {
 	const [selectedUsers, setSelectedUsers] = useState<string[]>([])
 	const [isFormOpen, setIsFormOpen] = useState(false)
 	const [currentUser, setCurrentUser] = useState<User | null>(null)
+	const [formTitle, setFormTitle] = useState('Add New User')
 	const [users, setUsers] = useState<User[]>([])
 	const [searchTerm, setSearchTerm] = useState('')
 	const [filterStatus, setFilterStatus] = useState<string>('')
@@ -71,8 +73,13 @@ const Users: React.FC = () => {
 	const [isDeleting, setIsDeleting] = useState(false)
 	const [deleteError, setDeleteError] = useState<string | null>(null)
 
+	// Add pagination state
+	const [currentPage, setCurrentPage] = useState(1)
+	const [usersPerPage] = useState(10) // 10 users per page
+
 	// Get current user and permissions from context
 	const { user } = useAuth()
+	const navigate = useNavigate()
 
 	// Function to get effective role for a user (considering parent roles)
 	const getEffectiveRole = (user: User): UserRole => {
@@ -298,6 +305,17 @@ const Users: React.FC = () => {
 		return matchesSearch && matchesRole && matchesStatus
 	})
 
+	// Get current users for pagination
+	const indexOfLastUser = currentPage * usersPerPage
+	const indexOfFirstUser = indexOfLastUser - usersPerPage
+	const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser)
+	const totalPages = Math.ceil(filteredUsers.length / usersPerPage)
+
+	// Change page
+	const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
+	const goToNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages))
+	const goToPrevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1))
+
 	// Handle search input change
 	const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setSearchTerm(e.target.value)
@@ -325,10 +343,10 @@ const Users: React.FC = () => {
 
 	// Handle select all checkbox
 	const handleSelectAll = () => {
-		if (selectedUsers.length === filteredUsers.length) {
+		if (selectedUsers.length === currentUsers.length) {
 			setSelectedUsers([])
 		} else {
-			setSelectedUsers(filteredUsers.map(user => user.id))
+			setSelectedUsers(currentUsers.map(user => user.id))
 		}
 	}
 
@@ -340,13 +358,52 @@ const Users: React.FC = () => {
 	// Open form to add a new user
 	const handleAddUser = () => {
 		setCurrentUser(null)
+		setFormTitle('Add New User')
 		setIsFormOpen(true)
 	}
 
 	// Open form to edit an existing user
-	const handleEditUser = (user: User) => {
+	const handleEditUser = async (user: User) => {
 		console.log('Opening edit form for user:', user)
-		setCurrentUser(user)
+		
+		// Create a properly formatted user object
+		const formattedUser: Partial<User> = {
+			id: user.id,
+			firstName: user.firstName || user.first_name || '',
+			lastName: user.lastName || user.last_name || '',
+			email: user.email || '',
+			role: user.role || getEffectiveRole(user),
+			status: user.status === 'inactive' ? 'inactive' : 'active',
+			birthday: user.birthday || '',
+		}
+		
+		// If the user is a parent, fetch their children
+		if (formattedUser.role === 'Parent') {
+			try {
+				setIsLoading(true)
+				// Fetch all children assigned to this parent
+				const { data, error } = await supabase
+					.from('users')
+					.select('id')
+					.eq('parent_id', user.id)
+				
+				if (error) {
+					console.error('Error fetching children:', error)
+					toast.error(`Error fetching children: ${error.message}`)
+				} else {
+					// Add childrenIds to the formatted user
+					formattedUser.childrenIds = data.map(child => child.id)
+					console.log('Fetched children for parent:', formattedUser.childrenIds)
+				}
+			} catch (err) {
+				console.error('Error fetching children:', err)
+			} finally {
+				setIsLoading(false)
+			}
+		}
+		
+		setCurrentUser(formattedUser)
+		setFormTitle(`Edit User: ${formattedUser.firstName} ${formattedUser.lastName}`)
 		setIsFormOpen(true)
 	}
 
@@ -683,33 +740,77 @@ const Users: React.FC = () => {
 		try {
 			console.log('Assigning children to parent:', { parentId, childrenIds })
 
-			// Update each child's parent_id to point to this parent
-			// Use camelCase (parentId) instead of snake_case (parent_id) to match DB schema
-			const { data, error } = await supabase
+			// First, fetch all children currently assigned to this parent
+			const { data: currentChildren, error: fetchError } = await supabase
 				.from('users')
-				.update({ parent_id: parentId })
-				.in('id', childrenIds)
+				.select('id')
+				.eq('parent_id', parentId)
 
-			if (error) {
-				console.error('Error assigning children to parent:', error)
-				console.log('Failed assignment data:', { parentId, childIds: childrenIds })
-				toast.error(`Failed to assign children: ${error.message || 'Unknown error'}`)
-				throw error
+			if (fetchError) {
+				console.error('Error fetching current children:', fetchError)
+				throw fetchError
 			}
 
-			console.log('Successfully assigned children to parent:', data)
+			// Extract IDs of current children
+			const currentChildrenIds = currentChildren?.map(child => child.id) || []
+
+			// Find children to remove (those in currentChildrenIds but not in new childrenIds)
+			const childrenToRemove = currentChildrenIds.filter(id => !childrenIds.includes(id))
+
+			// Find children to add (those in new childrenIds but not already assigned)
+			const childrenToAdd = childrenIds.filter(id => !currentChildrenIds.includes(id))
+
+			// Create a batch of promises to update all changes at once
+			const updatePromises = []
+
+			// Remove parent_id from children that should no longer be assigned to this parent
+			if (childrenToRemove.length > 0) {
+				const removePromise = supabase
+					.from('users')
+					.update({ parent_id: null })
+					.in('id', childrenToRemove)
+				updatePromises.push(removePromise)
+			}
+
+			// Assign parent_id to new children
+			if (childrenToAdd.length > 0) {
+				const addPromise = supabase
+				.from('users')
+				.update({ parent_id: parentId })
+					.in('id', childrenToAdd)
+				updatePromises.push(addPromise)
+			}
+
+			// Execute all updates
+			const results = await Promise.all(updatePromises)
+			
+			// Check for errors
+			for (const result of results) {
+				if (result.error) {
+					console.error('Error updating parent-child relationships:', result.error)
+					toast.error(`Failed to update children: ${result.error.message || 'Unknown error'}`)
+					throw result.error
+				}
+			}
+
+			console.log('Successfully updated parent-child relationships')
 
 			// Update the local state to reflect parent-child relationships
 			setUsers(prevUsers =>
 				prevUsers.map(user => {
-					if (childrenIds.includes(user.id)) {
-						return { ...user, parent_id: parentId } // Keep using parent_id in state for consistency
+					// Add parent_id to new children
+					if (childrenToAdd.includes(user.id)) {
+						return { ...user, parent_id: parentId }
+					}
+					// Remove parent_id from removed children
+					if (childrenToRemove.includes(user.id)) {
+						return { ...user, parent_id: null }
 					}
 					return user
 				})
 			)
 
-			return data
+			return results
 		} catch (err) {
 			console.error('Error in assignChildrenToParent:', err)
 			throw err
@@ -822,6 +923,31 @@ const Users: React.FC = () => {
 		handleOpenDeleteModal(userId)
 	}
 
+	// Handle user click to navigate to profile
+	const handleUserClick = (userId: string) => {
+		navigate(`/admin/users/${userId}`)
+	}
+
+	// Format dates for display
+	const formatDate = (dateString: string | null | undefined) => {
+		if (!dateString) return 'Never';
+		
+		try {
+			const date = new Date(dateString);
+			// Check if the date is valid
+			if (isNaN(date.getTime())) return 'Invalid Date';
+			
+			return date.toLocaleDateString('en-US', {
+				year: 'numeric',
+				month: 'short',
+				day: 'numeric'
+			});
+		} catch (error) {
+			console.error('Error formatting date:', error);
+			return 'Invalid Date';
+		}
+	};
+
 	return (
 		<UsersContainer
 			as={motion.div}
@@ -911,7 +1037,13 @@ const Users: React.FC = () => {
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<HeaderCell width='40px'>#</HeaderCell>
+								<HeaderCell width='40px'>
+									<Checkbox
+										type="checkbox"
+										checked={selectedUsers.length === currentUsers.length && currentUsers.length > 0}
+										onChange={handleSelectAll}
+									/>
+								</HeaderCell>
 								<HeaderCell>User</HeaderCell>
 								<HeaderCell>Email</HeaderCell>
 								<HeaderCell>Role</HeaderCell>
@@ -923,24 +1055,25 @@ const Users: React.FC = () => {
 									</>
 								)}
 								<HeaderCell>Last Login</HeaderCell>
+								<HeaderCell>Created</HeaderCell>
 								<HeaderCell width='100px'>Actions</HeaderCell>
 							</TableRow>
 						</TableHeader>
 
 						<TableBody>
-							{filteredUsers.length > 0 ? (
-								filteredUsers.map(user => (
+							{currentUsers.length > 0 ? (
+								currentUsers.map(user => (
 									<TableRow key={user.id}>
-										<TableCell>
+										<TableCell onClick={(e) => e.stopPropagation()}>
 											<CheckboxContainer>
 												<Checkbox
-													type='checkbox'
+													type="checkbox"
 													checked={selectedUsers.includes(user.id)}
 													onChange={() => handleSelectUser(user.id)}
 												/>
 											</CheckboxContainer>
 										</TableCell>
-										<TableCell>
+										<TableCell onClick={() => handleUserClick(user.id)} style={{ cursor: 'pointer' }}>
 											<UserCell>
 												<UserInfo>
 													<UserAvatar>
@@ -959,17 +1092,17 @@ const Users: React.FC = () => {
 												</UserInfo>
 											</UserCell>
 										</TableCell>
-										<TableCell>{user.email}</TableCell>
-										<TableCell>
+										<TableCell onClick={() => handleUserClick(user.id)} style={{ cursor: 'pointer' }}>{user.email}</TableCell>
+										<TableCell onClick={() => handleUserClick(user.id)} style={{ cursor: 'pointer' }}>
 											<RoleBadge $role={user.role.toLowerCase()}>{user.role}</RoleBadge>
 										</TableCell>
-										<TableCell>
+										<TableCell onClick={() => handleUserClick(user.id)} style={{ cursor: 'pointer' }}>
 											<StatusIndicator $status={user.status}>
 												{user.status === 'active' ? 'Active' : 'Inactive'}
 											</StatusIndicator>
 										</TableCell>
 										{(activeRole === 'Student' || activeRole === 'Parent') && (
-											<TableCell>
+											<TableCell onClick={() => handleUserClick(user.id)} style={{ cursor: 'pointer' }}>
 												{user.role === 'Parent' ? (
 													<ChildrenList parentId={user.id} users={users} />
 												) : user.parent_id || user.parentId ? (
@@ -988,8 +1121,9 @@ const Users: React.FC = () => {
 												)}
 											</TableCell>
 										)}
-										<TableCell>{user.lastLogin || 'Never'}</TableCell>
-										<TableCell>
+										<TableCell onClick={() => handleUserClick(user.id)} style={{ cursor: 'pointer' }}>{user.lastLogin || 'Never'}</TableCell>
+										<TableCell onClick={() => handleUserClick(user.id)} style={{ cursor: 'pointer' }}>{formatDate(user.createdAt)}</TableCell>
+										<TableCell onClick={(e) => e.stopPropagation()}>
 											<ActionsContainer>
 												<ActionIconButton onClick={() => handleEditUser(user)} title='Edit user'>
 													<FiEdit2 />
@@ -1006,7 +1140,7 @@ const Users: React.FC = () => {
 								))
 							) : (
 								<EmptyRow>
-									<EmptyCell colSpan={7}>
+									<EmptyCell colSpan={9}>
 										<EmptyState>
 											<EmptyIcon>
 												<FiUser />
@@ -1027,18 +1161,63 @@ const Users: React.FC = () => {
 				</TableContainer>
 			)}
 
+			{/* Pagination */}
+			{filteredUsers.length > 0 && (
+				<PaginationContainer>
+					<PaginationInfo>
+						Showing <strong>{indexOfFirstUser + 1}-{Math.min(indexOfLastUser, filteredUsers.length)}</strong> of <strong>{filteredUsers.length}</strong>{' '}
+						users
+					</PaginationInfo>
+					<PaginationButtons>
+						<PaginationButton onClick={goToPrevPage} disabled={currentPage === 1}>Previous</PaginationButton>
+						
+						{/* Show page numbers */}
+						{[...Array(Math.min(5, totalPages))].map((_, i) => {
+							// Logic to show pages around current page
+							let pageNum;
+							if (totalPages <= 5) {
+								pageNum = i + 1;
+							} else if (currentPage <= 3) {
+								pageNum = i + 1;
+							} else if (currentPage >= totalPages - 2) {
+								pageNum = totalPages - 4 + i;
+							} else {
+								pageNum = currentPage - 2 + i;
+							}
+							
+							if (pageNum > 0 && pageNum <= totalPages) {
+								return (
+									<PaginationButton 
+										key={pageNum} 
+										$active={currentPage === pageNum}
+										onClick={() => paginate(pageNum)}
+									>
+										{pageNum}
+									</PaginationButton>
+								);
+							}
+							return null;
+						})}
+						
+						<PaginationButton onClick={goToNextPage} disabled={currentPage === totalPages}>Next</PaginationButton>
+					</PaginationButtons>
+				</PaginationContainer>
+			)}
+
+			{/* User Form Modal */}
 			{isFormOpen && (
 				<UserForm
 					isOpen={isFormOpen}
 					onClose={handleFormClose}
 					onSubmit={handleFormSubmit}
 					initialData={currentUser || undefined}
-					formTitle={currentUser ? 'Edit User' : 'Add New User'}
-					currentUserRole={typeof user?.role === 'string' ? user?.role : user?.role?.name || ''}
+					formTitle={formTitle}
+					currentUserRole={user?.role as string}
 					currentUserPermissions={user?.permissions || []}
 				/>
 			)}
 
+			{/* Delete Confirmation Modal */}
 			<DeleteConfirmationModal />
 		</UsersContainer>
 	)
@@ -1128,51 +1307,50 @@ const LoadingState = styled.div`
 
 // Add empty state components
 const EmptyRow = styled.tr`
-	height: 300px;
+	width: 100%;
 `
 
 const EmptyCell = styled.td`
+	padding: 3rem 1rem;
 	text-align: center;
-	vertical-align: middle;
 `
 
 const EmptyState = styled.div`
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	padding: ${props => props.theme.spacing[8]};
+	justify-content: center;
+	padding: 2rem;
 `
 
 const EmptyIcon = styled.div`
-	font-size: 3rem;
-	color: ${props => props.theme.colors.text.tertiary};
-	margin-bottom: ${props => props.theme.spacing[4]};
+	font-size: 2rem;
+	color: ${props => props.theme.colors.neutral[400]};
+	margin-bottom: 1rem;
 `
 
 const EmptyTitle = styled.h3`
-	margin: 0;
-	margin-bottom: ${props => props.theme.spacing[2]};
-	font-size: 1.2rem;
+	font-size: 1.125rem;
 	font-weight: 600;
+	margin-bottom: 0.5rem;
 	color: ${props => props.theme.colors.text.primary};
 `
 
 const EmptyDescription = styled.p`
-	margin: 0;
-	margin-bottom: ${props => props.theme.spacing[4]};
+	text-align: center;
 	color: ${props => props.theme.colors.text.secondary};
-	max-width: 400px;
+	margin-bottom: 1.5rem;
+	max-width: 24rem;
 `
 
 const EmptyAction = styled.button`
+	padding: 0.5rem 1rem;
 	background-color: ${props => props.theme.colors.primary[500]};
 	color: white;
 	border: none;
-	border-radius: ${props => props.theme.borderRadius.md};
-	padding: ${props => `${props.theme.spacing[2]} ${props.theme.spacing[4]}`};
+	border-radius: 0.375rem;
 	font-weight: 500;
 	cursor: pointer;
-	transition: background-color ${props => props.theme.transition.fast};
 
 	&:hover {
 		background-color: ${props => props.theme.colors.primary[600]};
@@ -1465,7 +1643,7 @@ const UserCell = styled.div`
 const UserInfo = styled.div`
 	display: flex;
 	align-items: center;
-	gap: ${props => props.theme.spacing[3]};
+	gap: 0.75rem;
 `
 
 const UserAvatar = styled.div`
@@ -1484,7 +1662,6 @@ const UserAvatar = styled.div`
 const UserDetails = styled.div`
 	display: flex;
 	flex-direction: column;
-	gap: ${props => props.theme.spacing[1]};
 `
 
 const UserName = styled.div`
@@ -1493,8 +1670,9 @@ const UserName = styled.div`
 `
 
 const UserEmail = styled.div`
-	font-size: 0.8rem;
+	font-size: 0.8125rem;
 	color: ${props => props.theme.colors.text.secondary};
+	margin-top: 0.125rem;
 `
 
 interface RoleBadgeProps {
@@ -1568,29 +1746,26 @@ const StatusIndicator = styled.div<StatusIndicatorProps>`
 
 const ActionsContainer = styled.div`
 	display: flex;
-	gap: ${props => props.theme.spacing[2]};
+	justify-content: center;
+	gap: 0.5rem;
 `
 
 const ActionIconButton = styled.button`
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 32px;
-	height: 32px;
-	border-radius: ${props => props.theme.borderRadius.md};
+	width: 2rem;
+	height: 2rem;
+	border-radius: 0.375rem;
 	border: none;
-	background-color: transparent;
+	background-color: ${props => props.theme.colors.background.secondary};
 	color: ${props => props.theme.colors.text.secondary};
 	cursor: pointer;
-	transition: all ${props => props.theme.transition.fast};
+	transition: all 0.2s;
 
 	&:hover {
-		background-color: ${props => props.theme.colors.background.tertiary};
-		color: ${props => props.theme.colors.primary[500]};
-	}
-
-	&:active {
-		background-color: ${props => props.theme.colors.background.tertiary};
+		background-color: ${props => props.theme.colors.neutral[200]};
+		color: ${props => props.theme.colors.primary[600]};
 	}
 `
 
@@ -1743,6 +1918,53 @@ const CloseButton = styled.button`
 	&:hover {
 		background-color: ${props => props.theme.colors.background.tertiary};
 		color: ${props => props.theme.colors.text.primary};
+	}
+`
+
+const PaginationContainer = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem;
+	border-top: 1px solid ${props => props.theme.colors.neutral[200]};
+`
+
+const PaginationInfo = styled.div`
+	font-size: 0.875rem;
+	color: ${props => props.theme.colors.text.secondary};
+`
+
+const PaginationButtons = styled.div`
+	display: flex;
+	gap: 0.25rem;
+`
+
+const PaginationButton = styled.button<{ $active?: boolean }>`
+	padding: 0.5rem 0.75rem;
+	border: 1px solid ${props => 
+		props.$active 
+			? props.theme.colors.primary[500] 
+			: props.theme.colors.neutral[300]};
+	border-radius: 0.375rem;
+	background-color: ${props => 
+		props.$active 
+			? props.theme.colors.primary[50] 
+			: props.theme.colors.background.primary};
+	color: ${props => 
+		props.$active 
+			? props.theme.colors.primary[600] 
+			: props.disabled 
+				? props.theme.colors.text.tertiary 
+				: props.theme.colors.text.primary};
+	font-size: 0.875rem;
+	font-weight: ${props => props.$active ? '600' : '400'};
+	cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+	
+	&:hover:not(:disabled) {
+		background-color: ${props => 
+			props.$active 
+				? props.theme.colors.primary[100] 
+				: props.theme.colors.neutral[100]};
 	}
 `
 

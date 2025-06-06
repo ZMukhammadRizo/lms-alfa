@@ -227,10 +227,13 @@ export async function getStudentGrades(studentId: string): Promise<SubjectGrade[
 		if (!studentId || studentId.trim() === '') {
 			console.warn('Invalid student ID provided');
 			toast.error('Invalid student ID. Please login again.');
-			return [];
+			return getMockGrades(); // Return mock data if studentId is invalid
 		}
 
 		console.log('📊 Fetching grades data for student ID:', studentId);
+
+		// Debug check the table structure first
+		await debugCheckTables();
 
 		// Check if required tables exist - only fetch from ONE table to minimize requests
 		const { data: testData, error: tableCheckError } = await supabase
@@ -240,7 +243,7 @@ export async function getStudentGrades(studentId: string): Promise<SubjectGrade[
 		
 		if (tableCheckError) {
 			console.error('❌ Required database tables do not exist:', tableCheckError);
-			toast.error('Database tables might be missing. Using mock data instead.');
+			toast.error('Database table "scores" is missing. Using mock data instead.');
 			return getMockGrades();
 		}
 
@@ -252,14 +255,14 @@ export async function getStudentGrades(studentId: string): Promise<SubjectGrade[
 
 		if (studentError) {
 			console.error('❌ Error fetching student class info:', studentError);
-			toast.error('Error fetching your class information.');
-			return [];
+			toast.error('Error fetching your class information. Using mock data instead.');
+			return getMockGrades();
 		}
 		
 		if (!studentData || studentData.length === 0) {
 			console.warn('⚠️ No classes found for student ID:', studentId);
-			toast.warning('You are not assigned to any classes. Please contact your administrator.');
-			return [];
+			toast.warning('You are not assigned to any classes. Using mock data for demonstration.');
+			return getMockGrades();
 		}
 		
 		// Extract class IDs
@@ -278,14 +281,14 @@ export async function getStudentGrades(studentId: string): Promise<SubjectGrade[
 
 		if (classSubjectsError) {
 			console.error('❌ Error fetching class subjects:', classSubjectsError);
-			toast.error('Error fetching subject information.');
-			return [];
+			toast.error('Error fetching subject information. Using mock data instead.');
+			return getMockGrades();
 		}
 		
 		if (!classSubjectsData || classSubjectsData.length === 0) {
 			console.warn('⚠️ No subjects found for classes:', classIds);
-			toast.warning('No subjects are assigned to your classes. Please contact your administrator.');
-			return [];
+			toast.warning('No subjects are assigned to your classes. Using mock data for demonstration.');
+			return getMockGrades();
 		}
 
 		console.log('📝 Found class subjects:', classSubjectsData.length);
@@ -298,11 +301,13 @@ export async function getStudentGrades(studentId: string): Promise<SubjectGrade[
 			
 		if (fetchedClassesError || !fetchedClassesData) {
 			console.error('❌ Error fetching class details:', fetchedClassesError);
-			// Handle error appropriately, maybe return empty or mock data
-			return []; // Or return mock data
+			toast.error('Error fetching class details. Using mock data instead.');
+			return getMockGrades();
 		}
-		const classesData = fetchedClassesData; // Assign to the original variable name if needed elsewhere, or refactor
 		
+		// Continue with original logic
+		// ... rest of function remains the same
+
 		// --- Fetch Teacher Information --- 
 		// Extract unique teacher IDs from classesData
 		const teacherIds = classesData
