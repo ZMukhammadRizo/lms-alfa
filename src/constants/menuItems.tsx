@@ -24,6 +24,7 @@ export interface MenuItem {
 	path: string
 	icon: React.ReactNode
 	label: string
+	requiredPermission?: string
 }
 
 // Admin menu items
@@ -35,13 +36,24 @@ export const adminMenu: MenuItem[] = [
 	{ path: '/admin/assignments', icon: <FiFileText />, label: 'Assignments' },
 	{ path: '/admin/submissions', icon: <FiClipboard />, label: 'Submissions' },
 	{ path: '/admin/grades', icon: <FiClipboard />, label: 'Grades' },
+	{ path: '/admin/daily-attendance', icon: <FiCheckSquare />, label: 'Daily Attendance' },
 	{ path: '/admin/timetables', icon: <FiCalendar />, label: 'Timetables' },
 ]
 
 // Announcements submenu for admin
 export const announcementsSubItems: MenuItem[] = [
-	{ path: '/admin/announcements', icon: <FiList />, label: 'View All' },
-	{ path: '/admin/announcements/create', icon: <FiPlus />, label: 'Create New' },
+	{
+		path: '/admin/announcements',
+		icon: <FiList />,
+		label: 'View All',
+		requiredPermission: 'access_admin_announcements',
+	},
+	{
+		path: '/admin/announcements/create',
+		icon: <FiPlus />,
+		label: 'Create New',
+		requiredPermission: 'access_admin_announcements_create',
+	},
 ]
 
 // Teacher menu items
@@ -51,6 +63,7 @@ export const teacherMenu: MenuItem[] = [
 	{ path: '/teacher/assignments', icon: <FiClipboard />, label: 'Assignments' },
 	{ path: '/teacher/submissions', icon: <FiFileText />, label: 'Submissions' },
 	{ path: '/teacher/grades', icon: <FiCheckSquare />, label: 'Grades' },
+	{ path: '/teacher/daily-attendance', icon: <FiCheckSquare />, label: 'Daily Attendance' },
 	{ path: '/teacher/schedule', icon: <FiCalendar />, label: 'Schedule' },
 	{ path: '/teacher/messages', icon: <FiMessageSquare />, label: 'Messages' },
 ]
@@ -118,3 +131,52 @@ export const getSystemMenu = (rolePath: string): MenuItem[] => [
 	{ path: `/${rolePath}/profile`, icon: <FiUser />, label: 'Profile' },
 	{ path: `/${rolePath}/settings`, icon: <FiSettings />, label: 'Settings' },
 ]
+
+// Map menu item paths to required permissions
+export const menuItemPermissionMap: Record<string, string> = {
+	// Admin menu items
+	'/admin/dashboard': 'access_admin_dashboard',
+	'/admin/users': 'access_admin_users',
+	'/admin/roles': 'access_admin_roles',
+	'/admin/subjects': 'access_admin_subjects',
+	'/admin/classes': 'access_admin_classes',
+	'/admin/assignments': 'access_admin_assignments',
+	'/admin/grades': 'access_admin_grades',
+	'/admin/daily-attendance': 'access_admin_daily_attendance',
+	'/admin/timetables': 'access_admin_timetables',
+	'/admin/settings': 'access_admin_settings',
+	'/admin/profile': 'access_admin_profile',
+	'/admin/announcements': 'access_admin_announcements',
+	'/admin/announcements/create': 'access_admin_announcements_create',
+	'/admin/subjects/:subjectId/lessons': 'access_admin_lessons',
+	'/admin/lessons/:id': 'access_admin_lesson_detail',
+	'/admin/submissions': 'access_admin_submissions',
+	// Teacher menu items
+	'/teacher/dashboard': 'access_teacher_dashboard',
+	'/teacher/classes': 'view_classes',
+	'/teacher/assignments': 'manage_assignments',
+	'/teacher/submissions': 'manage_submissions',
+	'/teacher/grades': 'manage_grades',
+	'/teacher/daily-attendance': 'manage_daily_attendance',
+	'/teacher/schedule': 'view_schedule',
+	'/teacher/messages': 'send_messages',
+	// Student menu items
+	'/student/dashboard': 'access_student_dashboard',
+	'/student/announcements': 'read_announcements',
+	'/student/courses': 'view_courses',
+	'/student/assignments': 'view_assignments',
+	'/student/grades': 'view_grades',
+	'/student/schedule': 'view_schedule',
+	'/student/messages': 'send_messages',
+	'/student/tests': 'take_tests',
+	'/student/flashcards': 'use_flashcards',
+	// Parent menu items
+	'/parent/dashboard': 'access_parent_dashboard',
+	'/parent/students': 'view_students',
+	'/parent/assignments': 'view_assignments',
+	'/parent/announcements': 'read_announcements',
+	'/parent/grades': 'view_grades',
+	'/parent/attendance': 'view_attendance',
+	'/parent/messages': 'send_messages',
+	'/parent/calendar': 'view_calendar',
+}

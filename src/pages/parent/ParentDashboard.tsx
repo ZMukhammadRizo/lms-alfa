@@ -1,13 +1,6 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import {
-	FiBarChart2,
-	FiCalendar,
-	FiChevronRight,
-	FiClipboard,
-	FiRefreshCw,
-	FiUser,
-} from 'react-icons/fi'
+import { FiBarChart2, FiChevronRight, FiClipboard, FiUser } from 'react-icons/fi'
 import { Link, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import StatCard from '../../components/admin/StatCard'
@@ -19,6 +12,7 @@ import {
 	useParentScores,
 	useParentStudentStore,
 } from '../../store/parentStudentStore'
+import { useAnnouncements } from '../../stores/useAnnouncementStore'
 
 interface Child {
 	id: string
@@ -54,6 +48,7 @@ const ParentDashboard: React.FC = () => {
 	const { user } = useAuth()
 	const navigate = useNavigate()
 	const { fetchChildren, fetchScores, fetchAttendance, loading, error } = useParentStudentStore()
+	const { fetchAnnouncements } = useAnnouncements()
 	const children = useParentChildren()
 	const scores = useParentScores()
 	const attendance = useParentAttendance()
@@ -87,13 +82,16 @@ const ParentDashboard: React.FC = () => {
 
 				// Load children data
 				await fetchChildren(user.id)
+
+				// Fetch announcements for Parent role
+				await fetchAnnouncements('Parent')
 			} catch (err) {
 				console.error('Error loading parent data:', err)
 			}
 		}
 
 		loadParentData()
-	}, [fetchChildren, navigate])
+	}, [fetchChildren, navigate, fetchAnnouncements])
 
 	// Set default selected student when children are loaded
 	useEffect(() => {
@@ -262,8 +260,6 @@ const ParentDashboard: React.FC = () => {
 							</StudentButton>
 						))}
 					</StudentButtonsContainer>
-
-					
 				</HeaderControls>
 			</DashboardHeader>
 
@@ -528,7 +524,6 @@ const ParentDashboard: React.FC = () => {
 								)}
 							</GradesCard>
 						</GridItem>
-
 					</DashboardGrid>
 				</>
 			)}

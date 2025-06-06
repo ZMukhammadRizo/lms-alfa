@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import { FiBell, FiChevronDown, FiChevronLeft, FiChevronRight, FiMenu, FiX } from 'react-icons/fi'
+import { FiBell, FiChevronDown, FiChevronLeft, FiChevronRight, FiMenu } from 'react-icons/fi'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import styled, { css } from 'styled-components'
 import {
@@ -9,17 +9,12 @@ import {
 	getManagerMenu,
 	getModuleLeaderMenu,
 	getSystemMenu,
-	teacherMenu,
+	menuItemPermissionMap,
 } from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
-import {
-	getUserParentRole,
-	getUserRole,
-	hasAnnouncementPermission,
-	hasPermission,
-	hasRole,
-} from '../../utils/authUtils'
+import { getUserParentRole, getUserRole, hasPermission, hasRole } from '../../utils/authUtils'
 import LogoutButton from '../common/LogoutButton'
+import PermissionMenuItem from '../common/PermissionMenuItem'
 
 interface SidebarProps {
 	isCollapsed: boolean
@@ -83,8 +78,15 @@ interface MenuItemWithSubmenuProps {
 	icon: React.ReactNode
 	label: string
 	isCollapsed: boolean
-	subItems: { path: string; icon: React.ReactNode; label: string }[]
+	subItems: {
+		path: string
+		icon: React.ReactNode
+		label: string
+		requiredPermission?: string
+		[key: string]: any
+	}[]
 	onMobileClick?: () => void
+	requiredPermissions?: string[]
 }
 
 const MenuItemWithSubmenu: React.FC<MenuItemWithSubmenuProps> = ({
@@ -93,6 +95,7 @@ const MenuItemWithSubmenu: React.FC<MenuItemWithSubmenuProps> = ({
 	isCollapsed,
 	subItems,
 	onMobileClick,
+	requiredPermissions,
 }) => {
 	const [isOpen, setIsOpen] = useState(false)
 	const location = useLocation()
@@ -282,13 +285,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 	return (
 		<>
 			{/* Mobile menu button */}
-			{isMobile && (
-				<MobileMenuButton
-					onClick={handleMobileToggle}
-					aria-label={isMobileOpen ? 'Close menu' : 'Open menu'}
-					aria-expanded={isMobileOpen}
-				>
-					{isMobileOpen ? <FiX /> : <FiMenu />}
+			{isMobile && !isMobileOpen && (
+				<MobileMenuButton onClick={handleMobileToggle} aria-label='Open menu' aria-expanded={false}>
+					<FiMenu />
 				</MobileMenuButton>
 			)}
 
@@ -315,17 +314,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 										initial={{ opacity: 0 }}
 										animate={{ opacity: 1 }}
 										transition={{ delay: 0.2 }}
+										style={{
+											opacity: 1,
+											display: 'inline-block',
+											overflow: 'visible',
+											whiteSpace: 'nowrap',
+										}}
 									>
 										Learning Management System
 									</motion.span>
 								</Logo>
 							)}
 
-							{isMobile ? (
-								<CloseButton onClick={handleMobileToggle}>
-									<FiX />
-								</CloseButton>
-							) : (
+							{!isMobile && (
 								<ToggleButton onClick={toggleSidebar}>
 									{isCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
 								</ToggleButton>
@@ -334,7 +335,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 
 						<MenuContainer>
 							<MenuSection>
-								{role === 'Admin' && (
+								{(role === 'Admin' || parentRole === 'Admin') && (
 									<>
 										{adminMenu.map(item => (
 											<MenuItem
@@ -346,19 +347,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 												onMobileClick={handleNavItemClick}
 											/>
 										))}
+
+										<MenuItemWithSubmenu
+											icon={<FiBell />}
+											label='Announcements'
+											isCollapsed={isMobile ? false : isCollapsed}
+											subItems={announcementsSubItems}
+											onMobileClick={handleNavItemClick}
+										/>
 									</>
 								)}
-								{/* Render Announcements for users with read_announcements permission */}
-								{hasAnnouncementPermission('read') ? (
-									<MenuItemWithSubmenu
-										icon={<FiBell />}
-										label='Announcements'
-										isCollapsed={isMobile ? false : isCollapsed}
-										subItems={announcementsSubItems}
-										onMobileClick={handleNavItemClick}
-									/>
-								) : null}
-								{hasPermission('manage_roles') ||
+								{hasPermission('access_admin_roles') ||
 								hasRole('RoleManager') ||
 								hasRole('Admin') ||
 								hasRole('SuperAdmin') ? (
@@ -389,7 +388,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 									</>
 								) : null}
 
-								{hasPermission('manage_subjects') || role === 'Admin' || role === 'SuperAdmin' ? (
+								{hasPermission('access_admin_subjects') ||
+								hasRole('RoleManager') ||
+								role === 'Admin' ||
+								role === 'SuperAdmin' ? (
 									<>
 										<AnimatePresence>
 											{(!isCollapsed || isMobile) && (
@@ -411,26 +413,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 												label={item.label}
 												to={item.path}
 												isCollapsed={isMobile ? false : isCollapsed}
-											/>
-										))}
-									</>
-								) : (
-									''
-								)}
-								{role === 'Teacher' && (
-									<>
-										{teacherMenu.map(item => (
-											<MenuItem
-												key={item.path}
-												icon={item.icon}
-												label={item.label}
-												to={item.path}
-												isCollapsed={isMobile ? false : isCollapsed}
 												onMobileClick={handleNavItemClick}
 											/>
 										))}
 									</>
-								)}
+								) : null}
 							</MenuSection>
 
 							<MenuSection>
@@ -461,23 +448,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 						</MenuContainer>
 
 						<ProfileSection $isCollapsed={isMobile ? false : isCollapsed}>
-							<ProfileAvatar $isCollapsed={isMobile ? false : isCollapsed}>
-								{getUserInitials()}
-							</ProfileAvatar>
+							<ProfileImage>{getUserInitials()}</ProfileImage>
 							<AnimatePresence>
 								{(!isCollapsed || isMobile) && (
 									<ProfileInfo
 										initial={{ opacity: 0 }}
 										animate={{ opacity: 1 }}
 										exit={{ opacity: 0 }}
-										transition={{ delay: 0.1 }}
+										transition={{ duration: 0.2 }}
 									>
 										<ProfileName>{getFullName()}</ProfileName>
-										<ProfileRole>{getUserRole()}</ProfileRole>
+										<ProfileRole>{role}</ProfileRole>
 									</ProfileInfo>
 								)}
 							</AnimatePresence>
-							{(!isCollapsed || isMobile) && <LogoutButton />}
+							<LogoutButton />
 						</ProfileSection>
 
 						{isMobile && <MobileOverlay onClick={handleMobileToggle} />}
@@ -686,14 +671,6 @@ const ToggleButton = styled.button`
 	}
 `
 
-const CloseButton = styled(ToggleButton)`
-	color: ${props => props.theme.colors.text.secondary};
-
-	&:hover {
-		color: ${props => props.theme.colors.accent.red};
-	}
-`
-
 const MenuContainer = styled.div`
 	flex: 1;
 	overflow-y: auto;
@@ -825,7 +802,7 @@ const ProfileSection = styled.div<CollapsibleProps>`
 		`}
 `
 
-const ProfileAvatar = styled.div<CollapsibleProps>`
+const ProfileImage = styled.div`
 	width: 36px;
 	height: 36px;
 	border-radius: 50%;

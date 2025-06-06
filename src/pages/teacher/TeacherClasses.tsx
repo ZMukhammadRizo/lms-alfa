@@ -597,15 +597,15 @@ const TeacherClasses: React.FC = () => {
 				</HeaderTitleSection>
 				<HeaderControls>
 					{currentView === 'classes' && (
-						<SearchInputContainer>
-							<FiSearch size={18} />
-							<SearchInputStyled
+					<SearchInputContainer>
+						<FiSearch size={18} />
+						<SearchInputStyled
 								type='text'
 								placeholder='Search classes...'
-								value={searchQuery}
-								onChange={handleSearchChange}
-							/>
-						</SearchInputContainer>
+							value={searchQuery}
+							onChange={handleSearchChange}
+						/>
+					</SearchInputContainer>
 					)}
 				</HeaderControls>
 			</PageHeader>

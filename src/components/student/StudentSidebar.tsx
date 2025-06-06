@@ -1,12 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import { FiChevronLeft, FiChevronRight, FiMenu, FiX } from 'react-icons/fi'
+import { FiChevronLeft, FiChevronRight, FiMenu } from 'react-icons/fi'
 import { NavLink, useLocation } from 'react-router-dom'
 import styled, { css } from 'styled-components'
 import { getSystemMenu, studentMenu } from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
 import { getUserRole } from '../../utils/authUtils'
 import LogoutButton from '../common/LogoutButton'
+import PermissionMenuItem from '../common/PermissionMenuItem'
 
 interface SidebarProps {
 	isCollapsed: boolean
@@ -160,13 +161,9 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 	return (
 		<>
 			{/* Mobile menu button */}
-			{isMobile && (
-				<MobileMenuButton
-					onClick={handleMobileToggle}
-					aria-label={isMobileOpen ? 'Close menu' : 'Open menu'}
-					aria-expanded={isMobileOpen}
-				>
-					{isMobileOpen ? <FiX /> : <FiMenu />}
+			{isMobile && !isMobileOpen && (
+				<MobileMenuButton onClick={handleMobileToggle} aria-label='Open menu' aria-expanded={false}>
+					<FiMenu />
 				</MobileMenuButton>
 			)}
 
@@ -193,17 +190,19 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 										initial={{ opacity: 0 }}
 										animate={{ opacity: 1 }}
 										transition={{ delay: 0.2 }}
+										style={{
+											opacity: 1,
+											display: 'inline-block',
+											overflow: 'visible',
+											whiteSpace: 'nowrap',
+										}}
 									>
 										Learning Management System
 									</motion.span>
 								</Logo>
 							)}
 
-							{isMobile ? (
-								<CloseButton onClick={handleMobileToggle}>
-									<FiX />
-								</CloseButton>
-							) : (
+							{!isMobile && (
 								<ToggleButton onClick={toggleSidebar}>
 									{isCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
 								</ToggleButton>
@@ -213,7 +212,7 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 						<MenuContainer>
 							<MenuSection>
 								{studentMenu.map(item => (
-									<MenuItem
+									<PermissionMenuItem
 										key={item.path}
 										icon={item.icon}
 										label={item.label}
@@ -239,7 +238,7 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 								</AnimatePresence>
 
 								{systemMenu.map(item => (
-									<MenuItem
+									<PermissionMenuItem
 										key={item.path}
 										icon={item.icon}
 										label={item.label}
@@ -266,7 +265,7 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 									</ProfileInfo>
 								)}
 							</AnimatePresence>
-							<SidebarLogoutButton variant='secondary' size='small' showText={false} />
+							<LogoutButton />
 						</ProfileSection>
 
 						{isMobile && <MobileOverlay onClick={handleMobileToggle} />}
@@ -464,14 +463,6 @@ const ToggleButton = styled.button`
 	}
 `
 
-const CloseButton = styled(ToggleButton)`
-	color: ${props => props.theme.colors.text.secondary};
-
-	&:hover {
-		color: ${props => props.theme.colors.text.primary};
-	}
-`
-
 const MenuContainer = styled.div`
 	flex: 1;
 	overflow-y: auto;
@@ -605,21 +596,6 @@ const ProfileName = styled.div`
 const ProfileRole = styled.div`
 	font-size: ${props => props.theme.spacing[3]};
 	color: ${props => props.theme.colors.text.tertiary};
-`
-
-const SidebarLogoutButton = styled(LogoutButton)`
-	padding: 0.5rem;
-	background: transparent;
-
-	svg {
-		color: ${props => props.theme.colors.text.secondary};
-	}
-
-	&:hover {
-		svg {
-			color: ${props => props.theme.colors.danger};
-		}
-	}
 `
 
 const SectionLabel = styled(motion.div)`

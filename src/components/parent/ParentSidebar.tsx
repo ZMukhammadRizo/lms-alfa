@@ -6,6 +6,7 @@ import styled, { css } from 'styled-components'
 import { getSystemMenu, parentMenu } from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
 import LogoutButton from '../common/LogoutButton'
+import PermissionMenuItem from '../common/PermissionMenuItem'
 
 interface SidebarProps {
 	isCollapsed: boolean
@@ -224,7 +225,7 @@ const ParentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onM
 						<MenuContainer>
 							<MenuSection>
 								{parentMenu.map(item => (
-									<MenuItem
+									<PermissionMenuItem
 										key={item.path}
 										icon={item.icon}
 										label={item.label}
@@ -250,7 +251,7 @@ const ParentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onM
 								</AnimatePresence>
 
 								{systemMenu.map(item => (
-									<MenuItem
+									<PermissionMenuItem
 										key={item.path}
 										icon={item.icon}
 										label={item.label}

@@ -2,14 +2,17 @@ import React, { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import RedirectPage from '../../pages/auth/RedirectPage'
+import { checkUserPermission } from '../../utils/permissionUtils'
 
 interface ProtectedRouteProps {
 	allowedRoles: string[]
+	requiredPermission?: string
 	redirectPath?: string
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 	allowedRoles,
+	requiredPermission,
 	redirectPath = '/login',
 }) => {
 	const { isAuthenticated, user, getParentRoleName, loading } = useAuth()

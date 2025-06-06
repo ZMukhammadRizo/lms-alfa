@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import React, { useEffect, useRef, useState } from 'react'
+import { FiChevronDown, FiLogOut, FiSettings, FiUser } from 'react-icons/fi'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import Footer from '../components/admin/Footer'
 import ParentNotificationBell from '../components/parent/ParentNotificationBell'
 import ParentSidebar from '../components/parent/ParentSidebar'
+import { useAuth } from '../contexts/AuthContext'
 import { useAnnouncements } from '../stores/useAnnouncementStore'
 import { useParentStore } from '../stores/useParentStore'
-import { useAuth } from '../contexts/AuthContext'
 // Error boundary for handling rendering errors
 class ErrorBoundary extends React.Component<
 	{ children: React.ReactNode },
@@ -231,136 +232,246 @@ const ContentWrapper = styled.main`
 // Header styled components
 const HeaderContainer = styled.header`
 	display: flex;
-	justify-content: space-between;
 	align-items: center;
-	padding: 0.75rem 1.5rem;
-	background-color: ${props => props.theme.colors.background.primary || 'white'};
-	border-bottom: 1px solid ${props => props.theme.colors.border.light || '#e2e8f0'};
+	justify-content: flex-end;
+	padding: 0 32px;
+	background-color: ${props => props.theme.colors.background.secondary};
+	border-bottom: 1px solid ${props => props.theme.colors.border.light};
+	height: 60px;
+	width: 100%;
+	transition: background-color 0.2s ease, border-color 0.2s ease;
 `
 
-const HeaderLeft = styled.div`
-	display: flex;
-	align-items: center;
-`
-
-const PageTitle = styled.h1`
-	font-size: 1.25rem;
-	font-weight: 600;
-	color: ${props => props.theme.colors.text.primary || '#334155'};
-	margin: 0;
-`
-
-const HeaderRight = styled.div`
+const HeaderActions = styled.div`
 	display: flex;
 	align-items: center;
 	gap: 1rem;
 `
 
-const UserDropdown = styled.div`
+const UserMenuContainer = styled.div`
 	position: relative;
-`
-
-const UserButton = styled.button`
 	display: flex;
 	align-items: center;
+	gap: 0.5rem;
+`
+
+const UserName = styled.button`
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
 	background: none;
 	border: none;
+	color: ${props => props.theme.colors.text.primary};
+	font-size: 0.875rem;
+	font-weight: 500;
 	cursor: pointer;
 	padding: 0.25rem;
-	border-radius: 0.375rem;
 
 	&:hover {
-		background-color: ${props => props.theme.colors.background.hover || '#f1f5f9'};
+		color: ${props => props.theme.colors.primary[600]};
+	}
+
+	@media (max-width: ${props => props.theme.breakpoints.md}) {
+		display: none;
 	}
 `
 
 const UserAvatar = styled.div`
-	width: 2rem;
-	height: 2rem;
+	width: 36px;
+	height: 36px;
 	border-radius: 50%;
-	background-color: ${props => props.theme.colors.primary[500] || '#3b82f6'};
-	color: white;
+	background-color: ${props => props.theme.colors.primary[500]};
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	cursor: pointer;
+`
+
+const AvatarText = styled.span`
+	color: white;
 	font-weight: 600;
-	margin-right: 0.5rem;
-`
-
-const UserName = styled.span`
 	font-size: 0.875rem;
-	font-weight: 500;
-	color: ${props => props.theme.colors.text.primary || '#334155'};
 `
 
-const DropdownMenu = styled.div`
+const UserMenu = styled.div`
 	position: absolute;
-	top: 100%;
+	top: calc(100% + 10px);
 	right: 0;
-	margin-top: 0.5rem;
-	width: 12rem;
-	background-color: ${props => props.theme.colors.background.primary || 'white'};
-	border-radius: 0.375rem;
-	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-	border: 1px solid ${props => props.theme.colors.border.light || '#e2e8f0'};
-	z-index: 50;
-	padding: 0.5rem 0;
-	display: none;
-
-	${UserDropdown}:hover & {
-		display: block;
-	}
+	width: 240px;
+	background-color: ${props => props.theme.colors.background.secondary};
+	border-radius: 8px;
+	border: 1px solid ${props => props.theme.colors.border.light};
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	z-index: ${props => props.theme.zIndices.dropdown};
+	overflow: hidden;
 `
 
-const DropdownItem = styled.button`
-	display: block;
+const UserMenuHeader = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 1rem;
+`
+
+const MenuUserAvatar = styled.div`
+	width: 42px;
+	height: 42px;
+	border-radius: 50%;
+	background-color: ${props => props.theme.colors.primary[500]};
+	display: flex;
+	align-items: center;
+	justify-content: center;
+`
+
+const MenuAvatarText = styled.span`
+	color: white;
+	font-weight: 600;
+	font-size: 1rem;
+`
+
+const UserInfo = styled.div`
+	display: flex;
+	flex-direction: column;
+`
+
+const UserFullName = styled.span`
+	font-weight: 500;
+	color: ${props => props.theme.colors.text.primary};
+`
+
+const UserRole = styled.span`
+	font-size: 0.75rem;
+	color: ${props => props.theme.colors.text.secondary};
+	text-transform: capitalize;
+`
+
+const UserMenuDivider = styled.div`
+	height: 1px;
+	background-color: ${props => props.theme.colors.border.light};
+	margin: 0.25rem 0;
+`
+
+const UserMenuItem = styled.button`
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
 	width: 100%;
-	text-align: left;
-	padding: 0.5rem 1rem;
-	font-size: 0.875rem;
-	color: ${props => props.theme.colors.text.primary || '#334155'};
-	background: none;
+	padding: 0.75rem 1rem;
 	border: none;
+	background: none;
+	color: ${props => props.theme.colors.text.primary};
+	font-size: 0.875rem;
+	text-align: left;
 	cursor: pointer;
 
 	&:hover {
-		background-color: ${props => props.theme.colors.background.hover || '#f1f5f9'};
+		background-color: ${props => props.theme.colors.background.hover};
 	}
 `
 
-const DropdownDivider = styled.div`
-	height: 1px;
-	background-color: ${props => props.theme.colors.border.light || '#e2e8f0'};
-	margin: 0.5rem 0;
+const MenuItemIcon = styled.span`
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	color: ${props => props.theme.colors.text.secondary};
 `
 
 // Header component
 const Header: React.FC = () => {
 	const navigate = useNavigate()
 	const { user, logout } = useAuth()
+	const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+	const userMenuRef = useRef<HTMLDivElement>(null)
+
+	// Handle clicking outside of user menu to close it
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+				setIsUserMenuOpen(false)
+			}
+		}
+
+		document.addEventListener('mousedown', handleClickOutside)
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside)
+		}
+	}, [])
+
+	const toggleUserMenu = () => {
+		setIsUserMenuOpen(!isUserMenuOpen)
+	}
+
+	const handleCloseUserMenu = () => {
+		setIsUserMenuOpen(false)
+	}
+
+	const getUserInitials = () => {
+		if (!user || !user.firstName || !user.lastName) return '?'
+		return (user.firstName.charAt(0) + user.lastName.charAt(0)).toUpperCase()
+	}
 
 	return (
 		<HeaderContainer>
-			<HeaderLeft>
-				<PageTitle>Parent Dashboard</PageTitle>
-			</HeaderLeft>
-			<HeaderRight>
+			<HeaderActions>
 				<ParentNotificationBell basePath='/parent' />
-				<UserDropdown>
-					<UserButton>
-						<UserAvatar>{user?.firstName?.charAt(0) || 'U'}</UserAvatar>
-						<UserName>
-							{user?.firstName} {user?.lastName}
-						</UserName>
-					</UserButton>
-					<DropdownMenu>
-						<DropdownItem onClick={() => navigate('/parent/profile')}>Profile</DropdownItem>
-						<DropdownItem onClick={() => navigate('/parent/settings')}>Settings</DropdownItem>
-						<DropdownDivider />
-						<DropdownItem onClick={logout}>Sign Out</DropdownItem>
-					</DropdownMenu>
-				</UserDropdown>
-			</HeaderRight>
+				<UserMenuContainer ref={userMenuRef}>
+					<UserAvatar onClick={toggleUserMenu}>
+						<AvatarText>{getUserInitials()}</AvatarText>
+					</UserAvatar>
+					<UserName onClick={toggleUserMenu}>
+						{user?.firstName} {user?.lastName}
+						<FiChevronDown
+							style={{
+								transform: isUserMenuOpen ? 'rotate(180deg)' : 'rotate(0)',
+								transition: 'transform 0.2s ease',
+							}}
+						/>
+					</UserName>
+
+					{isUserMenuOpen && (
+						<UserMenu>
+							<UserMenuHeader>
+								<MenuUserAvatar>
+									<MenuAvatarText>{getUserInitials()}</MenuAvatarText>
+								</MenuUserAvatar>
+								<UserInfo>
+									<UserFullName>
+										{user?.firstName} {user?.lastName}
+									</UserFullName>
+									<UserRole>Parent</UserRole>
+								</UserInfo>
+							</UserMenuHeader>
+
+							<UserMenuDivider />
+
+							<UserMenuItem as={Link} to='/parent/profile' onClick={handleCloseUserMenu}>
+								<MenuItemIcon>
+									<FiUser />
+								</MenuItemIcon>
+								<span>My Profile</span>
+							</UserMenuItem>
+
+							<UserMenuItem as={Link} to='/parent/settings' onClick={handleCloseUserMenu}>
+								<MenuItemIcon>
+									<FiSettings />
+								</MenuItemIcon>
+								<span>Settings</span>
+							</UserMenuItem>
+
+							<UserMenuDivider />
+
+							<UserMenuItem onClick={logout}>
+								<MenuItemIcon>
+									<FiLogOut />
+								</MenuItemIcon>
+								<span>Log out</span>
+							</UserMenuItem>
+						</UserMenu>
+					)}
+				</UserMenuContainer>
+			</HeaderActions>
 		</HeaderContainer>
 	)
 }

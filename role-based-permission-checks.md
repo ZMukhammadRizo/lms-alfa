@@ -47,7 +47,7 @@ services/userService.ts
 ```ts
 import { hasPermission } from '@/utils/permissions'
 import { userCreationPermissionMap } from '@/constants/permissionMap'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabaseClient'
 
 export async function createUserWithPermissionCheck({
   currentUserRole,
