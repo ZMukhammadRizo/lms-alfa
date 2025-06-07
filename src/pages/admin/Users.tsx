@@ -23,6 +23,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { User as UserType } from '../../types/User'
 import { formatDateToLocal } from '../../utils/formatDate'
 import { canCreateUserWithRole } from '../../utils/permissions'
+import { useNavigate } from 'react-router-dom'
 
 // User interface
 interface User extends UserType {
@@ -53,6 +54,7 @@ interface User extends UserType {
 type UserRole = 'Admin' | 'Teacher' | 'Student' | 'Parent'
 
 const Users: React.FC = () => {
+	const navigate = useNavigate()
 	// State for search, filters, and selected users
 	const [selectedUsers, setSelectedUsers] = useState<string[]>([])
 	const [isFormOpen, setIsFormOpen] = useState(false)
@@ -987,6 +989,10 @@ const Users: React.FC = () => {
 		)
 	}
 
+	const handleUserClick = (userId: string) => {
+		navigate(`/admin/users/${userId}`)
+	}
+
 	return (
 		<UsersContainer
 			as={motion.div}
@@ -1095,7 +1101,7 @@ const Users: React.FC = () => {
 						<TableBody>
 							{filteredUsers.length > 0 ? (
 								filteredUsers.map(user => (
-									<TableRow key={user.id}>
+									<TableRow onClick={() => handleUserClick(user.id)} key={user.id}>
 										<TableCell>
 											<CheckboxContainer>
 												<Checkbox
@@ -1593,7 +1599,7 @@ const TableHeader = styled.thead`
 
 const TableRow = styled.tr`
 	border-bottom: 1px solid ${props => props.theme.colors.border.light};
-
+	cursor: pointer;
 	&:last-child {
 		border-bottom: none;
 	}
