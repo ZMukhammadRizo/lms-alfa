@@ -94,6 +94,7 @@ export const studentMenu: MenuItem[] = [
 	{ path: '/student/assignments', icon: <FiFileText />, label: 'Assignments' },
 	{ path: '/student/grades', icon: <FiBarChart2 />, label: 'My Grades' },
 	{ path: '/student/schedule', icon: <FiCalendar />, label: 'Schedule' },
+	{ path: '/student/daily-attendance', icon: <FiCheckSquare />, label: 'Daily Attendance' },
 	{ path: '/student/messages', icon: <FiMessageSquare />, label: 'Messages' },
 	{ path: '/student/tests', icon: <FiClipboard />, label: 'Tests' },
 	{ path: '/student/flashcards', icon: <FiLayers />, label: 'Flashcards' },
@@ -106,7 +107,7 @@ export const parentMenu: MenuItem[] = [
 	{ path: '/parent/assignments', icon: <FiClipboard />, label: 'Assignments' },
 	{ path: '/parent/announcements', icon: <FiBell />, label: 'Announcements' },
 	{ path: '/parent/grades', icon: <FiBarChart2 />, label: 'Grades' },
-	{ path: '/parent/attendance', icon: <FiCheckSquare />, label: 'Attendance' },
+	{ path: '/parent/daily-attendance', icon: <FiCheckSquare />, label: 'Daily Attendance' },
 	{ path: '/parent/messages', icon: <FiMessageSquare />, label: 'Messages' },
 	{ path: '/parent/calendar', icon: <FiCalendar />, label: 'Calendar' },
 ]
@@ -167,6 +168,7 @@ export const menuItemPermissionMap: Record<string, string> = {
 	'/student/assignments': 'view_assignments',
 	'/student/grades': 'view_grades',
 	'/student/schedule': 'view_schedule',
+	'/student/daily-attendance': 'view_daily_attendance',
 	'/student/messages': 'send_messages',
 	'/student/tests': 'take_tests',
 	'/student/flashcards': 'use_flashcards',
@@ -176,7 +178,7 @@ export const menuItemPermissionMap: Record<string, string> = {
 	'/parent/assignments': 'view_assignments',
 	'/parent/announcements': 'read_announcements',
 	'/parent/grades': 'view_grades',
-	'/parent/attendance': 'view_attendance',
+	'/parent/daily-attendance': 'view_daily_attendance',
 	'/parent/messages': 'send_messages',
 	'/parent/calendar': 'view_calendar',
 }

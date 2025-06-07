@@ -5,6 +5,7 @@ import {
 	FiEdit2,
 	FiFilter,
 	FiHome,
+	FiKey,
 	FiMoreVertical,
 	FiSearch,
 	FiTrash2,
@@ -70,6 +71,12 @@ const Users: React.FC = () => {
 	const [userToDelete, setUserToDelete] = useState<string | null>(null)
 	const [isDeleting, setIsDeleting] = useState(false)
 	const [deleteError, setDeleteError] = useState<string | null>(null)
+
+	// Add state for reset password confirmation modal
+	const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false)
+	const [userToResetPassword, setUserToResetPassword] = useState<string | null>(null)
+	const [isResettingPassword, setIsResettingPassword] = useState(false)
+	const [resetPasswordError, setResetPasswordError] = useState<string | null>(null)
 
 	// Get current user and permissions from context
 	const { user } = useAuth()
@@ -843,6 +850,143 @@ const Users: React.FC = () => {
 		handleOpenDeleteModal(userId)
 	}
 
+	// Open reset password confirmation modal
+	const handleOpenResetPasswordModal = (userId: string) => {
+		setUserToResetPassword(userId)
+		setIsResetPasswordModalOpen(true)
+	}
+
+	// Close reset password confirmation modal
+	const handleCloseResetPasswordModal = () => {
+		setIsResetPasswordModalOpen(false)
+		setUserToResetPassword(null)
+		setResetPasswordError(null)
+	}
+
+	// Reset user password to default value (12345678)
+	const handleResetPassword = async () => {
+		if (!userToResetPassword) return
+
+		setIsResettingPassword(true)
+		setResetPasswordError(null)
+
+		try {
+			// Get the user from the list
+			const userToReset = users.find(u => u.id === userToResetPassword)
+			if (!userToReset) {
+				throw new Error('User not found')
+			}
+
+			// First, update password in the auth.users table (which requires bcrypt hashing)
+			// We need to use the Supabase Admin client with service role for this
+			const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+				userToResetPassword,
+				{
+					password: '12345678',
+				}
+			)
+
+			if (authError) {
+				throw new Error(`Failed to reset auth password: ${authError.message}`)
+			}
+
+			// Next, update the password in public.users table
+			const { error: dbError } = await supabase
+				.from('users')
+				.update({ password: '12345678' })
+				.eq('id', userToResetPassword)
+
+			if (dbError) {
+				throw new Error(`Failed to reset database password: ${dbError.message}`)
+			}
+
+			// Show success message
+			toast.success(
+				`Password reset successfully for ${userToReset.firstName} ${userToReset.lastName}`
+			)
+
+			// Close the modal (ensure we close first, then clear states)
+			handleCloseResetPasswordModal()
+		} catch (error: any) {
+			console.error('Error resetting password:', error)
+			setResetPasswordError(error.message || 'Failed to reset password')
+		} finally {
+			setIsResettingPassword(false)
+		}
+	}
+
+	// Add the reset password confirmation modal component
+	const ResetPasswordModal = () => {
+		if (!isResetPasswordModalOpen || !userToResetPassword) return null
+
+		const user = users.find(u => u.id === userToResetPassword)
+		if (!user) return null
+
+		return (
+			<ModalOverlay
+				as={motion.div}
+				initial={{ opacity: 0 }}
+				animate={{ opacity: 1 }}
+				exit={{ opacity: 0 }}
+			>
+				<DeleteModal
+					as={motion.div}
+					initial={{ scale: 0.9, y: 20, opacity: 0 }}
+					animate={{ scale: 1, y: 0, opacity: 1 }}
+					exit={{ scale: 0.9, y: 20, opacity: 0 }}
+					transition={{ type: 'spring', damping: 25 }}
+				>
+					<DeleteModalHeader>
+						<DeleteModalTitle>Reset Password</DeleteModalTitle>
+						<CloseButton onClick={handleCloseResetPasswordModal}>
+							<FiX />
+						</CloseButton>
+					</DeleteModalHeader>
+
+					<DeleteModalContent>
+						<DeleteWarningIcon style={{ color: '#f59e0b' }}>
+							<svg
+								xmlns='http://www.w3.org/2000/svg'
+								viewBox='0 0 24 24'
+								fill='currentColor'
+								width='32'
+								height='32'
+							>
+								<path
+									fillRule='evenodd'
+									d='M15.75 1.5a6.75 6.75 0 00-6.651 7.906c.067.39-.032.717-.221.906l-6.5 6.499a3 3 0 00-.878 2.121v2.818c0 .414.336.75.75.75H6a.75.75 0 00.75-.75v-1.5h1.5A.75.75 0 009 19.5V18h1.5a.75.75 0 00.75-.75V15h1.5a.75.75 0 00.75-.75v-.53a.75.75 0 01.75-.75H16.5a6.75 6.75 0 00-.75-13.5zM18 10.5a.75.75 0 01-.75.75h-1.5a.75.75 0 01-.75-.75v-1.5a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v1.5z'
+									clipRule='evenodd'
+								/>
+							</svg>
+						</DeleteWarningIcon>
+
+						<DeleteModalText>
+							<DeleteTitle>Reset Password to Default</DeleteTitle>
+							<DeleteDescription>
+								Are you sure you want to reset the password for{' '}
+								<strong>{`${user.firstName} ${user.lastName}`}</strong> to the default value{' '}
+								<strong>12345678</strong>?
+							</DeleteDescription>
+
+							{resetPasswordError && <DeleteError>{resetPasswordError}</DeleteError>}
+						</DeleteModalText>
+					</DeleteModalContent>
+
+					<DeleteModalFooter>
+						<CancelButton onClick={handleCloseResetPasswordModal}>Cancel</CancelButton>
+						<ConfirmDeleteButton
+							onClick={handleResetPassword}
+							disabled={isResettingPassword}
+							style={{ backgroundColor: '#f59e0b', borderColor: '#f59e0b' }}
+						>
+							{isResettingPassword ? 'Resetting...' : 'Reset Password'}
+						</ConfirmDeleteButton>
+					</DeleteModalFooter>
+				</DeleteModal>
+			</ModalOverlay>
+		)
+	}
+
 	return (
 		<UsersContainer
 			as={motion.div}
@@ -944,7 +1088,7 @@ const Users: React.FC = () => {
 									</>
 								)}
 								<HeaderCell>Last Login</HeaderCell>
-								<HeaderCell width='100px'>Actions</HeaderCell>
+								<HeaderCell width='150px'>Actions</HeaderCell>
 							</TableRow>
 						</TableHeader>
 
@@ -1016,6 +1160,12 @@ const Users: React.FC = () => {
 													<FiEdit2 />
 												</ActionIconButton>
 												<ActionIconButton
+													onClick={() => handleOpenResetPasswordModal(user.id)}
+													title='Reset password'
+												>
+													<FiKey />
+												</ActionIconButton>
+												<ActionIconButton
 													onClick={() => handleDeleteClick(user.id)}
 													title='Delete user'
 												>
@@ -1061,6 +1211,7 @@ const Users: React.FC = () => {
 			)}
 
 			<DeleteConfirmationModal />
+			<ResetPasswordModal />
 		</UsersContainer>
 	)
 }

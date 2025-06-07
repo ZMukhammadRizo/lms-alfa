@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import { FiAward, FiBook, FiCalendar, FiClock, FiFileText } from 'react-icons/fi'
+import { FiAward, FiBook, FiCalendar, FiCheckSquare, FiClock, FiFileText } from 'react-icons/fi'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
+import supabase from '../../config/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
 import {
 	CourseInfo as FetchedCourseInfo,
@@ -25,6 +26,18 @@ interface DashboardStatCard {
 	color: string
 }
 
+// Define attendance record interface
+interface DailyAttendance {
+	id: string
+	student_id: string
+	noted_for: string
+	status: string
+	noted_at: string
+	quarter_id?: string
+	class_id?: string
+	teacher_id?: string
+}
+
 const StudentDashboard: React.FC = () => {
 	const { user } = useAuth()
 	const [isLoading, setIsLoading] = useState(true)
@@ -36,6 +49,8 @@ const StudentDashboard: React.FC = () => {
 	const [schedule, setSchedule] = useState<ScheduleEntry[]>([])
 	const [courseCount, setCourseCount] = useState<number>(0)
 	const [assignmentCount, setAssignmentCount] = useState<number>(0)
+	const [recentAttendance, setRecentAttendance] = useState<DailyAttendance[]>([])
+	const [loadingAttendance, setLoadingAttendance] = useState(true)
 
 	// Fetch dashboard data
 	useEffect(() => {
@@ -81,6 +96,37 @@ const StudentDashboard: React.FC = () => {
 		fetchDashboardData()
 	}, [user])
 
+	// Fetch recent attendance data
+	useEffect(() => {
+		const fetchRecentAttendance = async () => {
+			if (!user?.id) return
+
+			setLoadingAttendance(true)
+
+			try {
+				const { data, error } = await supabase
+					.from('daily_attendance')
+					.select('*')
+					.eq('student_id', user.id)
+					.order('noted_for', { ascending: false })
+					.limit(3)
+
+				if (error) {
+					console.error('Error fetching attendance data:', error)
+				} else {
+					setRecentAttendance(data || [])
+				}
+			} catch (error) {
+				console.error('Error in fetchRecentAttendance:', error)
+				setRecentAttendance([])
+			} finally {
+				setLoadingAttendance(false)
+			}
+		}
+
+		fetchRecentAttendance()
+	}, [user])
+
 	// Convert stats to the format needed for display
 	const dashboardStats: DashboardStatCard[] = [
 		{ id: 1, title: 'Courses', value: courseCount.toString(), icon: <FiBook />, color: 'primary' },
@@ -92,6 +138,34 @@ const StudentDashboard: React.FC = () => {
 			color: 'yellow',
 		},
 	]
+
+	// Helper function to get status color
+	const getStatusColor = (status: string): string => {
+		if (!status) return 'var(--color-text-secondary)'
+
+		switch (status.toLowerCase()) {
+			case 'present':
+				return 'var(--color-success)'
+			case 'late':
+				return 'var(--color-warning)'
+			case 'excused':
+				return 'var(--color-primary)'
+			case 'absent':
+				return 'var(--color-danger)'
+			default:
+				return 'var(--color-text-secondary)'
+		}
+	}
+
+	// Format date for display
+	const formatDate = (dateString: string) => {
+		const date = new Date(dateString)
+		return date.toLocaleDateString('en-US', {
+			weekday: 'short',
+			month: 'short',
+			day: 'numeric',
+		})
+	}
 
 	// Show loading state
 	if (isLoading) {
@@ -208,12 +282,52 @@ const StudentDashboard: React.FC = () => {
 					</ContentCard>
 				</GridItem>
 
-				{/* Today's Schedule */}
+				{/* Daily Attendance Section */}
 				<GridItem
 					as={motion.div}
 					initial={{ opacity: 0, y: 20 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.3, delay: 0.4 }}
+				>
+					<SectionHeader>
+						<SectionTitle>
+							<FiCheckSquare />
+							<span>Daily Attendance</span>
+						</SectionTitle>
+						<ViewAllButton as={Link} to='/student/daily-attendance'>
+							View All
+						</ViewAllButton>
+					</SectionHeader>
+					<ContentCard>
+						{loadingAttendance ? (
+							<LoadingState>Loading attendance records...</LoadingState>
+						) : recentAttendance.length > 0 ? (
+							recentAttendance.map((record, index) => (
+								<AttendanceItem
+									key={record.id}
+									as={motion.div}
+									initial={{ opacity: 0, x: -10 }}
+									animate={{ opacity: 1, x: 0 }}
+									transition={{ duration: 0.3, delay: 0.1 * index }}
+								>
+									<AttendanceDate>{formatDate(record.noted_for)}</AttendanceDate>
+									<AttendanceStatus $status={record.status}>
+										{record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+									</AttendanceStatus>
+								</AttendanceItem>
+							))
+						) : (
+							<EmptyState>No attendance records found</EmptyState>
+						)}
+					</ContentCard>
+				</GridItem>
+
+				{/* Today's Schedule */}
+				<GridItem
+					as={motion.div}
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.3, delay: 0.5 }}
 				>
 					<SectionHeader>
 						<SectionTitle>
@@ -259,7 +373,7 @@ const StudentDashboard: React.FC = () => {
 					as={motion.div}
 					initial={{ opacity: 0, y: 20 }}
 					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.3, delay: 0.5 }}
+					transition={{ duration: 0.3, delay: 0.6 }}
 				>
 					<SectionHeader>
 						<SectionTitle>
@@ -302,7 +416,7 @@ const StudentDashboard: React.FC = () => {
 					as={motion.div}
 					initial={{ opacity: 0, y: 20 }}
 					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.3, delay: 0.6 }}
+					transition={{ duration: 0.3, delay: 0.7 }}
 				>
 					<SectionHeader>
 						<SectionTitle>
@@ -834,6 +948,73 @@ const LessonTitle = styled.div`
 const LessonDetails = styled.div`
 	font-size: 12px;
 	color: ${props => props.theme.colors.text.secondary};
+`
+
+const LoadingState = styled.div`
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 100px;
+	color: ${props => props.theme.colors.text.secondary};
+	font-style: italic;
+`
+
+const AttendanceItem = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px;
+	border-radius: 8px;
+	background-color: ${props => props.theme.colors.background.secondary};
+	transition: all 0.2s ease;
+
+	&:hover {
+		transform: translateY(-2px);
+		box-shadow: ${props => props.theme.shadows?.md || '0 4px 12px rgba(0, 0, 0, 0.1)'};
+	}
+`
+
+const AttendanceDate = styled.div`
+	font-size: 14px;
+	font-weight: 600;
+	color: ${props => props.theme.colors.text.primary};
+`
+
+const AttendanceStatus = styled.div<StatusProps>`
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 500;
+
+	${props => {
+		switch (props.$status) {
+			case 'present':
+				return `
+          background-color: ${props.theme.colors.success[50]};
+          color: ${props.theme.colors.success[500]};
+        `
+			case 'late':
+				return `
+          background-color: ${props.theme.colors.warning[50]};
+          color: ${props.theme.colors.warning[500]};
+        `
+			case 'excused':
+				return `
+          background-color: ${props.theme.colors.primary[50]};
+          color: ${props.theme.colors.primary[500]};
+        `
+			case 'absent':
+				return `
+          background-color: ${props.theme.colors.danger[50]};
+          color: ${props.theme.colors.danger[500]};
+        `
+			default:
+				return `
+          background-color: ${props.theme.colors.text.secondary};
+          color: ${props.theme.colors.text.primary};
+        `
+		}
+	}}
 `
 
 export default StudentDashboard
