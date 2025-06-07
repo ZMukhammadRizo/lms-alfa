@@ -125,14 +125,10 @@ function AppContent() {
 				await debugCheckTables()
 				setTablesChecked(true)
 			}
-			
+
 			checkTables()
 		}
 	}, [isAuthenticated, tablesChecked])
-
-	if (loading) {
-		return <div className="loading-container">Loading...</div>
-	}
 
 	return (
 		<ThemeContext.Provider value={themeContextValue}>
@@ -165,6 +161,7 @@ function AppContent() {
 						<Route path='/admin' element={<AdminLayout />}>
 							<Route index element={<Navigate to='/admin/dashboard' replace />} />
 							<Route path='dashboard' element={<Dashboard />} />
+							<Route path='users/:userId' element={<UserProfile />} />
 							<Route path='users' element={<Users />} />
 							<Route path='users/:userId' element={<UserProfile />} />
 							<Route path='roles' element={<Roles />} />
