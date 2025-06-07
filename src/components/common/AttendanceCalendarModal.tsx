@@ -43,24 +43,6 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 	const [selectedStatus, setSelectedStatus] = useState<AttendanceStatus>(null)
 	const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null)
 
-	// Helper function to get status color
-	const getStatusColor = (status: AttendanceStatus): string => {
-		if (!status) return 'transparent'
-
-		switch (status.toLowerCase()) {
-			case 'present':
-				return 'var(--color-success)'
-			case 'late':
-				return 'var(--color-warning)'
-			case 'excused':
-				return 'var(--color-primary)'
-			case 'absent':
-				return 'var(--color-danger)'
-			default:
-				return 'transparent'
-		}
-	}
-
 	useEffect(() => {
 		if (isOpen && student?.id) {
 			fetchAttendanceData()
@@ -870,7 +852,7 @@ const HelpText = styled.p`
 `
 
 // Helper function for styled components to access
-function getStatusColor(status: AttendanceStatus): string {
+export function getStatusColor(status: AttendanceStatus): string {
 	if (!status) return 'transparent'
 
 	switch (status.toLowerCase()) {

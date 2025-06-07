@@ -70,7 +70,12 @@ import { TeacherSubjectDetails } from './pages/teacher/TeacherSubjectDetails'
 import TeacherSubmissions from './pages/teacher/TeacherSubmissions'
 import GlobalStyle from './styles/globalStyles'
 import { createTheme } from './styles/theme'
+
+import StudentDailyAttendance from './pages/student/DailyAttendance'
+import ParentDailyAttendance from './pages/parent/DailyAttendance'
+
 import { debugCheckTables } from './services/gradesService'
+
 
 // Create a context for theme settings
 export interface ThemeContextType {
@@ -235,6 +240,7 @@ function AppContent() {
 							<Route path='assignments/:assignmentId' element={<SingleAssignment />} />
 							<Route path='schedule' element={<StudentSchedule />} />
 							<Route path='grades' element={<StudentGradesPage />} />
+							<Route path='daily-attendance' element={<StudentDailyAttendance />} />
 							{/* Route for viewing grades for a specific subject */}
 							<Route path='grades/:subjectId' element={<GradeDetails />} />
 							<Route path='messages' element={<h1>Coming Soon...</h1>} />
@@ -260,6 +266,7 @@ function AppContent() {
 							<Route path='notifications' element={<NotificationsPage />} />
 							<Route path='settings' element={<SettingsPage />} />
 							<Route path='profile' element={<ProfilePage />} />
+							<Route path='daily-attendance' element={<ParentDailyAttendance />} />
 						</Route>
 					</Route>
 				</Routes>

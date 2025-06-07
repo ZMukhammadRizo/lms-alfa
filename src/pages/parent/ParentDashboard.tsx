@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import { FiBarChart2, FiChevronRight, FiClipboard, FiUser } from 'react-icons/fi'
+import { FiBarChart2, FiCheckSquare, FiChevronRight, FiClipboard, FiUser } from 'react-icons/fi'
 import { Link, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import StatCard from '../../components/admin/StatCard'
@@ -44,6 +44,16 @@ interface Event {
 	time: string
 }
 
+// Define daily attendance record interface
+interface DailyAttendanceRecord {
+	id: string
+	student_id: string
+	student_name: string
+	noted_for: string
+	status: string
+	noted_at: string
+}
+
 const ParentDashboard: React.FC = () => {
 	const { user } = useAuth()
 	const navigate = useNavigate()
@@ -58,6 +68,8 @@ const ParentDashboard: React.FC = () => {
 	const [assignments, setAssignments] = useState<Assignment[]>([])
 	const [recentGrades, setRecentGrades] = useState<Grade[]>([])
 	const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([])
+	const [recentDailyAttendance, setRecentDailyAttendance] = useState<DailyAttendanceRecord[]>([])
+	const [loadingDailyAttendance, setLoadingDailyAttendance] = useState(false)
 	const [overallStats, setOverallStats] = useState({
 		grade: 'N/A',
 		gradeValue: 0,
@@ -106,8 +118,46 @@ const ParentDashboard: React.FC = () => {
 			const childrenIds = children.map(child => child.id)
 			fetchScores(childrenIds)
 			fetchAttendance(childrenIds)
+			fetchDailyAttendance(childrenIds)
 		}
 	}, [children, fetchScores, fetchAttendance])
+
+	// Fetch the latest daily attendance records for all children
+	const fetchDailyAttendance = async (childrenIds: string[]) => {
+		if (!childrenIds || childrenIds.length === 0) return
+
+		setLoadingDailyAttendance(true)
+
+		try {
+			// Using the in operator to filter by multiple student_ids
+			const { data, error } = await supabase
+				.from('daily_attendance')
+				.select('*, users:student_id(fullName)')
+				.in('student_id', childrenIds)
+				.order('noted_for', { ascending: false })
+				.limit(3)
+
+			if (error) {
+				console.error('Error fetching daily attendance:', error)
+			} else if (data) {
+				// Format the data to include student names
+				const formattedData = data.map(record => ({
+					id: record.id,
+					student_id: record.student_id,
+					student_name: record.users?.fullName || 'Unknown Student',
+					noted_for: record.noted_for,
+					status: record.status,
+					noted_at: record.noted_at,
+				}))
+
+				setRecentDailyAttendance(formattedData)
+			}
+		} catch (error) {
+			console.error('Error in fetchDailyAttendance:', error)
+		} finally {
+			setLoadingDailyAttendance(false)
+		}
+	}
 
 	// Calculate stats when selected student changes or data updates
 	useEffect(() => {
@@ -523,6 +573,50 @@ const ParentDashboard: React.FC = () => {
 									))
 								)}
 							</GradesCard>
+						</GridItem>
+
+						{/* Daily Attendance Section */}
+						<GridItem
+							as={motion.div}
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.3, delay: 0.6 }}
+						>
+							<SectionHeader>
+								<SectionTitle>
+									<FiCheckSquare />
+									<span>Daily Attendance</span>
+								</SectionTitle>
+								<ViewAllLink to='/parent/daily-attendance'>
+									View All <FiChevronRight />
+								</ViewAllLink>
+							</SectionHeader>
+
+							<SectionContent>
+								{loadingDailyAttendance ? (
+									<LoadingMessage>Loading attendance data...</LoadingMessage>
+								) : recentDailyAttendance.length === 0 ? (
+									<EmptyMessage>No attendance records found</EmptyMessage>
+								) : (
+									recentDailyAttendance.map(record => (
+										<AttendanceCard key={record.id}>
+											<AttendanceCardLeft>
+												<AttendanceDate>
+													{new Date(record.noted_for).toLocaleDateString('en-US', {
+														weekday: 'short',
+														month: 'short',
+														day: 'numeric',
+													})}
+												</AttendanceDate>
+												<AttendanceStudentName>{record.student_name}</AttendanceStudentName>
+											</AttendanceCardLeft>
+											<AttendanceStatus $status={record.status.toLowerCase()}>
+												{record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+											</AttendanceStatus>
+										</AttendanceCard>
+									))
+								)}
+							</SectionContent>
 						</GridItem>
 					</DashboardGrid>
 				</>
@@ -1265,6 +1359,129 @@ const EmptyState = styled.div`
 	text-align: center;
 	color: ${props => props.theme?.colors?.text?.secondary || '#666'};
 	font-style: italic;
+`
+
+const SectionContainer = styled.div`
+	padding: 20px;
+	background-color: ${props => props.theme.colors.background.primary};
+	border-radius: 8px;
+	margin-bottom: 20px;
+`
+
+const SectionContent = styled.div`
+	padding: 16px;
+`
+
+const ViewAllLink = styled(Link)`
+	background: transparent;
+	border: none;
+	color: ${props => props.theme.colors.primary[500] || '#1890ff'};
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 0.875rem;
+	font-weight: 500;
+	cursor: pointer;
+	padding: 4px 8px;
+	text-decoration: none;
+	border-radius: 4px;
+	transition: all 0.2s ease;
+
+	&:hover {
+		background-color: ${props => props.theme.colors.primary[50] || '#e6f7ff'};
+	}
+
+	svg {
+		font-size: 1rem;
+	}
+`
+
+const AttendanceCard = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px 16px;
+	background-color: ${props => props.theme.colors.background.primary};
+	border-radius: 8px;
+	margin-bottom: 10px;
+	box-shadow: ${props => props.theme.shadows.sm};
+	transition: all 0.2s ease;
+
+	&:hover {
+		transform: translateY(-2px);
+		box-shadow: ${props => props.theme.shadows.md};
+	}
+`
+
+const AttendanceCardLeft = styled.div`
+	display: flex;
+	flex-direction: column;
+`
+
+const AttendanceDate = styled.div`
+	font-size: 14px;
+	font-weight: 600;
+	color: ${props => props.theme.colors.text.primary};
+	margin-bottom: 4px;
+`
+
+const AttendanceStudentName = styled.div`
+	font-size: 12px;
+	color: ${props => props.theme.colors.text.secondary};
+`
+
+const AttendanceStatus = styled.div<StatusProps>`
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 500;
+
+	${props => {
+		switch (props.$status) {
+			case 'present':
+				return `
+          background-color: ${props.theme.colors.success[50]};
+          color: ${props.theme.colors.success[500]};
+        `
+			case 'late':
+				return `
+          background-color: ${props.theme.colors.warning[50]};
+          color: ${props.theme.colors.warning[500]};
+        `
+			case 'excused':
+				return `
+          background-color: ${props.theme.colors.primary[50]};
+          color: ${props.theme.colors.primary[500]};
+        `
+			case 'absent':
+				return `
+          background-color: ${props.theme.colors.danger[50]};
+          color: ${props.theme.colors.danger[500]};
+        `
+			default:
+				return `
+          background-color: ${props.theme.colors.background.secondary};
+          color: ${props.theme.colors.text.secondary};
+        `
+		}
+	}}
+`
+
+const LoadingMessage = styled.div`
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 100px;
+	color: ${props => props.theme.colors.text.secondary};
+	font-style: italic;
+`
+
+const EmptyMessage = styled.div`
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 100px;
+	color: ${props => props.theme.colors.text.secondary};
 `
 
 export default ParentDashboard
