@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FiChevronDown, FiChevronRight } from 'react-icons/fi'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import styled from 'styled-components'
@@ -13,6 +14,7 @@ import {
 import { ScoreResponse } from '../../types/parent'
 
 const GradesPage: React.FC = () => {
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const [searchParams] = useSearchParams()
 	const studentParam = searchParams.get('student')
@@ -145,19 +147,19 @@ const GradesPage: React.FC = () => {
 		<Container>
 			<PageHeader>
 				<TitleSection>
-					<PageTitle>My Children's Grades</PageTitle>
-					<SubTitle>View your children's academic progress</SubTitle>
+					<PageTitle>{t('parent.grades.title')}</PageTitle>
+					<SubTitle>{t('parent.grades.description')}</SubTitle>
 				</TitleSection>
 
 				<StudentSelectorWrapper>
-					<SelectLabel>Select Child:</SelectLabel>
+					<SelectLabel>{t('parent.grades.selectChild')}</SelectLabel>
 					<StudentSelector
 						value={selectedStudent}
 						onChange={handleStudentChange}
 						disabled={loading || children.length === 0}
 					>
-						<option value='all'>All Children</option>
-						{children.length === 0 && <option value=''>No students available</option>}
+						<option value='all'>{t('parent.grades.allChildren')}</option>
+						{children.length === 0 && <option value=''>{t('parent.grades.noStudentsAvailable')}</option>}
 						{children.map(child => (
 							<option key={child.id} value={child.id}>
 								{child.firstName} {child.lastName}
@@ -167,14 +169,14 @@ const GradesPage: React.FC = () => {
 				</StudentSelectorWrapper>
 			</PageHeader>
 
-			{error && <ErrorMessage>Error loading data: {error}</ErrorMessage>}
+			{error && <ErrorMessage>{t('parent.grades.errorLoading')}: {error}</ErrorMessage>}
 
 			{loading ? (
-				<LoadingState>Loading grades...</LoadingState>
+				<LoadingState>{t('parent.grades.loadingGrades')}</LoadingState>
 			) : scores.length === 0 ? (
 				<EmptyState>
-					<EmptyStateTitle>No grades available</EmptyStateTitle>
-					<EmptyStateText>There are no grades recorded for your children yet.</EmptyStateText>
+					<EmptyStateTitle>{t('parent.grades.noGradesAvailable')}</EmptyStateTitle>
+					<EmptyStateText>{t('parent.grades.noGradesRecorded')}</EmptyStateText>
 				</EmptyState>
 			) : (
 				<>
@@ -188,9 +190,9 @@ const GradesPage: React.FC = () => {
 										{child.firstName} {child.lastName}
 									</ChildName>
 									<EmptyState>
-										<EmptyStateTitle>No grades available</EmptyStateTitle>
+										<EmptyStateTitle>{t('parent.grades.noGradesAvailable')}</EmptyStateTitle>
 										<EmptyStateText>
-											There are no grades recorded for this child yet.
+											{t('parent.grades.noGradesForChild')}
 										</EmptyStateText>
 									</EmptyState>
 								</ChildGradesSection>
@@ -204,7 +206,7 @@ const GradesPage: React.FC = () => {
 								</ChildName>
 								<GradesContainer>
 									<GradesSummary>
-										<SummaryTitle>Overall Performance</SummaryTitle>
+										<SummaryTitle>{t('parent.grades.overallPerformance')}</SummaryTitle>
 										<SubjectsGrid>
 											{Object.values(groupedScores).map(subject => {
 												const averageScore = subject.totalScore / subject.count
@@ -221,9 +223,9 @@ const GradesPage: React.FC = () => {
 									</GradesSummary>
 
 									<DetailedGrades>
-										<DetailedTitle>Detailed Subject Grades</DetailedTitle>
+										<DetailedTitle>{t('parent.grades.detailedGrades')}</DetailedTitle>
 										<DetailedInstructions>
-											Click on a subject to see individual lesson grades
+											{t('parent.grades.clickSubjectToExpand')}
 										</DetailedInstructions>
 
 										{Object.values(groupedScores).map(subject => {
@@ -241,16 +243,16 @@ const GradesPage: React.FC = () => {
 															{subject.subjectName}
 														</SubjectHeaderName>
 														<SubjectHeaderGrade $score={averageScore}>
-															Average: {renderGradeLetter(averageScore)}
+															{t('parent.grades.average')}: {renderGradeLetter(averageScore)}
 														</SubjectHeaderGrade>
 													</SubjectHeader>
 
 													{isExpanded && (
 														<LessonsTable>
 															<LessonsTableHeader>
-																<LessonCell width='50%'>Lesson</LessonCell>
-																<LessonCell width='25%'>Quarter</LessonCell>
-																<LessonCell width='25%'>Grade</LessonCell>
+																<LessonCell width='50%'>{t('parent.grades.lesson')}</LessonCell>
+																<LessonCell width='25%'>{t('parent.grades.quarter')}</LessonCell>
+																<LessonCell width='25%'>{t('parent.grades.grade')}</LessonCell>
 															</LessonsTableHeader>
 
 															{subject.lessons.map(lesson => (
