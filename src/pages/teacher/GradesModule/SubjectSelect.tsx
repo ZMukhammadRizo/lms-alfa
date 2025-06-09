@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { FiBook, FiChevronRight, FiFileText, FiSearch } from 'react-icons/fi'
 import { useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
+import { useTranslation } from 'react-i18next'
 import { PageTitle } from '../../../components/common'
 import { Card, Container, Input } from '../../../components/ui'
 import { getClassInfo } from '../../../services/gradesService'
@@ -13,6 +14,7 @@ interface SubjectCardProps {
 }
 
 const SubjectSelect: React.FC = () => {
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const { gradeLevel, classId } = useParams<{ gradeLevel?: string; classId: string }>()
 	const [searchTerm, setSearchTerm] = useState('')
@@ -108,7 +110,7 @@ const SubjectSelect: React.FC = () => {
 	if (loading || isLoadingSubjects) {
 		return (
 			<PageContainer>
-				<LoadingMessage>Loading subjects...</LoadingMessage>
+				<LoadingMessage>{t('grades.loadingSubjects')}</LoadingMessage>
 			</PageContainer>
 		)
 	}
@@ -126,14 +128,14 @@ const SubjectSelect: React.FC = () => {
 			<PageHeaderWrapper>
 				<PageHeader>
 					<HeaderContent>
-						<PageTitle>Class {classname} Subjects</PageTitle>
-						<SubTitle>Select a subject to view and manage student grades</SubTitle>
+						<PageTitle>{t('grades.classSubjects', { className: classname })}</PageTitle>
+						<SubTitle>{t('grades.selectSubjectToViewGrades')}</SubTitle>
 					</HeaderContent>
 					<HeaderRight>
 						<SearchWrapper>
 							<StyledInput
 								prefix={<FiSearch />}
-								placeholder='Search subjects...'
+								placeholder={t('grades.searchSubjects')}
 								value={searchTerm}
 								onChange={e => setSearchTerm(e.target.value)}
 							/>
@@ -166,12 +168,12 @@ const SubjectSelect: React.FC = () => {
 									<LessonCount>
 										<FiFileText />
 										<span>
-											{subject.lessonCount} {subject.lessonCount === 1 ? 'Lesson' : 'Lessons'}
+											{subject.lessonCount} {subject.lessonCount === 1 ? t('grades.lesson') : t('grades.lessons')}
 										</span>
 									</LessonCount>
 									<CardArrow $isHovered={hoveredCard === subject.subjectId}>
 										<FiChevronRight />
-										<span>Open Journal</span>
+										<span>{t('grades.openJournal')}</span>
 									</CardArrow>
 								</CardContent>
 							</SubjectCard>
@@ -179,8 +181,8 @@ const SubjectSelect: React.FC = () => {
 					) : (
 						<NoResults>
 							{searchTerm
-								? `No subjects found matching "${searchTerm}"`
-								: 'No subjects assigned to this class.'}
+								? t('grades.noSubjectsFoundMatching', { searchTerm })
+								: t('grades.noSubjectsAssigned')}
 						</NoResults>
 					)}
 				</SubjectGrid>

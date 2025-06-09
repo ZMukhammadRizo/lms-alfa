@@ -293,27 +293,27 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 										</ReportTypeTitle>
 										<RadioGroup>
 											<RadioOption>
-												<RadioInput
-													type='radio'
-													id='monthly'
-													name='reportType'
-													checked={reportType === 'monthly'}
-													onChange={() => handleReportTypeSelect('monthly')}
-												/>
 												<RadioLabel htmlFor='monthly'>
+													<RadioInput
+														type='radio'
+														id='monthly'
+														name='reportType'
+														checked={reportType === 'monthly'}
+														onChange={() => handleReportTypeSelect('monthly')}
+													/>
 													<RadioButton />
 													{t('dailyAttendance.filterModal.monthly')}
 												</RadioLabel>
 											</RadioOption>
 											<RadioOption>
-												<RadioInput
-													type='radio'
-													id='weekly'
-													name='reportType'
-													checked={reportType === 'weekly'}
-													onChange={() => handleReportTypeSelect('weekly')}
-												/>
 												<RadioLabel htmlFor='weekly'>
+													<RadioInput
+														type='radio'
+														id='weekly'
+														name='reportType'
+														checked={reportType === 'weekly'}
+														onChange={() => handleReportTypeSelect('weekly')}
+													/>
 													<RadioButton />
 													{t('dailyAttendance.filterModal.weekly')}
 												</RadioLabel>
@@ -369,16 +369,20 @@ const Overlay = styled(motion.div)`
 	justify-content: center;
 	z-index: 999;
 	backdrop-filter: blur(2px);
+	padding: 20px;
 `
 
 const ModalContainer = styled(motion.div)`
 	width: 90%;
 	max-width: 700px;
+	max-height: 90vh;
 	background-color: white;
 	border-radius: 12px;
 	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 	z-index: 1000;
-	overflow: auto;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
 `
 
 const ModalHeader = styled.div`
@@ -417,8 +421,9 @@ const CloseButton = styled.button`
 
 const ModalBody = styled.div`
 	padding: 28px;
-	max-height: 70vh;
+	max-height: 80vh;
 	overflow-y: auto;
+	min-height: 400px;
 `
 
 const ClassSelectionRow = styled.div`
@@ -546,25 +551,35 @@ const ReportTypeSelection = styled.div`
 	flex-direction: column;
 	align-items: center;
 	padding: 20px 0;
+	height: 100%;
+	justify-content: space-between;
+	min-height: 300px;
 `
 
 const ReportTypeTitle = styled.h3`
 	font-size: 1.1rem;
 	font-weight: 500;
 	margin-bottom: 24px;
-	color: ${props => props.theme.colors.text.primary};
+	color: #1f2937;
 `
 
 const RadioGroup = styled.div`
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
-	margin-bottom: 32px;
+	gap: 20px;
+	margin-bottom: 40px;
 `
 
 const RadioOption = styled.div`
 	display: flex;
 	align-items: center;
+	padding: 8px 12px;
+	border-radius: 6px;
+	transition: background-color 0.2s ease;
+
+	&:hover {
+		background-color: #f9fafb;
+	}
 `
 
 const RadioInput = styled.input`
@@ -582,8 +597,9 @@ const RadioButton = styled.span`
 	height: 20px;
 	margin-right: 12px;
 	border-radius: 50%;
-	border: 2px solid ${props => props.theme.colors.primary.main};
+	border: 2px solid #0ea5e9;
 	background-color: transparent;
+	flex-shrink: 0;
 
 	&::after {
 		content: '';
@@ -595,7 +611,7 @@ const RadioButton = styled.span`
 		width: 10px;
 		height: 10px;
 		border-radius: 50%;
-		background-color: ${props => props.theme.colors.primary.main};
+		background-color: #0ea5e9;
 	}
 `
 
@@ -603,11 +619,11 @@ const RadioLabel = styled.label`
 	display: flex;
 	align-items: center;
 	font-size: 1rem;
-	color: ${props => props.theme.colors.text.primary};
+	color: #1f2937;
 	cursor: pointer;
 	user-select: none;
 
-	${RadioInput}:checked + & ${RadioButton}::after {
+	${RadioInput}:checked + ${RadioButton}::after {
 		display: block;
 	}
 `
@@ -615,7 +631,9 @@ const RadioLabel = styled.label`
 const ActionButtonsContainer = styled.div`
 	display: flex;
 	justify-content: space-between;
+	gap: 16px;
 	margin-top: auto;
+	width: 100%;
 `
 
 const BackButton = styled.button`

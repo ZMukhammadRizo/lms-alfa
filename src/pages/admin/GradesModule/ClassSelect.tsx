@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { FiAward, FiBookOpen, FiChevronRight, FiSearch, FiUsers } from 'react-icons/fi'
 import { useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
+import { useTranslation } from 'react-i18next'
 import { PageTitle } from '../../../components/common'
 import { Badge, Card, Container, Input } from '../../../components/ui'
 import { useAuth } from '../../../contexts/AuthContext'
@@ -22,6 +23,7 @@ interface ClassWithStudentCount {
 }
 
 const ClassSelect: React.FC = () => {
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const { gradeLevel } = useParams<{ gradeLevel: string }>()
 	const [searchTerm, setSearchTerm] = useState('')
@@ -134,7 +136,7 @@ const ClassSelect: React.FC = () => {
 	if (isLoadingClasses) {
 		return (
 			<PageContainer>
-				<LoadingMessage>Loading classes...</LoadingMessage>
+				<LoadingMessage>{t('grades.loadingClasses')}</LoadingMessage>
 			</PageContainer>
 		)
 	}
@@ -152,16 +154,16 @@ const ClassSelect: React.FC = () => {
 			<PageHeaderWrapper>
 				<PageHeader>
 					<HeaderContent>
-						<PageTitle>Classes for {levelName}th Grade</PageTitle>
+						<PageTitle>{t('grades.classesForGrade', { grade: levelName })}</PageTitle>
 						<SubTitle>
-							Select a class to view and manage student grades
+							{t('grades.selectClassToViewGrades')}
 						</SubTitle>
 					</HeaderContent>
 					<HeaderRight>
 						<SearchWrapper>
 							<StyledInput
 								prefix={<FiSearch />}
-								placeholder='Search classes...'
+								placeholder={t('grades.searchClasses')}
 								value={searchTerm}
 								onChange={e => setSearchTerm(e.target.value)}
 							/>
@@ -203,7 +205,7 @@ const ClassSelect: React.FC = () => {
 											</MetricIcon>
 											<MetricContent>
 												<MetricValue>{classItem.actualStudentCount !== undefined ? classItem.actualStudentCount : classItem.studentCount}</MetricValue>
-												<MetricLabel>Students</MetricLabel>
+												<MetricLabel>{t('grades.students')}</MetricLabel>
 											</MetricContent>
 										</Metric>
 										<Metric>
@@ -212,13 +214,13 @@ const ClassSelect: React.FC = () => {
 											</MetricIcon>
 											<MetricContent>
 												<MetricValue>{classItem.subjectCount}</MetricValue>
-												<MetricLabel>Subjects</MetricLabel>
+												<MetricLabel>{t('grades.subjects')}</MetricLabel>
 											</MetricContent>
 										</Metric>
 									</MetricRow>
 									<CardArrow $isHovered={hoveredCard === classItem.classId}>
 										<FiChevronRight />
-										<span>View Subjects</span>
+										<span>{t('grades.viewSubjects')}</span>
 									</CardArrow>
 								</CardContent>
 							</ClassCard>
@@ -226,8 +228,8 @@ const ClassSelect: React.FC = () => {
 					) : (
 						<NoResults>
 							{classesWithCounts.length === 0
-								? 'No classes found for this grade level.'
-								: `No classes found matching "${searchTerm}"`}
+								? t('grades.noClassesFoundForLevel')
+								: t('grades.noClassesFoundMatching', { searchTerm })}
 						</NoResults>
 					)}
 				</ClassGrid>

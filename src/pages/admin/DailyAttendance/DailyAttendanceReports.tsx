@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ArrowLeft, Download, FileText } from 'react-feather'
+import { ArrowLeft, Download, FileText, Check, X, Clock, BookOpen } from 'react-feather'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -221,15 +221,15 @@ const DailyAttendanceReports: React.FC = () => {
 	const getStatusDisplay = (status: string) => {
 		switch (status) {
 			case 'present':
-				return <StatusDot $status='present' title={t('dailyAttendance.status.present')} />
+				return <StatusIcon $status='present' title={t('dailyAttendance.status.present')}><Check size={16} /></StatusIcon>
 			case 'late':
-				return <StatusDot $status='late' title={t('dailyAttendance.status.late')} />
+				return <StatusIcon $status='late' title={t('dailyAttendance.status.late')}><Clock size={16} /></StatusIcon>
 			case 'excused':
-				return <StatusDot $status='excused' title={t('dailyAttendance.status.excused')} />
+				return <StatusIcon $status='excused' title={t('dailyAttendance.status.excused')}><BookOpen size={16} /></StatusIcon>
 			case 'absent':
-				return <StatusDot $status='absent' title={t('dailyAttendance.status.absent')} />
+				return <StatusIcon $status='absent' title={t('dailyAttendance.status.absent')}><X size={16} /></StatusIcon>
 			default:
-				return <StatusDot $status='absent' title={t('dailyAttendance.status.absent')} />
+				return <StatusIcon $status='absent' title={t('dailyAttendance.status.absent')}><X size={16} /></StatusIcon>
 		}
 	}
 
@@ -418,9 +418,9 @@ const DailyAttendanceReports: React.FC = () => {
 											<TableRow key={studentData.student.id}>
 												<TableCell>{studentData.student.fullName}</TableCell>
 												{classData.dates.map(date => (
-													<TableCell key={date}>
+													<StatusTableCell key={date} $status={studentData.attendanceByDate[date]}>
 														{getStatusDisplay(studentData.attendanceByDate[date])}
-													</TableCell>
+													</StatusTableCell>
 												))}
 												<TableCell>
 													<AttendancePercentageIndicator percentage={studentData.percentage} />
@@ -458,26 +458,52 @@ const DailyAttendanceReports: React.FC = () => {
 	)
 }
 
-interface StatusDotProps {
+interface StatusIconProps {
 	$status: 'present' | 'late' | 'excused' | 'absent'
 }
 
-const StatusDot = styled.div<StatusDotProps>`
-	width: 12px;
-	height: 12px;
-	border-radius: 50%;
-	background-color: ${props => {
+const StatusIcon = styled.div<StatusIconProps>`
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: ${props => {
 		switch (props.$status) {
 			case 'present':
 				return '#22c55e' // Green
 			case 'late':
 				return '#eab308' // Yellow
 			case 'excused':
-				return '#6b7280' // Gray
+				return '#3b82f6' // Blue
 			case 'absent':
 				return '#ef4444' // Red
 			default:
 				return '#ef4444'
+		}
+	}};
+`
+
+interface StatusTableCellProps {
+	$status: string
+}
+
+const StatusTableCell = styled.td<StatusTableCellProps>`
+	padding: 12px 16px;
+	font-size: 0.9rem;
+	color: #111827;
+	border-bottom: 1px solid #e5e7eb;
+	text-align: center;
+	background-color: ${props => {
+		switch (props.$status) {
+			case 'present':
+				return 'rgba(34, 197, 94, 0.1)' // Green with 10% opacity
+			case 'late':
+				return 'rgba(234, 179, 8, 0.1)' // Yellow with 10% opacity
+			case 'excused':
+				return 'rgba(59, 130, 246, 0.1)' // Blue with 10% opacity
+			case 'absent':
+				return 'rgba(239, 68, 68, 0.1)' // Red with 10% opacity
+			default:
+				return 'rgba(239, 68, 68, 0.1)' // Default to red
 		}
 	}};
 `
