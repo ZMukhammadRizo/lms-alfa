@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Modal from 'react-modal';
 import { toast } from 'react-toastify';
 import styled from 'styled-components';
+import { useTranslation } from 'react-i18next';
 import supabase from '../config/supabaseClient';
 import { FiX, FiInfo } from 'react-icons/fi';
 
@@ -199,21 +200,28 @@ const SubjectItem = styled.div`
   }
 `;
 
+const LoadingIndicator = styled.div`
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 0.5rem;
+`;
+
 const Checkbox = styled.input`
-  width: 1rem;
-  height: 1rem;
+  width: 1.25rem;
+  height: 1.25rem;
   cursor: pointer;
 `;
 
 const SubjectLabel = styled.span`
-  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
 `;
 
 const SubjectCode = styled.span`
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   color: #6b7280;
   background-color: #f3f4f6;
-  padding: 0.15rem 0.4rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
 `;
 
@@ -221,49 +229,53 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
   border-top: 1px solid #e5e7eb;
 `;
 
-const Button = styled.button`
-  padding: 0.6rem 1.2rem;
+const CancelButton = styled.button`
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  background-color: white;
+  color: #374151;
   border-radius: 0.375rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s ease;
-`;
-
-const CancelButton = styled(Button)`
-  background-color: white;
-  border: 1px solid #d1d5db;
-  color: #374151;
-  
-  &:hover {
-    background-color: #f9fafb;
-  }
-`;
-
-const AssignButton = styled(Button)`
-  background-color: #4f46e5;
-  border: none;
-  color: white;
+  transition: all 0.2s ease;
   
   &:hover:not(:disabled) {
-    background-color: #4338ca;
+    background-color: #f9fafb;
   }
   
   &:disabled {
-    background-color: #a5b4fc;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 `;
 
-const LoadingIndicator = styled.div`
-  padding: 1rem;
-  text-align: center;
-  color: #6b7280;
+const AssignButton = styled.button`
+  padding: 0.5rem 1rem;
+  background-color: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    background-color: #5856eb;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #9ca3af;
+  }
 `;
+
+
 
 // Update the interface for multi-select functionality
 interface AssignSubjectModalProps {
@@ -294,6 +306,7 @@ const AssignSubjectModal: React.FC<AssignSubjectModalProps> = ({
   onClose,
   onAssign
 }) => {
+  const { t } = useTranslation();
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [allSubjects, setAllSubjects] = useState<SubjectType[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
@@ -381,7 +394,7 @@ const AssignSubjectModal: React.FC<AssignSubjectModalProps> = ({
 
   const handleAssignClick = async () => {
     if (!selectedGrade || selectedSubjects.length === 0) {
-      toast.warn('Please select a grade and at least one subject.');
+      toast.warn(t('assignSubjectModal.selectGradeFirst'));
       return;
     }
     
@@ -402,16 +415,16 @@ const AssignSubjectModal: React.FC<AssignSubjectModalProps> = ({
     <ModalOverlay>
       <ModalContent>
       <ModalHeader>
-        <ModalTitle>Assign Subject to Grade</ModalTitle>
+        <ModalTitle>{t('assignSubjectModal.title')}</ModalTitle>
           <CloseButton onClick={onClose}><FiX /></CloseButton>
       </ModalHeader>
       
         <InfoPanel>
             <InfoIcon><FiInfo /></InfoIcon>
             <InfoTextContainer>
-            <InfoTitle>What does this do?</InfoTitle>
+            <InfoTitle>{t('assignSubjectModal.whatDoesThis')}</InfoTitle>
             <InfoDescription>
-                This feature automatically assigns selected subjects to all sections of the chosen grade (e.g., selecting Grade 10 assigns subjects to 10A, 10B, etc.).
+                {t('assignSubjectModal.description')}
             </InfoDescription>
             </InfoTextContainer>
         </InfoPanel>
@@ -419,7 +432,7 @@ const AssignSubjectModal: React.FC<AssignSubjectModalProps> = ({
         {error && <div style={{ color: 'red', marginBottom: '1rem' }}>Error: {error}</div>}
         
         <FormGroup>
-          <Label htmlFor="grade">Grade <span style={{ color: 'red' }}>*</span></Label>
+          <Label htmlFor="grade">{t('assignSubjectModal.grade')} <span style={{ color: 'red' }}>*</span></Label>
           <Select
             id="grade"
             value={selectedGrade}
@@ -427,25 +440,25 @@ const AssignSubjectModal: React.FC<AssignSubjectModalProps> = ({
             disabled={isLoading}
             required
           >
-            <option value="" disabled>Select grade</option>
+            <option value="" disabled>{t('assignSubjectModal.selectGrade')}</option>
             {isLoading && !availableGrades.length ? (
-                <option disabled>Loading grades...</option>
+                <option disabled>{t('assignSubjectModal.loadingGrades')}</option>
             ) : availableGrades.length > 0 ? (
                 availableGrades.map(grade => (
-                    <option key={grade} value={grade}>Grade {grade}</option>
+                    <option key={grade} value={grade}>{t('assignSubjectModal.gradeOption', { grade })}</option>
                 ))
             ) : (
-                <option disabled>No grades found</option> // Show if fetch failed or no classes exist
+                <option disabled>{t('assignSubjectModal.noGradesFound')}</option>
             )}
           </Select>
         </FormGroup>
         
         <FormGroup>
-          <Label>Subjects {selectedGrade ? `for Grade ${selectedGrade}` : ''} <span style={{ color: 'red' }}>*</span></Label>
+          <Label>{t('assignSubjectModal.subjects')} {selectedGrade ? t('assignSubjectModal.subjectsForGrade', { grade: selectedGrade }) : ''} <span style={{ color: 'red' }}>*</span></Label>
           {isLoading && !allSubjects.length ? (
-              <LoadingIndicator>Loading subjects...</LoadingIndicator>
+              <LoadingIndicator>{t('assignSubjectModal.loadingSubjects')}</LoadingIndicator>
           ) : !selectedGrade ? (
-            <div style={{ color: '#6b7280', marginTop: '0.5rem' }}>Please select a grade first.</div>
+            <div style={{ color: '#6b7280', marginTop: '0.5rem' }}>{t('assignSubjectModal.selectGradeFirst')}</div>
           ) : filteredSubjects.length > 0 ? (
               <SubjectList>
                 {filteredSubjects.map(subject => (
@@ -465,17 +478,17 @@ const AssignSubjectModal: React.FC<AssignSubjectModalProps> = ({
                     ))}
               </SubjectList>
               ) : (
-              <div style={{ color: '#6b7280', marginTop: '0.5rem' }}>No subjects found for Grade {selectedGrade}.</div>
+              <div style={{ color: '#6b7280', marginTop: '0.5rem' }}>{t('assignSubjectModal.noSubjectsFound', { grade: selectedGrade })}</div>
           )}
         </FormGroup>
       
       <ModalFooter>
-          <CancelButton onClick={onClose} disabled={isLoading}>Cancel</CancelButton>
+          <CancelButton onClick={onClose} disabled={isLoading}>{t('assignSubjectModal.cancel')}</CancelButton>
           <AssignButton 
             onClick={handleAssignClick} 
             disabled={isLoading || !selectedGrade || selectedSubjects.length === 0}
         >
-            Assign {selectedSubjects.length} Subject(s)
+            {t('assignSubjectModal.assign', { count: selectedSubjects.length })}
           </AssignButton>
       </ModalFooter>
       </ModalContent>

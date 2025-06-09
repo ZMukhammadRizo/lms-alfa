@@ -17,6 +17,7 @@ import {
 } from 'react-icons/fi'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
+import { useTranslation } from 'react-i18next'
 import UserForm from '../../components/admin/UserForm'
 import supabase, { supabaseAdmin } from '../../config/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
@@ -55,6 +56,7 @@ type UserRole = 'Admin' | 'Teacher' | 'Student' | 'Parent'
 
 const Users: React.FC = () => {
 	const navigate = useNavigate()
+	const { t } = useTranslation()
 	// State for search, filters, and selected users
 	const [selectedUsers, setSelectedUsers] = useState<string[]>([])
 	const [isFormOpen, setIsFormOpen] = useState(false)
@@ -107,26 +109,30 @@ const Users: React.FC = () => {
 	}
 
 	// Roles with icons for tabs
-	const roles: { role: UserRole; icon: React.ReactNode; count: number }[] = [
+	const roles: { role: UserRole; icon: React.ReactNode; count: number; translationKey: string }[] = [
 		{
 			role: 'Admin',
 			icon: <FiUserCheck />,
 			count: countUsersByRole('Admin'),
+			translationKey: 'userManagement.admins'
 		},
 		{
 			role: 'Teacher',
 			icon: <FiUser />,
 			count: countUsersByRole('Teacher'),
+			translationKey: 'userManagement.teachers'
 		},
 		{
 			role: 'Student',
 			icon: <FiUsers />,
 			count: countUsersByRole('Student'),
+			translationKey: 'userManagement.students'
 		},
 		{
 			role: 'Parent',
 			icon: <FiHome />,
 			count: countUsersByRole('Parent'),
+			translationKey: 'userManagement.parents'
 		},
 	]
 	// User deletion helper function
@@ -1002,23 +1008,23 @@ const Users: React.FC = () => {
 		>
 			<PageHeader>
 				<div>
-					<PageTitle>User Management</PageTitle>
+					<PageTitle>{t('userManagement.title')}</PageTitle>
 					<PageDescription>Manage system users, roles and permissions</PageDescription>
 				</div>
 
-				<AddUserButton onClick={handleAddUser}>
-					<FiUserPlus />
-					<span>Add New User</span>
-				</AddUserButton>
+									<AddUserButton onClick={handleAddUser}>
+						<FiUserPlus />
+						<span>{t('userManagement.addNewUser')}</span>
+					</AddUserButton>
 			</PageHeader>
 
 			{/* Role Tabs */}
 			<RoleTabsContainer>
-				{roles.map(({ role, icon, count }) => (
+				{roles.map(({ role, icon, count, translationKey }) => (
 					<RoleTab key={role} $active={activeRole === role} onClick={() => handleRoleChange(role)}>
 						<RoleTabIcon>{icon}</RoleTabIcon>
 						<RoleTabContent>
-							<RoleTabName>{role}s</RoleTabName>
+							<RoleTabName>{t(translationKey)}</RoleTabName>
 							<RoleTabCount>{count}</RoleTabCount>
 						</RoleTabContent>
 					</RoleTab>
@@ -1032,7 +1038,7 @@ const Users: React.FC = () => {
 							<FiSearch />
 						</SearchIcon>
 						<SearchInput
-							placeholder={`Search ${activeRole.toLowerCase()}s...`}
+							placeholder={t('userManagement.searchUsers')}
 							value={searchTerm}
 							onChange={handleSearchChange}
 						/>
@@ -1045,9 +1051,9 @@ const Users: React.FC = () => {
 						</FilterLabel>
 
 						<FilterSelect value={filterStatus} onChange={handleStatusFilterChange}>
-							<option value=''>All Status</option>
-							<option value='active'>Active</option>
-							<option value='inactive'>Inactive</option>
+							<option value=''>{t('userManagement.allStatus')}</option>
+							<option value='active'>{t('userManagement.active')}</option>
+							<option value='inactive'>{t('userManagement.inactive')}</option>
 						</FilterSelect>
 					</FiltersSection>
 				</SearchAndFilters>
@@ -1055,46 +1061,46 @@ const Users: React.FC = () => {
 				<ToolbarActions>
 					{selectedUsers.length > 0 && (
 						<>
-							<SelectedCount>{selectedUsers.length} selected</SelectedCount>
+							<SelectedCount>{selectedUsers.length} {t('userManagement.selected')}</SelectedCount>
 							<ActionsButton onClick={toggleActionsMenu}>
 								<FiMoreVertical />
 								<span>Actions</span>
 							</ActionsButton>
 							{isActionsMenuOpen && (
 								<ActionsMenu>
-									<ActionMenuItem>Send Email</ActionMenuItem>
-									<ActionMenuItem $danger>Delete Selected</ActionMenuItem>
+									<ActionMenuItem>{t('userManagement.sendEmail')}</ActionMenuItem>
+									<ActionMenuItem $danger>{t('userManagement.deleteSelected')}</ActionMenuItem>
 								</ActionsMenu>
 							)}
 						</>
 					)}
 					<ExportButton>
 						<FiDownload />
-						<span>Export</span>
+						<span>{t('userManagement.export')}</span>
 					</ExportButton>
 				</ToolbarActions>
 			</ToolbarContainer>
 
 			{isLoading ? (
-				<LoadingState>Loading users...</LoadingState>
+				<LoadingState>{t('userManagement.loading')}</LoadingState>
 			) : (
 				<TableContainer>
 					<Table>
 						<TableHeader>
 							<TableRow>
 								<HeaderCell width='40px'>#</HeaderCell>
-								<HeaderCell>User</HeaderCell>
-								<HeaderCell>Email</HeaderCell>
-								<HeaderCell>Role</HeaderCell>
-								<HeaderCell>Status</HeaderCell>
+								<HeaderCell>{t('userManagement.user')}</HeaderCell>
+								<HeaderCell>{t('userManagement.email')}</HeaderCell>
+								<HeaderCell>{t('userManagement.role')}</HeaderCell>
+								<HeaderCell>{t('userManagement.status')}</HeaderCell>
 								{(activeRole === 'Student' || activeRole === 'Parent') && (
 									<>
-										{activeRole === 'Student' && <HeaderCell>Parent</HeaderCell>}
-										{activeRole === 'Parent' && <HeaderCell>Children</HeaderCell>}
+										{activeRole === 'Student' && <HeaderCell>{t('userManagement.parent')}</HeaderCell>}
+										{activeRole === 'Parent' && <HeaderCell>{t('profile.children')}</HeaderCell>}
 									</>
 								)}
-								<HeaderCell>Last Login</HeaderCell>
-								<HeaderCell width='150px'>Actions</HeaderCell>
+								<HeaderCell>{t('userManagement.lastLogin')}</HeaderCell>
+								<HeaderCell width='150px'>{t('userManagement.actions')}</HeaderCell>
 							</TableRow>
 						</TableHeader>
 
@@ -1136,7 +1142,7 @@ const Users: React.FC = () => {
 										</TableCell>
 										<TableCell>
 											<StatusIndicator $status={user.status}>
-												{user.status === 'active' ? 'Active' : 'Inactive'}
+												{user.status === 'active' ? t('userManagement.active') : t('userManagement.inactive')}
 											</StatusIndicator>
 										</TableCell>
 										{(activeRole === 'Student' || activeRole === 'Parent') && (
@@ -1159,7 +1165,7 @@ const Users: React.FC = () => {
 												)}
 											</TableCell>
 										)}
-										<TableCell>{user.lastLogin || 'Never'}</TableCell>
+										<TableCell>{user.lastLogin || t('userManagement.never')}</TableCell>
 										<TableCell>
 											<ActionsContainer>
 												<ActionIconButton onClick={() => handleEditUser(user)} title='Edit user'>
@@ -1188,13 +1194,13 @@ const Users: React.FC = () => {
 											<EmptyIcon>
 												<FiUser />
 											</EmptyIcon>
-											<EmptyTitle>No {activeRole.toLowerCase()}s found</EmptyTitle>
+											<EmptyTitle>{t('userManagement.noUsersFound')}</EmptyTitle>
 											<EmptyDescription>
 												{searchTerm
-													? `No ${activeRole.toLowerCase()}s match your search criteria.`
-													: `There are no ${activeRole.toLowerCase()}s in the system yet.`}
+													? t('userManagement.noUsersFound')
+													: t('userManagement.noUsersFound')}
 											</EmptyDescription>
-											<EmptyAction onClick={handleAddUser}>Add New {activeRole}</EmptyAction>
+											<EmptyAction onClick={handleAddUser}>{t('userManagement.addNewUser')}</EmptyAction>
 										</EmptyState>
 									</EmptyCell>
 								</EmptyRow>
@@ -1210,7 +1216,7 @@ const Users: React.FC = () => {
 					onClose={handleFormClose}
 					onSubmit={handleFormSubmit}
 					initialData={currentUser || undefined}
-					formTitle={currentUser ? 'Edit User' : 'Add New User'}
+					formTitle={currentUser ? t('userManagement.editUser') : t('userManagement.addNewUser')}
 					currentUserRole={typeof user?.role === 'string' ? user?.role : user?.role?.name || ''}
 					currentUserPermissions={user?.permissions || []}
 				/>

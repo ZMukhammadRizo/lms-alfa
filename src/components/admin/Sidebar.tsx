@@ -5,6 +5,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import styled, { css } from 'styled-components'
 import {
 	adminMenu,
+	getAdminMenu,
 	announcementsSubItems,
 	getManagerMenu,
 	getModuleLeaderMenu,
@@ -15,6 +16,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { getUserParentRole, getUserRole, hasPermission, hasRole } from '../../utils/authUtils'
 import LogoutButton from '../common/LogoutButton'
 import PermissionMenuItem from '../common/PermissionMenuItem'
+import { useTranslation } from 'react-i18next'
 
 interface SidebarProps {
 	isCollapsed: boolean
@@ -180,6 +182,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 	const [isMobile, setIsMobile] = useState(false)
 	const [isMobileOpen, setIsMobileOpen] = useState(false)
 	const { user } = useAuth()
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 
 	// Handle window resize
@@ -272,13 +275,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 	console.log('Detected user parent role:', parentRole)
 
 	// Get manager menu items based on parent role
-	const managerMenu = getManagerMenu(parentRole, role)
+	const managerMenu = getManagerMenu(parentRole, role, t)
 
 	// Get system menu items for the current role
-	const systemMenu = getSystemMenu(role.toLowerCase())
+	const systemMenu = getSystemMenu(role.toLowerCase(), t)
 
 	// Get module leader menu items based on parent role
-	const moduleLeaderMenu = getModuleLeaderMenu(parentRole, role)
+	const moduleLeaderMenu = getModuleLeaderMenu(parentRole, role, t)
+
+	// Get translated admin menu
+	const translatedAdminMenu = getAdminMenu(t)
 
 	console.log('hasPermission("manage_roles")', hasPermission('manage_roles'))
 
@@ -337,7 +343,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 							<MenuSection>
 								{(role === 'Admin' || parentRole === 'Admin') && (
 									<>
-										{adminMenu.map(item => (
+										{translatedAdminMenu.map(item => (
 											<MenuItem
 												key={item.path}
 												icon={item.icon}
@@ -350,7 +356,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 
 										<MenuItemWithSubmenu
 											icon={<FiBell />}
-											label='Announcements'
+											label={t('navigation.announcements')}
 											isCollapsed={isMobile ? false : isCollapsed}
 											subItems={announcementsSubItems}
 											onMobileClick={handleNavItemClick}
@@ -370,7 +376,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 													exit={{ opacity: 0 }}
 													transition={{ delay: 0.2 }}
 												>
-													ROLE MANAGER
+													{t('navigation.roleManagement').toUpperCase()}
 												</SectionLabel>
 											)}
 										</AnimatePresence>
@@ -401,7 +407,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 													exit={{ opacity: 0 }}
 													transition={{ delay: 0.2 }}
 												>
-													Module Leader
+													{t('navigation.moduleLeader')}
 												</SectionLabel>
 											)}
 										</AnimatePresence>
@@ -429,7 +435,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 											exit={{ opacity: 0 }}
 											transition={{ delay: 0.2 }}
 										>
-											SYSTEM
+											{t('navigation.system')}
 										</SectionLabel>
 									)}
 								</AnimatePresence>

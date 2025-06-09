@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import {
 	FiUsers,
 	FiBook,
@@ -8,22 +9,22 @@ import {
 	FiCalendar,
 	FiAward,
 	FiClock,
-	FiBarChart2,
 	FiCheckCircle,
 	FiClipboard,
 	FiStar,
 	FiUserCheck,
 	FiUserX,
+	FiBarChart2,
 } from 'react-icons/fi'
 import { DefaultTheme } from 'styled-components'
 import StatCard from '../../components/admin/StatCard'
+import AttendanceOverview from '../../components/admin/AttendanceOverview'
 import {
 	getDashboardStats,
 	getRecentActivities,
 	getPerformanceData,
 	getTopStudents,
 	getRecentAssessments,
-	getAttendanceData,
 } from '../../services/dashboardService'
 import supabase from '../../config/supabaseClient'
 
@@ -37,6 +38,7 @@ interface ProgressProps {
 }
 
 const Dashboard: React.FC = () => {
+	const { t } = useTranslation();
 	// State for refresh animation
 	// const [isRefreshing, setIsRefreshing] = useState(false)
 	// State for selected statistics view
@@ -64,7 +66,6 @@ const Dashboard: React.FC = () => {
 	// const [performanceData, setPerformanceData] = useState<any[]>([])
 	const [topStudents, setTopStudents] = useState<any[]>([])
 	// const [recentAssessments, setRecentAssessments] = useState<any[]>([])
-	const [attendanceData, setAttendanceData] = useState<any[]>([])
 
 	// Fetch dashboard data
 	const fetchDashboardData = async () => {
@@ -89,10 +90,6 @@ const Dashboard: React.FC = () => {
 			// Get recent assessments
 			const recentAssessments = await getRecentAssessments(4);
 			// setRecentAssessments(recentAssessments);
-
-			// Get attendance data
-			const attendanceData = await getAttendanceData();
-			setAttendanceData(attendanceData);
 		} catch (error) {
 			console.error('Error fetching dashboard data:', error)
 			// If there's an error, we'll keep the existing data in state
@@ -168,7 +165,7 @@ const Dashboard: React.FC = () => {
 				return [
 					{
 						id: 5,
-						title: 'Total Students',
+						title: t('dashboard.totalStudents'),
 						value: dashboardStats.totalStudents,
 						change: '+8%',
 						icon: <FiUserCheck />,
@@ -176,7 +173,7 @@ const Dashboard: React.FC = () => {
 					},
 					{
 						id: 6,
-						title: 'Inactive Students',
+						title: t('dashboard.inactiveStudents'),
 						value: dashboardStats.inactiveStudents,
 						change: '-5%',
 						icon: <FiUserX />,
@@ -184,7 +181,7 @@ const Dashboard: React.FC = () => {
 					},
 					{
 						id: 7,
-						title: 'Avg. Attendance',
+						title: t('dashboard.avgAttendance'),
 						value: '87%',
 						change: '+2%',
 						icon: <FiCheckCircle />,
@@ -192,7 +189,7 @@ const Dashboard: React.FC = () => {
 					},
 					{
 						id: 8,
-						title: 'Top Performers',
+						title: t('dashboard.topPerformers'),
 						value: topStudents.length,
 						change: '+15%',
 						icon: <FiStar />,
@@ -203,7 +200,7 @@ const Dashboard: React.FC = () => {
 				return [
 					{
 						id: 9,
-						title: 'Total Classes',
+						title: t('dashboard.totalClasses'),
 						value: dashboardStats.totalClasses,
 						change: '+4%',
 						icon: <FiBarChart2 />,
@@ -211,7 +208,7 @@ const Dashboard: React.FC = () => {
 					},
 					{
 						id: 10,
-						title: 'Active Classes',
+						title: t('dashboard.activeClasses'),
 						value: dashboardStats.activeClasses,
 						change: '+12%',
 						icon: <FiClipboard />,
@@ -219,7 +216,7 @@ const Dashboard: React.FC = () => {
 					},
 					{
 						id: 11,
-						title: 'Total Subjects',
+						title: t('dashboard.totalSubjects'),
 						value: dashboardStats.totalSubjects,
 						change: '+3%',
 						icon: <FiAward />,
@@ -227,7 +224,7 @@ const Dashboard: React.FC = () => {
 					},
 					{
 						id: 12,
-						title: 'Teachers',
+						title: t('dashboard.teachers'),
 						value: dashboardStats.totalTeachers,
 						change: '+18%',
 						icon: <FiClock />,
@@ -238,7 +235,7 @@ const Dashboard: React.FC = () => {
 				return [
 					{
 						id: 1,
-						title: 'Total Users',
+						title: t('dashboard.totalUsers'),
 						value: dashboardStats.totalUsers,
 						change: '+12%',
 						icon: <FiUsers />,
@@ -246,7 +243,7 @@ const Dashboard: React.FC = () => {
 					},
 					{
 						id: 2,
-						title: 'Total Students',
+						title: t('dashboard.totalStudents'),
 						value: dashboardStats.totalStudents,
 						change: '+8%',
 						icon: <FiUserCheck />,
@@ -254,7 +251,7 @@ const Dashboard: React.FC = () => {
 					},
 					{
 						id: 3,
-						title: 'Teachers',
+						title: t('dashboard.teachers'),
 						value: dashboardStats.totalTeachers,
 						change: '+3%',
 						icon: <FiBriefcase />,
@@ -262,7 +259,7 @@ const Dashboard: React.FC = () => {
 					},
 					{
 						id: 4,
-						title: 'Active Classes',
+						title: t('dashboard.activeClasses'),
 						value: dashboardStats.activeClasses,
 						change: '+7%',
 						icon: <FiCalendar />,
@@ -276,8 +273,8 @@ const Dashboard: React.FC = () => {
 		<DashboardContainer>
 			<DashboardHeader>
 				<div>
-					<PageTitle>Dashboard</PageTitle>
-					<WelcomeMessage>Welcome back, Admin User!</WelcomeMessage>
+					<PageTitle>{t('dashboard.title')}</PageTitle>
+					<WelcomeMessage>{t('dashboard.welcomeMessage')}</WelcomeMessage>
 				</div>
 			</DashboardHeader>
 
@@ -287,19 +284,19 @@ const Dashboard: React.FC = () => {
 					$isActive={statsView === 'overview'}
 					onClick={() => setStatsView('overview')}
 				>
-					Overview
+					{t('dashboard.overview')}
 				</StatsViewButton>
 				<StatsViewButton
 					$isActive={statsView === 'students'}
 					onClick={() => setStatsView('students')}
 				>
-					Students
+					{t('dashboard.students')}
 				</StatsViewButton>
 				<StatsViewButton
 					$isActive={statsView === 'courses'}
 					onClick={() => setStatsView('courses')}
 				>
-					Courses
+					{t('dashboard.courses')}
 				</StatsViewButton>
 			</StatsViewSelector>
 
@@ -335,19 +332,19 @@ const Dashboard: React.FC = () => {
 					<SectionHeader>
 						<SectionTitle>
 							<FiUserCheck style={{ marginRight: '8px' }} />
-							Student Statistics
+							{t('dashboard.studentStatistics')}
 						</SectionTitle>
 					</SectionHeader>
 					<StudentStatsContent>
 						<div className='count-section'>
 							<StudentCountCircle>
 								<BigNumber>{isLoading ? '-' : dashboardStats.totalStudents}</BigNumber>
-								<CountLabel>Total Students</CountLabel>
+								<CountLabel>{t('dashboard.totalStudents')}</CountLabel>
 							</StudentCountCircle>
 						</div>
 						<div className='details-section'>
 							<StatDetail>
-								<StatLabel>Active Students</StatLabel>
+								<StatLabel>{t('dashboard.activeStudents')}</StatLabel>
 								<StatValue>
 									{isLoading ? '-' : dashboardStats.totalStudents - dashboardStats.inactiveStudents}
 									<span className='percentage'>
@@ -362,7 +359,7 @@ const Dashboard: React.FC = () => {
 								</StatValue>
 							</StatDetail>
 							<StatDetail>
-								<StatLabel>Inactive Students</StatLabel>
+								<StatLabel>{t('dashboard.inactiveStudents')}</StatLabel>
 								<StatValue>
 									{isLoading ? '-' : dashboardStats.inactiveStudents}
 									<span className='percentage'>
@@ -377,7 +374,7 @@ const Dashboard: React.FC = () => {
 								</StatValue>
 							</StatDetail>
 							<StudentProgress>
-								<ProgressTitle>Active vs. Inactive</ProgressTitle>
+								<ProgressTitle>{t('dashboard.activeVsInactive')}</ProgressTitle>
 								<ProgressBar>
 									<ProgressFill
 										$percentage={Math.round(
@@ -394,49 +391,15 @@ const Dashboard: React.FC = () => {
 			)}
 
 			<DashboardGrid>
-				{/* Attendance Chart */}
-				<GridItem
-					as={motion.div}
+				{/* Attendance Overview */}
+				<motion.div
 					initial={{ opacity: 0, y: 20 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.3, delay: 0.7 }}
-					className='span-2'
+					style={{ gridColumn: 'span 2' }}
 				>
-					<SectionHeader>
-						<SectionTitle>Attendance Overview</SectionTitle>
-						<ViewAllButton>
-							Full Report <FiBarChart2 />
-						</ViewAllButton>
-					</SectionHeader>
-					<AttendanceChartNew>
-						<ChartHeader>
-							<ChartTitle>Daily Attendance</ChartTitle>
-							<ChartLegend>
-								<LegendItem>
-									<LegendDot $color='primary' />
-									<LegendText>Present</LegendText>
-								</LegendItem>
-								<LegendItem>
-									<LegendDot $color='red' />
-									<LegendText>Absent</LegendText>
-								</LegendItem>
-							</ChartLegend>
-						</ChartHeader>
-						<ChartContainer>
-							{attendanceData.map((item, index) => (
-								<AttendanceItem key={index}>
-									<Day>{item.day}</Day>
-									<AttendanceBarContainerNew>
-										<AttendanceBarNew>
-											<AttendanceBarFill $percentage={item.attendance} />
-										</AttendanceBarNew>
-										<AttendanceRate>{item.attendance}%</AttendanceRate>
-									</AttendanceBarContainerNew>
-								</AttendanceItem>
-							))}
-						</ChartContainer>
-					</AttendanceChartNew>
-				</GridItem>
+					<AttendanceOverview />
+				</motion.div>
 			</DashboardGrid>
 		</DashboardContainer>
 	)
@@ -564,9 +527,7 @@ const StatsGrid = styled.div`
 	}
 `
 
-interface ColorProps {
-	$color: ColorType
-}
+
 
 const DashboardGrid = styled.div`
 	display: grid;
@@ -756,101 +717,6 @@ const ProgressFill = styled.div<ProgressProps>`
 	border-radius: inherit;
 `
 
-const ChartHeader = styled.div`
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: ${props => props.theme.spacing[4]};
-	padding: 0 ${props => props.theme.spacing[4]};
-`
 
-const ChartTitle = styled.h3`
-	font-size: 1rem;
-	font-weight: 600;
-	color: ${props => props.theme.colors.text.primary};
-	margin: 0;
-`
-
-const ChartLegend = styled.div`
-	display: flex;
-	gap: 1rem;
-`
-
-const LegendItem = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-`
-
-const LegendDot = styled.div<ColorProps>`
-	width: 10px;
-	height: 10px;
-	border-radius: 50%;
-	background-color: ${props => getColorValue(props.$color, props.theme)};
-`
-
-const LegendText = styled.span`
-	font-size: 0.75rem;
-	color: ${props => props.theme.colors.text.secondary};
-`
-
-const ChartContainer = styled.div`
-	padding: ${props => props.theme.spacing[4]};
-`
-
-const AttendanceItem = styled.div`
-	display: flex;
-	align-items: center;
-	margin-bottom: ${props => props.theme.spacing[3]};
-
-	&:last-child {
-		margin-bottom: 0;
-	}
-`
-
-const Day = styled.div`
-	width: 80px;
-	font-size: 0.875rem;
-	font-weight: 500;
-	color: ${props => props.theme.colors.text.primary};
-`
-
-const AttendanceChartNew = styled.div`
-	padding: ${props => props.theme.spacing[3]};
-`
-
-const AttendanceBarContainerNew = styled.div`
-	flex: 1;
-	display: flex;
-	align-items: center;
-	gap: 1rem;
-`
-
-const AttendanceBarNew = styled.div`
-	flex: 1;
-	height: 10px;
-	background-color: ${props => props.theme.colors.background.tertiary};
-	border-radius: ${props => props.theme.borderRadius.full};
-	overflow: hidden;
-	position: relative;
-`
-
-const AttendanceBarFill = styled.div<ProgressProps>`
-	position: absolute;
-	top: 0;
-	left: 0;
-	height: 100%;
-	width: ${props => props.$percentage}%;
-	background-color: ${props => getColorValue('primary', props.theme)};
-	border-radius: ${props => props.theme.borderRadius.full};
-`
-
-const AttendanceRate = styled.div`
-	font-size: 0.875rem;
-	font-weight: 600;
-	color: ${props => props.theme.colors.text.primary};
-	width: 50px;
-	text-align: right;
-`
 
 export default Dashboard

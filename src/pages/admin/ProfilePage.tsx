@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import { FiUser, FiLock, FiSave, FiX, FiInfo } from 'react-icons/fi'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../contexts/AuthContext'
 
 // Field validation interface
@@ -15,6 +16,7 @@ interface ValidationErrors {
 }
 
 const ProfilePage: React.FC = () => {
+	const { t } = useTranslation()
 	const { user, updateProfile, updatePassword } = useAuth()
 	const [formData, setFormData] = useState({
 		username: '',
@@ -284,7 +286,7 @@ const ProfilePage: React.FC = () => {
 	return (
 		<PageContainer>
 			<PageHeader>
-				<HeaderTitle>My Profile</HeaderTitle>
+				<HeaderTitle>{t('profile.title')}</HeaderTitle>
 			</PageHeader>
 
 			{/* Alerts */}
@@ -306,14 +308,14 @@ const ProfilePage: React.FC = () => {
 							onClick={() => handleTabChange('general')}
 						>
 							<FiUser />
-							<span>General Information</span>
+							<span>{t('profile.generalInformation')}</span>
 						</TabButton>
 						<TabButton
 							$isActive={activeTab === 'security'}
 							onClick={() => handleTabChange('security')}
 						>
 							<FiLock />
-							<span>Password & Security</span>
+							<span>{t('profile.passwordAndSecurity')}</span>
 						</TabButton>
 					</TabsContainer>
 				</ProfileSidebar>
@@ -328,16 +330,16 @@ const ProfilePage: React.FC = () => {
 										<>
 											<SaveButton type='submit'>
 												<FiSave />
-												Save Changes
+												{t('profile.saveChanges')}
 											</SaveButton>
 											<CancelButton type='button' onClick={toggleEditing}>
 												<FiX />
-												Cancel
+												{t('profile.cancel')}
 											</CancelButton>
 										</>
 									) : (
 										<EditButton type='button' onClick={toggleEditing}>
-											Edit Profile
+											{t('profile.editProfile')}
 										</EditButton>
 									)}
 								</ActionButtons>
@@ -355,7 +357,7 @@ const ProfilePage: React.FC = () => {
 									$hasError={!!errors.username}
 								/>
 								{errors.username && <ErrorMessage>{errors.username}</ErrorMessage>}
-								<FormHint>Your username will be changed via your email.</FormHint>
+								<FormHint>{t('profile.usernameHint')}</FormHint>
 							</FormGroup>
 
 							<FormGroup>
@@ -410,12 +412,7 @@ const ProfilePage: React.FC = () => {
 							<PasswordRequirements>
 								<FiInfo />
 								<div>
-									<p>Password must:</p>
-									<ul>
-										<li>Be at least 6 characters long</li>
-										<li>Include at least one number</li>
-										<li>Include at least one letter</li>
-									</ul>
+									<p>{t('profile.passwordRequirements')}</p>
 								</div>
 							</PasswordRequirements>
 
@@ -427,7 +424,7 @@ const ProfilePage: React.FC = () => {
 									name='currentPassword'
 									value={formData.currentPassword}
 									onChange={handleInputChange}
-									placeholder='Enter your current password'
+									placeholder={t('profile.currentPasswordPlaceholder')}
 									$hasError={!!errors.currentPassword}
 								/>
 								{errors.currentPassword && <ErrorMessage>{errors.currentPassword}</ErrorMessage>}
@@ -442,7 +439,7 @@ const ProfilePage: React.FC = () => {
 										name='newPassword'
 										value={formData.newPassword}
 										onChange={handleInputChange}
-										placeholder='Enter new password'
+										placeholder={t('profile.newPasswordPlaceholder')}
 										$hasError={!!errors.newPassword}
 									/>
 								</PasswordInputWrapper>
@@ -457,7 +454,7 @@ const ProfilePage: React.FC = () => {
 									name='confirmPassword'
 									value={formData.confirmPassword}
 									onChange={handleInputChange}
-									placeholder='Confirm new password'
+									placeholder={t('profile.confirmPasswordPlaceholder')}
 									$hasError={!!errors.confirmPassword}
 								/>
 								{errors.confirmPassword && <ErrorMessage>{errors.confirmPassword}</ErrorMessage>}
@@ -465,7 +462,7 @@ const ProfilePage: React.FC = () => {
 
 							<SaveButton type='submit'>
 								<FiSave />
-								Change Password
+								{t('profile.changePassword')}
 							</SaveButton>
 						</form>
 					)}
