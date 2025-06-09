@@ -4,6 +4,7 @@ import { FiBook, FiEdit2, FiPlus, FiSearch, FiTrash2, FiX } from 'react-icons/fi
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
+import { useTranslation } from 'react-i18next'
 import AssignSubjectModal from '../../components/AssignSubjectModal'
 import supabase from '../../config/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
@@ -18,6 +19,7 @@ interface Subject {
 }
 
 const SubjectsManagePage: React.FC = () => {
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const { user } = useAuth()
 	const [subjects, setSubjects] = useState<Subject[]>([])
@@ -49,7 +51,7 @@ const SubjectsManagePage: React.FC = () => {
 			const allowedRoles = ['Admin', 'SuperAdmin', 'ModuleLeader']
 
 			if (!allowedRoles.includes(userRole)) {
-				toast.error('You do not have permission to access this page')
+				toast.error(t('common.noPermissionToAccessPage'))
 
 				// Redirect based on role or parent role
 				if (userRole === 'Teacher') {
@@ -86,7 +88,7 @@ const SubjectsManagePage: React.FC = () => {
 				setSubjects(data || [])
 			} catch (error) {
 				console.error('Error fetching subjects:', error)
-				toast.error('Failed to load subjects')
+				toast.error(t('common.failedToLoadSubjects'))
 			} finally {
 				setIsLoading(false)
 			}
@@ -152,7 +154,7 @@ const SubjectsManagePage: React.FC = () => {
 			if (countError) throw countError
 
 			if (count && count > 0) {
-				toast.error(`Cannot delete subject. It is used in ${count} classes.`)
+				toast.error(t('common.cannotDeleteSubjectInUse', { count }))
 				return
 			}
 
@@ -165,7 +167,7 @@ const SubjectsManagePage: React.FC = () => {
 			if (lessonCountError) throw lessonCountError
 
 			if (lessonCount && lessonCount > 0) {
-				toast.error(`Cannot delete subject. It has ${lessonCount} lessons.`)
+				toast.error(t('common.cannotDeleteSubjectWithLessons', { count: lessonCount }))
 				return
 			}
 
@@ -175,20 +177,20 @@ const SubjectsManagePage: React.FC = () => {
 			if (deleteError) throw deleteError
 
 			setSubjects(subjects.filter(subject => subject.id !== id))
-			toast.success('Subject deleted successfully')
+			toast.success(t('common.subjectDeletedSuccessfully'))
 		} catch (error) {
 			console.error('Error deleting subject:', error)
-			toast.error('Failed to delete subject')
+			toast.error(t('common.failedToDeleteSubject'))
 		}
 	}
 
 	const validateForm = () => {
 		if (!formData.subjectname.trim()) {
-			toast.error('Subject name is required')
+			toast.error(t('common.subjectNameRequired'))
 			return false
 		}
 		if (!formData.code.trim()) {
-			toast.error('Subject code is required')
+			toast.error(t('common.subjectCodeRequired'))
 			return false
 		}
 		return true
@@ -555,7 +557,7 @@ const SubjectsManagePage: React.FC = () => {
 	if (isLoading) {
 		return (
 			<PageContainer>
-				<LoadingMessage>Loading subjects...</LoadingMessage>
+				<LoadingMessage>{t('common.loadingSubjects')}</LoadingMessage>
 			</PageContainer>
 		)
 	}
@@ -569,18 +571,18 @@ const SubjectsManagePage: React.FC = () => {
 		>
 			<PageHeader>
 				<div>
-					<PageTitle>Subject Management</PageTitle>
-					<PageDescription>Manage subjects and view their details</PageDescription>
+					<PageTitle>{t('common.subjectManagement')}</PageTitle>
+					<PageDescription>{t('common.manageSubjectsAndViewDetails')}</PageDescription>
 				</div>
 				{realRole !== 'ModuleLeader' && (
 					<ActionButtonsContainer>
 						<AssignButton onClick={handleAssignSubject}>
 							<FiBook />
-							<span>Assign to Grade</span>
+							<span>{t('common.assignToGrade')}</span>
 						</AssignButton>
 						<AddButton onClick={handleAddSubject}>
 							<FiPlus />
-							<span>Add Subject</span>
+							<span>{t('common.addSubject')}</span>
 						</AddButton>
 					</ActionButtonsContainer>
 				)}
@@ -592,7 +594,7 @@ const SubjectsManagePage: React.FC = () => {
 				</SearchIconWrapper>
 				<SearchInput
 					type='text'
-					placeholder='Search subjects...'
+					placeholder={t('common.searchSubjects')}
 					value={searchTerm}
 					onChange={handleSearchChange}
 				/>
@@ -612,7 +614,7 @@ const SubjectsManagePage: React.FC = () => {
 							<SubjectDescription>{subject.description}</SubjectDescription>
 							<SubjectActions>
 								<ActionButton
-									title='View lessons'
+									title={t('common.viewLessons')}
 									onClick={() => {
 										navigate(
 											`/${
@@ -623,11 +625,11 @@ const SubjectsManagePage: React.FC = () => {
 								>
 									<FiBook />
 								</ActionButton>
-								<ActionButton title='Edit subject' onClick={() => handleEditSubject(subject)}>
+								<ActionButton title={t('common.editSubject')} onClick={() => handleEditSubject(subject)}>
 									<FiEdit2 />
 								</ActionButton>
 								<ActionButton
-									title='Delete subject'
+									title={t('common.deleteSubject')}
 									onClick={() => handleDeleteSubject(subject.id)}
 								>
 									<FiTrash2 />
@@ -637,7 +639,7 @@ const SubjectsManagePage: React.FC = () => {
 					))
 				) : (
 					<EmptyState>
-						<EmptyStateText>No subjects found</EmptyStateText>
+						<EmptyStateText>{t('common.noSubjectsFound')}</EmptyStateText>
 					</EmptyState>
 				)}
 			</SubjectGrid>
@@ -652,7 +654,7 @@ const SubjectsManagePage: React.FC = () => {
 						exit={{ opacity: 0, y: 20 }}
 					>
 						<ModalHeader>
-							<ModalTitle>{currentSubject ? 'Edit Subject' : 'Add New Subject'}</ModalTitle>
+							<ModalTitle>{currentSubject ? t('common.editSubject') : t('common.addNewSubject')}</ModalTitle>
 							<CloseButton onClick={() => setShowAddModal(false)}>
 								<FiX />
 							</CloseButton>
@@ -660,76 +662,73 @@ const SubjectsManagePage: React.FC = () => {
 						<ModalBody>
 							{!currentSubject && (
 								<InfoPanel>
-									<InfoTitle>Automatic Grade Assignment</InfoTitle>
+									<InfoTitle>{t('common.automaticGradeAssignment')}</InfoTitle>
 									<InfoDescription>
-										When you create a new subject with a code ending in a grade number (e.g.,
-										MATH10), the subject will be automatically assigned to all sections of that
-										grade (10A, 10B, etc.)
+										{t('common.automaticGradeAssignmentDescription')}
 									</InfoDescription>
 								</InfoPanel>
 							)}
 							<form onSubmit={handleSubmit}>
 								<FormGroup>
-									<FormLabel htmlFor='subjectname'>Subject Name</FormLabel>
+									<FormLabel htmlFor='subjectname'>{t('common.subjectName')}</FormLabel>
 									<FormInput
 										id='subjectname'
 										name='subjectname'
 										value={formData.subjectname}
 										onChange={handleInputChange}
-										placeholder='Enter subject name'
+										placeholder={t('common.enterSubjectName')}
 										required
 									/>
 								</FormGroup>
 								<FormGroup>
-									<FormLabel htmlFor='code'>Subject Code</FormLabel>
+									<FormLabel htmlFor='code'>{t('common.subjectCode')}</FormLabel>
 									<FormInput
 										id='code'
 										name='code'
 										value={formData.code}
 										onChange={handleInputChange}
-										placeholder='e.g. MATH10, BIO11, CHEM12'
+										placeholder={t('common.enterSubjectCode')}
 										required
 									/>
 									<CodeHelp>
-										Use a code ending with the grade number for automatic assignment. Examples:{' '}
+										{t('common.codeHelp')}{' '}
 										<Example>MATH10</Example> for Grade 10, <Example>BIO11</Example> for Grade 11.
 										{detectedGrade && (
 											<div style={{ marginTop: '6px', color: '#059669', fontWeight: '500' }}>
-												✓ Grade {detectedGrade} detected - this subject will be auto-assigned to
-												Grade {detectedGrade} sections
+												{t('common.gradeDetected', { grade: detectedGrade })}
 											</div>
 										)}
 									</CodeHelp>
 								</FormGroup>
 								<FormGroup>
-									<FormLabel htmlFor='description'>Description</FormLabel>
+									<FormLabel htmlFor='description'>{t('common.description')}</FormLabel>
 									<FormTextarea
 										id='description'
 										name='description'
 										value={formData.description}
 										onChange={handleInputChange}
-										placeholder='Enter subject description'
+										placeholder={t('common.enterSubjectDescription')}
 										rows={3}
 									/>
 								</FormGroup>
 								<FormGroup>
-									<FormLabel htmlFor='status'>Status</FormLabel>
+									<FormLabel htmlFor='status'>{t('common.status')}</FormLabel>
 									<FormSelect
 										id='status'
 										name='status'
 										value={formData.status}
 										onChange={handleInputChange}
 									>
-										<option value='active'>Active</option>
-										<option value='inactive'>Inactive</option>
+										<option value='active'>{t('common.active')}</option>
+										<option value='inactive'>{t('common.inactive')}</option>
 									</FormSelect>
 								</FormGroup>
 								<ButtonContainer>
 									<CancelButton type='button' onClick={() => setShowAddModal(false)}>
-										Cancel
+										{t('common.cancel')}
 									</CancelButton>
 									<SubmitButton type='submit'>
-										{currentSubject ? 'Update Subject' : 'Create Subject'}
+										{currentSubject ? t('common.updateSubject') : t('common.createSubject')}
 									</SubmitButton>
 								</ButtonContainer>
 							</form>

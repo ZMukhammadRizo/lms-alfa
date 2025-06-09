@@ -59,22 +59,6 @@ const AdminAttendanceTab: React.FC<AttendanceTabProps> = ({ students, lessons })
 		)
 	}
 
-	const handleAttendanceChange = (studentId: string, lessonId: string, present: boolean) => {
-		// Validate IDs before updating
-		if (!studentId || studentId === 'undefined' || studentId === 'null' || studentId === 'NaN') {
-			console.error('Invalid student ID:', studentId)
-			return
-		}
-
-		if (!lessonId) {
-			console.error('Invalid lesson ID:', lessonId)
-			return
-		}
-
-		console.log('Updating attendance:', { studentId, lessonId, present })
-		saveAttendanceStatus(lessonId, studentId, present ? 'present' : 'absent')
-	}
-
 	const getAttendanceStatus = (studentId: string, lessonId: string) => {
 		// Validate IDs before checking
 		if (!studentId || !lessonId) {

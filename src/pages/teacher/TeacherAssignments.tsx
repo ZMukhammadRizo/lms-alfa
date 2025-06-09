@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
 	FiAlertCircle,
 	FiBook,
@@ -69,6 +70,7 @@ interface Class {
 }
 
 const TeacherAssignments = () => {
+	const { t } = useTranslation()
 	const { user } = useAuth()
 	const navigate = useNavigate()
 	const [searchTerm, setSearchTerm] = useState('')
@@ -140,7 +142,7 @@ const TeacherAssignments = () => {
 				setAssignments([])
 				setClasses([])
 				setIsLoading(false)
-				toast.info('You are not assigned to any subjects. Please contact an administrator.')
+				toast.info(t('assignments.noSubjectsAssigned'))
 				return
 			}
 
@@ -306,22 +308,22 @@ const TeacherAssignments = () => {
 
 	// Format date for display
 	const formatDate = (dateString: string | undefined) => {
-		if (!dateString) return 'N/A'
+		if (!dateString) return t('common.notAvailable')
 
 		try {
 			const date = new Date(dateString)
 			if (isNaN(date.getTime())) {
-				return 'N/A'
+				return t('common.notAvailable')
 			}
 
 			// Format with date and time in a more readable format
-			const formattedDate = date.toLocaleDateString('en-US', {
+			const formattedDate = date.toLocaleDateString(navigator.language, {
 				year: 'numeric',
 				month: 'short',
 				day: 'numeric',
 			})
 
-			const formattedTime = date.toLocaleTimeString('en-US', {
+			const formattedTime = date.toLocaleTimeString(navigator.language, {
 				hour: '2-digit',
 				minute: '2-digit',
 				hour12: true,
@@ -330,7 +332,7 @@ const TeacherAssignments = () => {
 			return `${formattedDate} • ${formattedTime}`
 		} catch (error) {
 			console.error('Error formatting date:', error, 'for value:', dateString)
-			return 'N/A'
+			return t('common.notAvailable')
 		}
 	}
 
@@ -338,15 +340,15 @@ const TeacherAssignments = () => {
 	const getStatusText = (status: Assignment['status']): string => {
 		switch (status) {
 			case 'draft':
-				return 'Draft'
+				return t('assignments.status.draft')
 			case 'published':
-				return 'Published'
+				return t('assignments.status.published')
 			case 'grading':
-				return 'Needs Grading'
+				return t('assignments.status.needsGrading')
 			case 'completed':
-				return 'Completed'
+				return t('assignments.status.completed')
 			default:
-				return 'Unknown'
+				return t('assignments.status.unknown')
 		}
 	}
 
@@ -445,29 +447,29 @@ const TeacherAssignments = () => {
 		const newErrors: Partial<Record<keyof NewAssignmentFormData, string>> = {}
 
 		if (!formData.title.trim()) {
-			newErrors.title = 'Title is required'
+			newErrors.title = t('assignments.validation.titleRequired')
 		}
 
 		if (!formData.description.trim()) {
-			newErrors.description = 'Description is required'
+			newErrors.description = t('assignments.validation.descriptionRequired')
 		}
 
 		if (!formData.courseId) {
-			newErrors.courseId = 'Please select a course'
+			newErrors.courseId = t('assignments.validation.courseRequired')
 		}
 
 		if (!formData.dueDate) {
-			newErrors.dueDate = 'Due date is required'
+			newErrors.dueDate = t('assignments.validation.dueDateRequired')
 		} else {
 			const selectedDate = new Date(formData.dueDate)
 			const today = new Date()
 			if (selectedDate < today) {
-				newErrors.dueDate = 'Due date cannot be in the past'
+				newErrors.dueDate = t('assignments.validation.dueDatePast')
 			}
 		}
 
 		if (formData.totalPoints <= 0) {
-			newErrors.totalPoints = 'Points must be greater than 0'
+			newErrors.totalPoints = t('assignments.validation.pointsPositive')
 		}
 
 		setErrors(newErrors)
@@ -483,22 +485,22 @@ const TeacherAssignments = () => {
 		let isValid = true
 
 		if (!formData.title) {
-			formErrors.title = 'Title is required'
+			formErrors.title = t('assignments.validation.titleRequired')
 			isValid = false
 		}
 
 		if (!formData.description) {
-			formErrors.description = 'Description is required'
+			formErrors.description = t('assignments.validation.descriptionRequired')
 			isValid = false
 		}
 
 		if (!formData.courseId) {
-			formErrors.courseId = 'Course is required'
+			formErrors.courseId = t('assignments.validation.courseRequired')
 			isValid = false
 		}
 
 		if (!formData.dueDate) {
-			formErrors.dueDate = 'Due date is required'
+			formErrors.dueDate = t('assignments.validation.dueDateRequired')
 			isValid = false
 		}
 
@@ -554,14 +556,14 @@ const TeacherAssignments = () => {
 		>
 			<PageHeader>
 				<div>
-					<PageTitle>Assignments</PageTitle>
-					<PageDescription>View and manage assignments for your classes</PageDescription>
+					<PageTitle>{t('assignments.title')}</PageTitle>
+					<PageDescription>{t('assignments.description')}</PageDescription>
 				</div>
 
 				<HeaderActions>
 					<ExportButton>
 						<FiDownload />
-						<span>Export</span>
+						<span>{t('assignments.export')}</span>
 					</ExportButton>
 				</HeaderActions>
 			</PageHeader>
@@ -573,7 +575,7 @@ const TeacherAssignments = () => {
 					</SearchIcon>
 					<SearchInput
 						type='text'
-						placeholder='Search assignments...'
+						placeholder={t('assignments.searchPlaceholder')}
 						value={searchTerm}
 						onChange={handleSearchChange}
 					/>
@@ -582,43 +584,43 @@ const TeacherAssignments = () => {
 				<FilterContainer>
 					<FilterButton onClick={() => setShowFilters(!showFilters)}>
 						<FiFilter />
-						<span>Filter</span>
+						<span>{t('assignments.filter')}</span>
 					</FilterButton>
 
 					{showFilters && (
 						<FilterDropdown>
 							<FilterOption onClick={() => handleFilterChange('all')} $isActive={filter === 'all'}>
-								All Assignments
+								{t('assignments.filters.all')}
 							</FilterOption>
 							<FilterOption
 								onClick={() => handleFilterChange('upcoming')}
 								$isActive={filter === 'upcoming'}
 							>
-								Upcoming
+								{t('assignments.filters.upcoming')}
 							</FilterOption>
 							<FilterOption
 								onClick={() => handleFilterChange('published')}
 								$isActive={filter === 'published'}
 							>
-								Published
+								{t('assignments.filters.published')}
 							</FilterOption>
 							<FilterOption
 								onClick={() => handleFilterChange('grading')}
 								$isActive={filter === 'grading'}
 							>
-								Needs Grading
+								{t('assignments.filters.needsGrading')}
 							</FilterOption>
 							<FilterOption
 								onClick={() => handleFilterChange('completed')}
 								$isActive={filter === 'completed'}
 							>
-								Completed
+								{t('assignments.filters.completed')}
 							</FilterOption>
 							<FilterOption
 								onClick={() => handleFilterChange('draft')}
 								$isActive={filter === 'draft'}
 							>
-								Drafts
+								{t('assignments.filters.drafts')}
 							</FilterOption>
 						</FilterDropdown>
 					)}
@@ -629,8 +631,8 @@ const TeacherAssignments = () => {
 						<FiBook />
 						<span>
 							{selectedCourse
-								? classes.find(c => c.id === String(selectedCourse))?.classname || 'All Courses'
-								: 'All Courses'}
+								? classes.find(c => c.id === String(selectedCourse))?.classname || t('assignments.allCourses')
+								: t('assignments.allCourses')}
 						</span>
 						<FiChevronDown
 							style={{
@@ -646,7 +648,7 @@ const TeacherAssignments = () => {
 								onClick={() => handleCourseSelect(null)}
 								$isActive={selectedCourse === null}
 							>
-								All Courses
+								{t('assignments.allCourses')}
 							</CourseOption>
 							{classes.map(course => (
 								<CourseOption
@@ -666,7 +668,7 @@ const TeacherAssignments = () => {
 				<thead>
 					<tr>
 						<TableHeader onClick={() => handleSort('title')}>
-							<span>Assignment</span>
+							<span>{t('assignments.table.assignment')}</span>
 							{sortBy === 'title' && (
 								<SortIcon $direction={sortDirection}>
 									<FiChevronDown />
@@ -674,7 +676,7 @@ const TeacherAssignments = () => {
 							)}
 						</TableHeader>
 						<TableHeader onClick={() => handleSort('course')}>
-							<span>Course</span>
+							<span>{t('assignments.table.course')}</span>
 							{sortBy === 'course' && (
 								<SortIcon $direction={sortDirection}>
 									<FiChevronDown />
@@ -682,7 +684,7 @@ const TeacherAssignments = () => {
 							)}
 						</TableHeader>
 						<TableHeader onClick={() => handleSort('subject')}>
-							<span>Subject</span>
+							<span>{t('assignments.table.subject')}</span>
 							{sortBy === 'subject' && (
 								<SortIcon $direction={sortDirection}>
 									<FiChevronDown />
@@ -690,7 +692,7 @@ const TeacherAssignments = () => {
 							)}
 						</TableHeader>
 						<TableHeader onClick={() => handleSort('dueDate')}>
-							<span>Due Date</span>
+							<span>{t('assignments.table.dueDate')}</span>
 							{sortBy === 'dueDate' && (
 								<SortIcon $direction={sortDirection}>
 									<FiChevronDown />
@@ -698,14 +700,14 @@ const TeacherAssignments = () => {
 							)}
 						</TableHeader>
 						<TableHeader onClick={() => handleSort('status')}>
-							<span>Creator Email</span>
+							<span>{t('assignments.table.creatorEmail')}</span>
 							{sortBy === 'status' && (
 								<SortIcon $direction={sortDirection}>
 									<FiChevronDown />
 								</SortIcon>
 							)}
 						</TableHeader>
-						<TableHeader>Actions</TableHeader>
+						<TableHeader>{t('assignments.table.actions')}</TableHeader>
 					</tr>
 				</thead>
 				<tbody>
@@ -714,7 +716,7 @@ const TeacherAssignments = () => {
 							<EmptyCell colSpan={5}>
 								<LoadingContainer>
 									<LoadingSpinner />
-									<p>Loading assignments...</p>
+									<p>{t('assignments.loading')}</p>
 								</LoadingContainer>
 							</EmptyCell>
 						</tr>
@@ -725,11 +727,11 @@ const TeacherAssignments = () => {
 									<EmptyStateIcon>
 										<FiClock size={40} />
 									</EmptyStateIcon>
-									<EmptyStateTitle>No Assignments Found</EmptyStateTitle>
+									<EmptyStateTitle>{t('assignments.noAssignmentsFound')}</EmptyStateTitle>
 									<EmptyStateDescription>
 										{searchTerm
-											? 'No assignments match your search criteria.'
-											: 'There are no assignments for your classes yet.'}
+											? t('assignments.noMatchingAssignments')
+											: t('assignments.noAssignmentsYet')}
 									</EmptyStateDescription>
 								</EmptyState>
 							</EmptyCell>
@@ -770,14 +772,14 @@ const TeacherAssignments = () => {
 									<ActionButtons>
 										{/* View Files Button */}
 										<ActionButton
-											title='View Uploads'
+											title={t('assignments.viewUploads')}
 											variant='secondary'
 											onClick={() => {
 												if (
 													!assignment.file_url ||
 													(Array.isArray(assignment.file_url) && assignment.file_url.length === 0)
 												) {
-													toast.info('No files uploaded for this assignment')
+													toast.info(t('assignments.noFilesUploaded'))
 													return
 												}
 												// Navigate to the assignment files page

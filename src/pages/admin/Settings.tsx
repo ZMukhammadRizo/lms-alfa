@@ -7,9 +7,9 @@ import {
   FiLock, 
   FiSliders, FiToggleLeft, FiCheckCircle, FiXCircle
 } from 'react-icons/fi';
-import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeContext } from '../../App';
+import { useTranslation } from 'react-i18next';
 
 // Setting item type
 type SettingType = 'toggle' | 'select' | 'input' | 'slider' | 'color' | 'button';
@@ -28,6 +28,7 @@ interface SettingItem {
 
 // Settings Page Component
 export const Settings: React.FC = () => {
+  const { t } = useTranslation();
   // Get theme context
   const { isDarkMode, toggleTheme, primaryColor, setPrimaryColor } = useThemeContext();
   // Get auth context to check user role
@@ -36,13 +37,16 @@ export const Settings: React.FC = () => {
   // State for active category
   const [activeCategory, setActiveCategory] = useState<string>('general');
   
-  // State for settings
+  // Get translation for admin-only note
+  const adminOnlyNoteText = t('settings.adminOnlyNote');
+  
+    // State for settings
   const [settings, setSettings] = useState<SettingItem[]>([
     // General Settings
     {
       id: 'siteName',
-      label: 'Site Name',
-      description: 'The name of your learning management system',
+      label: t('settings.siteName'),
+      description: t('settings.siteNameDescription'),
       type: 'input',
       value: 'My Learning Management System',
       category: 'general',
@@ -50,8 +54,8 @@ export const Settings: React.FC = () => {
     },
     {
       id: 'adminEmail',
-      label: 'Admin Email',
-      description: 'Email used for system notifications',
+      label: t('settings.adminEmail'),
+      description: t('settings.adminEmailDescription'),
       type: 'input',
       value: 'admin@example.com',
       category: 'general',
@@ -62,22 +66,22 @@ export const Settings: React.FC = () => {
     // Appearance Settings
     {
       id: 'theme',
-      label: 'Color Theme',
-      description: 'Choose between light and dark mode',
+      label: t('settings.colorTheme'),
+      description: t('settings.colorThemeDescription'),
       type: 'select',
       value: isDarkMode ? 'dark' : 'light',
       options: [
-        { value: 'light', label: 'Light Mode' },
-        { value: 'dark', label: 'Dark Mode' },
-        { value: 'system', label: 'System Default' }
+        { value: 'light', label: t('settings.lightMode') },
+        { value: 'dark', label: t('settings.darkMode') },
+        { value: 'system', label: t('settings.systemDefault') }
       ],
       category: 'appearance',
       icon: <FiMonitor />
     },
     {
       id: 'primaryColor',
-      label: 'Primary Color',
-      description: 'Main color used throughout the application',
+      label: t('settings.primaryColor'),
+      description: t('settings.primaryColorDescription'),
       type: 'color',
       value: primaryColor,
       category: 'appearance',
@@ -85,8 +89,8 @@ export const Settings: React.FC = () => {
     },
     {
       id: 'compactMode',
-      label: 'Compact Mode',
-      description: 'Use reduced spacing in the interface',
+      label: t('settings.compactMode'),
+      description: t('settings.compactModeDescription'),
       type: 'toggle',
       value: false,
       category: 'appearance',
@@ -96,8 +100,8 @@ export const Settings: React.FC = () => {
     // Notification Settings
     {
       id: 'emailNotifications',
-      label: 'Email Notifications',
-      description: 'Send system notifications via email',
+      label: t('settings.emailNotifications'),
+      description: t('settings.emailNotificationsDescription'),
       type: 'toggle',
       value: true,
       category: 'notifications',
@@ -105,8 +109,8 @@ export const Settings: React.FC = () => {
     },
     {
       id: 'newUserAlert',
-      label: 'New User Alerts',
-      description: 'Get notified when new users register',
+      label: t('settings.newUserAlerts'),
+      description: t('settings.newUserAlertsDescription'),
       type: 'toggle',
       value: true,
       category: 'notifications',
@@ -114,8 +118,8 @@ export const Settings: React.FC = () => {
     },
     {
       id: 'loginAlerts',
-      label: 'Login Alerts',
-      description: 'Get notified of suspicious login attempts',
+      label: t('settings.loginAlerts'),
+      description: t('settings.loginAlertsDescription'),
       type: 'toggle',
       value: true,
       category: 'notifications',
@@ -125,8 +129,8 @@ export const Settings: React.FC = () => {
     // Security Settings
     {
       id: 'twoFactorAuth',
-      label: 'Two-Factor Authentication',
-      description: 'Require 2FA for admin accounts',
+      label: t('settings.twoFactorAuth'),
+      description: t('settings.twoFactorAuthDescription'),
       type: 'toggle',
       value: false,
       category: 'security',
@@ -134,30 +138,30 @@ export const Settings: React.FC = () => {
     },
     {
       id: 'passwordPolicy',
-      label: 'Password Policy',
-      description: 'Set minimum requirements for passwords',
+      label: t('settings.passwordPolicy'),
+      description: t('settings.passwordPolicyDescription'),
       type: 'select',
       value: 'strong',
       options: [
-        { value: 'basic', label: 'Basic (6+ characters)' },
-        { value: 'medium', label: 'Medium (8+ chars, mixed case)' },
-        { value: 'strong', label: 'Strong (8+ chars, mixed case, numbers, symbols)' }
+        { value: 'basic', label: t('settings.passwordBasic') },
+        { value: 'medium', label: t('settings.passwordMedium') },
+        { value: 'strong', label: t('settings.passwordStrong') }
       ],
       category: 'security',
       icon: <FiLock />
     },
     {
       id: 'sessionTimeout',
-      label: 'Session Timeout',
-      description: 'Automatically log out inactive users',
+      label: t('settings.sessionTimeout'),
+      description: t('settings.sessionTimeoutDescription'),
       type: 'select',
       value: '30',
       options: [
-        { value: '15', label: '15 minutes' },
-        { value: '30', label: '30 minutes' },
-        { value: '60', label: '1 hour' },
-        { value: '120', label: '2 hours' },
-        { value: 'never', label: 'Never' }
+        { value: '15', label: t('settings.minutes15') },
+        { value: '30', label: t('settings.minutes30') },
+        { value: '60', label: t('settings.hour1') },
+        { value: '120', label: t('settings.hours2') },
+        { value: 'never', label: t('settings.never') }
       ],
       category: 'security',
       icon: <FiRefreshCw />
@@ -166,23 +170,23 @@ export const Settings: React.FC = () => {
     // System Settings
     {
       id: 'backupFrequency',
-      label: 'Backup Frequency',
-      description: 'How often the system data is backed up',
+      label: t('settings.backupFrequency'),
+      description: t('settings.backupFrequencyDescription'),
       type: 'select',
       value: 'daily',
       options: [
-        { value: 'daily', label: 'Daily' },
-        { value: 'weekly', label: 'Weekly' },
-        { value: 'monthly', label: 'Monthly' },
-        { value: 'manual', label: 'Manual Only' }
+        { value: 'daily', label: t('settings.daily') },
+        { value: 'weekly', label: t('settings.weekly') },
+        { value: 'monthly', label: t('settings.monthly') },
+        { value: 'manual', label: t('settings.manualOnly') }
       ],
       category: 'system',
       icon: <FiDatabase />
     },
     {
       id: 'maintenanceMode',
-      label: 'Maintenance Mode',
-      description: 'Put the system in maintenance mode',
+      label: t('settings.maintenanceMode'),
+      description: t('settings.maintenanceModeDescription'),
       type: 'toggle',
       value: false,
       category: 'system',
@@ -190,10 +194,10 @@ export const Settings: React.FC = () => {
     },
     {
       id: 'cacheClearing',
-      label: 'Clear System Cache',
-      description: 'Clear cached data to free up system resources',
+      label: t('settings.clearSystemCache'),
+      description: t('settings.clearSystemCacheDescription'),
       type: 'button',
-      value: 'Clear Cache',
+      value: t('settings.clearCache'),
       category: 'system',
       icon: <FiRefreshCw />
     }
@@ -220,11 +224,11 @@ export const Settings: React.FC = () => {
   
   // Categories
   const categories = [
-    { id: 'general', label: 'General', icon: <FiSettings /> },
-    { id: 'appearance', label: 'Appearance', icon: <FiMonitor /> },
-    { id: 'notifications', label: 'Notifications', icon: <FiBell /> },
-    { id: 'security', label: 'Security', icon: <FiShield /> },
-    { id: 'system', label: 'System', icon: <FiDatabase /> }
+    { id: 'general', label: t('settings.general'), icon: <FiSettings /> },
+    { id: 'appearance', label: t('settings.appearance'), icon: <FiMonitor /> },
+    { id: 'notifications', label: t('settings.notifications'), icon: <FiBell /> },
+    { id: 'security', label: t('settings.security'), icon: <FiShield /> },
+    { id: 'system', label: t('settings.system'), icon: <FiDatabase /> }
   ];
   
   // Handle setting change
@@ -284,10 +288,15 @@ export const Settings: React.FC = () => {
     }, 1500);
   };
   
+  // Helper function to check if user is admin
+  const isAdmin = () => {
+    return user?.role === 'Admin' || (typeof user?.role === 'object' && user?.role?.name === 'Admin');
+  };
+
   // Get filtered settings by category and role
   const filteredSettings = settings.filter(setting => {
     // Only show security and system settings to admin users
-    if ((setting.category === 'security' || setting.category === 'system') && user?.role !== 'admin') {
+    if ((setting.category === 'security' || setting.category === 'system') && !isAdmin()) {
       return false;
     }
     return setting.category === activeCategory;
@@ -295,7 +304,7 @@ export const Settings: React.FC = () => {
 
   // Get visible categories based on user role
   const visibleCategories = categories.filter(category => {
-    if ((category.id === 'security' || category.id === 'system') && user?.role !== 'admin') {
+    if ((category.id === 'security' || category.id === 'system') && !isAdmin()) {
       return false;
     }
     return true;
@@ -305,8 +314,8 @@ export const Settings: React.FC = () => {
     <SettingsContainer>
       <SettingsHeader>
         <div>
-          <PageTitle>Settings</PageTitle>
-          <PageDescription>Configure system settings and preferences</PageDescription>
+          <PageTitle>{t('settings.title')}</PageTitle>
+          <PageDescription>{t('settings.description')}</PageDescription>
         </div>
         
         <SaveButton 
@@ -322,7 +331,7 @@ export const Settings: React.FC = () => {
                 exit={{ opacity: 0 }}
               >
                 <FiRefreshCw className="spin" />
-                <span>Saving...</span>
+                <span>{t('settings.saving')}</span>
               </motion.div>
             ) : saveStatus === 'success' ? (
               <motion.div
@@ -332,7 +341,7 @@ export const Settings: React.FC = () => {
                 exit={{ opacity: 0 }}
               >
                 <FiCheckCircle />
-                <span>Saved!</span>
+                <span>{t('settings.saved')}</span>
               </motion.div>
             ) : saveStatus === 'error' ? (
               <motion.div
@@ -342,7 +351,7 @@ export const Settings: React.FC = () => {
                 exit={{ opacity: 0 }}
               >
                 <FiXCircle />
-                <span>Error!</span>
+                <span>{t('settings.error')}</span>
               </motion.div>
             ) : (
               <motion.div
@@ -352,7 +361,7 @@ export const Settings: React.FC = () => {
                 exit={{ opacity: 0 }}
               >
                 <FiSave />
-                <span>Save Changes</span>
+                <span>{t('settings.saveChanges')}</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -384,7 +393,7 @@ export const Settings: React.FC = () => {
         
         <SettingsContent>
           <SectionTitle>
-            {categories.find(c => c.id === activeCategory)?.label} Settings
+            {categories.find(c => c.id === activeCategory)?.label}
           </SectionTitle>
           
           <SettingsList>
@@ -423,12 +432,12 @@ export const Settings: React.FC = () => {
                             type="text"
                             value={setting.value}
                             onChange={(e) => handleSettingChange(setting.id, e.target.value)}
-                            readOnly={setting.id === 'siteName' && user?.role !== 'admin'}
+                            readOnly={setting.id === 'siteName' && !isAdmin()}
                           />
-                          {setting.id === 'siteName' && user?.role !== 'admin' && (
+                          {setting.id === 'siteName' && !isAdmin() && (
                             <AdminOnlyNote>
                               <FiLock size={12} />
-                              This setting can only be changed by administrators
+                              {adminOnlyNoteText}
                             </AdminOnlyNote>
                           )}
                         </div>

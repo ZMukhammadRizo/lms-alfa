@@ -123,31 +123,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 		}
 	}
 
-	const handleImageUpload = async () => {
-		if (!imageFile) return null
 
-		try {
-			setUploadingImage(true)
-
-			// For demo purposes, we'll use a mock upload
-			// In production, implement actual image upload to server/cloud storage
-			// Example: Supabase Storage or AWS S3 upload would go here
-			await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate upload delay
-
-			// Normally we would return the URL from the upload service
-			// For demo, we'll just use the image preview as the URL
-			const url = imagePreview
-
-			setUploadingImage(false)
-			showSuccess(t('announcements.imageUploadedSuccess'))
-			return url
-		} catch (error) {
-			setUploadingImage(false)
-			showError(t('announcements.failedToUploadImage'))
-			console.error('Error uploading image:', error)
-			return null
-		}
-	}
 
 	const removeImage = () => {
 		setImageFile(null)
@@ -182,30 +158,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 		}
 	}
 
-	const handleVideoUpload = async () => {
-		if (!videoFile) return null
 
-		try {
-			setUploadingVideo(true)
-
-			// For demo purposes, we'll use a mock upload
-			// In production, implement actual video upload to server/cloud storage
-			await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate upload delay
-
-			// Normally we would return the URL from the upload service
-			// For demo, we'll just use the video preview as the URL
-			const url = videoPreview
-
-			setUploadingVideo(false)
-			showSuccess(t('announcements.videoUploadedSuccess'))
-			return url
-		} catch (error) {
-			setUploadingVideo(false)
-			showError(t('announcements.failedToUploadVideo'))
-			console.error('Error uploading video:', error)
-			return null
-		}
-	}
 
 	const removeVideo = () => {
 		setVideoFile(null)
@@ -246,7 +199,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 				setUploadingVideo(true)
 				const generatedSlug = await generateSlug(formData.title)
 				const videoFileName = `videos/${generatedSlug}-${Date.now()}`
-				const { data: videoData, error: videoError } = await supabase.storage
+				const { error: videoError } = await supabase.storage
 					.from('lms')
 					.upload(videoFileName, videoFile, {
 						cacheControl: '3600',
@@ -273,7 +226,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 				setUploadingImage(true)
 				const generatedSlug = await generateSlug(formData.title)
 				const imageFileName = `photos/${generatedSlug}-${Date.now()}`
-				const { data: imageData, error: imageError } = await supabase.storage
+				const { error: imageError } = await supabase.storage
 					.from('lms')
 					.upload(imageFileName, imageFile, {
 						cacheControl: '3600',
@@ -294,7 +247,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 			}
 
 			// Create the announcement
-			const { data: announcement, error: announcementError } = await supabase
+			const { error: announcementError } = await supabase
 				.from('announcements')
 				.insert({
 					title: formData.title,
