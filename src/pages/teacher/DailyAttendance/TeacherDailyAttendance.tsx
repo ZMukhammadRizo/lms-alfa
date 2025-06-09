@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Book, Calendar, ChevronRight, FileText, Search, Users } from 'react-feather'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
 import FilterReportModal from '../../../components/admin/FilterReportModal'
@@ -16,6 +17,7 @@ interface Level {
 }
 
 const TeacherDailyAttendance: React.FC = () => {
+	const { t } = useTranslation()
 	const [levels, setLevels] = useState<Level[]>([])
 	const [filteredLevels, setFilteredLevels] = useState<Level[]>([])
 	const [searchQuery, setSearchQuery] = useState('')
@@ -94,7 +96,7 @@ const TeacherDailyAttendance: React.FC = () => {
 			setLevels(levelsWithCounts)
 		} catch (error) {
 			console.error('Error fetching teacher levels:', error)
-			toast.error('Failed to load levels')
+			toast.error(t('teacherAttendance.failedToLoadLevels'))
 		} finally {
 			setLoading(false)
 		}
@@ -111,8 +113,8 @@ const TeacherDailyAttendance: React.FC = () => {
 	return (
 		<Container>
 			<PageHeader
-				title='Daily Attendance'
-				subtitle='Manage daily attendance records for your classes'
+				title={t('teacherAttendance.dailyAttendance')}
+				subtitle={t('teacherAttendance.manageDailyAttendanceRecords')}
 			/>
 
 			<HeaderInfo>
@@ -122,7 +124,7 @@ const TeacherDailyAttendance: React.FC = () => {
 					</InfoCardIcon>
 					<InfoCardContent>
 						<InfoCardValue>{levels.length}</InfoCardValue>
-						<InfoCardLabel>Assigned Levels</InfoCardLabel>
+						<InfoCardLabel>{t('teacherAttendance.assignedLevels')}</InfoCardLabel>
 					</InfoCardContent>
 				</InfoCard>
 
@@ -134,7 +136,7 @@ const TeacherDailyAttendance: React.FC = () => {
 						<InfoCardValue>
 							{levels.reduce((sum, level) => sum + level.class_count, 0)}
 						</InfoCardValue>
-						<InfoCardLabel>Your Classes</InfoCardLabel>
+						<InfoCardLabel>{t('teacherAttendance.yourClasses')}</InfoCardLabel>
 					</InfoCardContent>
 				</InfoCard>
 
@@ -146,7 +148,7 @@ const TeacherDailyAttendance: React.FC = () => {
 						<InfoCardValue>
 							{levels.reduce((sum, level) => sum + (level.student_count || 0), 0)}
 						</InfoCardValue>
-						<InfoCardLabel>Total Students</InfoCardLabel>
+						<InfoCardLabel>{t('teacherAttendance.totalStudents')}</InfoCardLabel>
 					</InfoCardContent>
 				</InfoCard>
 			</HeaderInfo>
@@ -154,21 +156,21 @@ const TeacherDailyAttendance: React.FC = () => {
 			{loading ? (
 				<LoadingContainer>
 					<LoadingSpinner />
-					<p>Loading levels...</p>
+					<p>{t('teacherAttendance.loadingLevels')}</p>
 				</LoadingContainer>
 			) : levels.length === 0 ? (
 				<EmptyState>
-					<h3>No classes assigned</h3>
-					<p>You don't have any classes assigned to you.</p>
+					<h3>{t('teacherAttendance.noClassesAssigned')}</h3>
+					<p>{t('teacherAttendance.noClassesAssignedDescription')}</p>
 				</EmptyState>
 			) : (
 				<>
 					<SearchContainer>
-						<SectionTitle>Select a Level</SectionTitle>
+						<SectionTitle>{t('teacherAttendance.selectALevel')}</SectionTitle>
 						<ActionContainer>
 							<ReportButton onClick={() => setIsReportModalOpen(true)}>
 								<FileText size={16} />
-								<span>Filter & Report</span>
+								<span>{t('teacherAttendance.filterReport')}</span>
 							</ReportButton>
 							<SearchInputWrapper>
 								<SearchIcon>
@@ -176,7 +178,7 @@ const TeacherDailyAttendance: React.FC = () => {
 								</SearchIcon>
 								<SearchInput
 									type='text'
-									placeholder='Search levels...'
+									placeholder={t('teacherAttendance.searchLevels')}
 									value={searchQuery}
 									onChange={handleSearchChange}
 								/>
@@ -186,8 +188,8 @@ const TeacherDailyAttendance: React.FC = () => {
 
 					{filteredLevels.length === 0 ? (
 						<EmptyState>
-							<h3>No matching levels</h3>
-							<p>No levels match your search criteria.</p>
+							<h3>{t('teacherAttendance.noMatchingLevels')}</h3>
+							<p>{t('teacherAttendance.noMatchingLevelsDescription')}</p>
 						</EmptyState>
 					) : (
 						<LevelsGrid>
@@ -197,11 +199,11 @@ const TeacherDailyAttendance: React.FC = () => {
 									<LevelStats>
 										<StatItem>
 											<Book size={16} />
-											<span>{level.class_count} Classes</span>
+											<span>{level.class_count} {t('teacherAttendance.classCount', { count: level.class_count })}</span>
 										</StatItem>
 										<StatItem>
 											<Users size={16} />
-											<span>{level.student_count || 0} Students</span>
+											<span>{level.student_count || 0} {t('teacherAttendance.studentCount', { count: level.student_count || 0 })}</span>
 										</StatItem>
 									</LevelStats>
 									<GoButton>

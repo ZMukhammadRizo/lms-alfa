@@ -1,6 +1,7 @@
 import React, { useEffect, useState, ChangeEvent } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import { useTranslation } from 'react-i18next'
 import supabase from '../../config/supabaseClient'
 import { FiArrowLeft, FiDownload, FiFileText, FiVideo, FiUpload, FiTrash2, FiCalendar } from 'react-icons/fi'
 import { toast } from 'react-hot-toast'
@@ -364,6 +365,7 @@ const getYouTubeVideoId = (url: string): string | null => {
 }
 
 const TeacherLessonDetails = () => {
+  const { t } = useTranslation()
   const { classId, subjectId, lessonId } = useParams<{ classId: string; subjectId: string; lessonId: string }>()
   const navigate = useNavigate()
   const [lesson, setLesson] = useState<LessonDetails | null>(null)
@@ -376,7 +378,7 @@ const TeacherLessonDetails = () => {
       setLoading(true);
       try {
         if (!lessonId) {
-            toast.error("Lesson ID is missing.");
+            toast.error(t('teacher.subjects.lessonIdMissing'));
             setLoading(false);
             return;
         }
@@ -424,12 +426,12 @@ const TeacherLessonDetails = () => {
           console.log("Parsed fileurls set in lesson state:", parsedFileUrls);
           // --- END PARSE --- 
         } else {
-             throw new Error("Lesson not found.");
+             throw new Error(t('teacher.subjects.lessonNotFound'));
         }
 
       } catch (error: any) {
         console.error('Error fetching lesson data:', error);
-        toast.error(error.message || 'Failed to load lesson data.');
+        toast.error(error.message || t('teacher.subjects.loadingLessonDetails'));
         setLesson(null);
       } finally {
         setLoading(false);
@@ -451,7 +453,7 @@ const TeacherLessonDetails = () => {
   // Renamed and Rewritten function to handle primary file uploads
   const handleUploadPrimaryFile = async () => {
     if (!selectedFile || !lessonId || !lesson) {
-      toast.error("Please select a file to upload or wait for lesson data.");
+      toast.error(t('teacher.subjects.selectFileToUpload'));
       return;
     }
 
@@ -476,7 +478,7 @@ const TeacherLessonDetails = () => {
 
       if (!urlData?.publicUrl) {
         await supabase.storage.from('lms').remove([filePath]); // Cleanup attempt
-        throw new Error("Could not get public URL for the uploaded file.");
+        throw new Error(t('teacher.subjects.couldNotGetPublicUrl'));
       }
       const newFileUrl = urlData.publicUrl;
 
@@ -498,14 +500,14 @@ const TeacherLessonDetails = () => {
       // 5. Update local state
       setLesson(prevLesson => prevLesson ? { ...prevLesson, fileurls: updatedUrlsArray } : null);
 
-      toast.success("File uploaded successfully!");
+      toast.success(t('teacher.subjects.fileUploadedSuccessfully'));
       setSelectedFile(null);
       const fileInput = document.getElementById('primary-file-upload') as HTMLInputElement; // Changed ID
       if (fileInput) fileInput.value = '';
 
     } catch (error: any) {
       console.error("Error uploading primary file:", error);
-      toast.error(error?.message || "Failed to upload file.");
+      toast.error(error?.message || t('teacher.subjects.failedToUploadFile'));
     } finally {
       setUploading(false);
     }
@@ -513,14 +515,14 @@ const TeacherLessonDetails = () => {
 
   // Renamed and Rewritten function to delete primary files
   const handleDeletePrimaryFile = async (fileUrlToDelete: string) => {
-     if (!window.confirm("Are you sure you want to delete this file?") || !lesson || !lesson.fileurls) {
+     if (!window.confirm(t('teacher.subjects.confirmDeleteFile')) || !lesson || !lesson.fileurls) {
          return;
      }
 
      // Derive storage path using the new helper function logic
      const filePath = getFileStoragePathFromUrl(fileUrlToDelete);
      if (!filePath) {
-         toast.error("Could not determine the file path for deletion from URL.");
+         toast.error(t('teacher.subjects.couldNotDetermineFilePath'));
          return;
      }
 
@@ -543,9 +545,9 @@ const TeacherLessonDetails = () => {
 
          if (storageError) {
              console.error("Error deleting file from storage (DB record updated):", storageError);
-             toast("⚠️ File removed from lesson record, but failed to delete from storage.");
+             toast(t('teacher.subjects.fileRemovedButStorageError'));
          } else {
-             toast.success("File deleted successfully!");
+             toast.success(t('teacher.subjects.fileDeletedSuccessfully'));
          }
 
         // 3. Update local state
@@ -553,7 +555,7 @@ const TeacherLessonDetails = () => {
 
      } catch (error: any) {
          console.error("Error deleting primary file:", error);
-         toast.error(error.message || "Failed to delete file.");
+         toast.error(error.message || t('teacher.subjects.failedToDeleteFile'));
      }
  };
 
@@ -567,7 +569,7 @@ const TeacherLessonDetails = () => {
   if (loading) {
     return (
       <Container>
-        <LoadingState>Loading Lesson Details...</LoadingState>
+        <LoadingState>{t('teacher.subjects.loadingLessonDetails')}</LoadingState>
       </Container>
     )
   }
@@ -577,10 +579,10 @@ const TeacherLessonDetails = () => {
       <Container>
           <Header>
               <StyledBackButton onClick={handleBackClick}>
-                  <FiArrowLeft /> Back
+                  <FiArrowLeft /> {t('common.back')}
               </StyledBackButton>
           </Header>
-          <EmptyState>Lesson not found.</EmptyState>
+          <EmptyState>{t('teacher.subjects.lessonNotFound')}</EmptyState>
       </Container>
     )
   }
@@ -589,7 +591,7 @@ const TeacherLessonDetails = () => {
     <Container>
       <Header>
          <StyledBackButton onClick={handleBackClick}>
-             <FiArrowLeft /> Back
+             <FiArrowLeft /> {t('common.back')}
          </StyledBackButton>
          <Title>{lesson.lessonname}</Title>
       </Header>
@@ -597,7 +599,7 @@ const TeacherLessonDetails = () => {
       <ContentContainer>
         {videoId && (
           <Section>
-            <SectionTitle><FiVideo /> Video</SectionTitle>
+            <SectionTitle><FiVideo /> {t('common.video')}</SectionTitle>
             <VideoContainer>
               <iframe
                 src={`https://www.youtube.com/embed/${videoId}`}
@@ -612,13 +614,13 @@ const TeacherLessonDetails = () => {
 
         {lesson.description && (
           <Section>
-            <SectionTitle><FiFileText /> Description</SectionTitle>
+            <SectionTitle><FiFileText /> {t('common.description')}</SectionTitle>
             <Description>{lesson.description}</Description>
           </Section>
         )}
 
         <Section>
-            <SectionTitle><FiDownload /> Files</SectionTitle>
+            <SectionTitle><FiDownload /> {t('common.files')}</SectionTitle>
             <FilesList>
                 {lesson.fileurls && lesson.fileurls.length > 0 ? (
                     lesson.fileurls.map((url, index) => (
@@ -629,25 +631,25 @@ const TeacherLessonDetails = () => {
                             </FileInfo>
                             <FileActions>
                                 <DownloadButton href={url} target="_blank" download={getFileNameFromUrl(url)} >
-                                    <FiDownload /> Download
+                                    <FiDownload /> {t('common.downloadFile')}
                                 </DownloadButton>
                                 <ActionButton
                                     className="delete"
                                     onClick={() => handleDeletePrimaryFile(url)}
                                 >
-                                    <FiTrash2 /> Delete
+                                    <FiTrash2 /> {t('common.deleteFile')}
                                 </ActionButton>
                             </FileActions>
                         </FileItem>
                     ))
                 ) : (
-                    <EmptyState>No files attached to this lesson.</EmptyState>
+                    <EmptyState>{t('teacher.subjects.noFilesAttached')}</EmptyState>
                 )}
             </FilesList>
 
             <UploadSection>
                 <FileInputLabel htmlFor="primary-file-upload">
-                    <FiUpload /> Choose File
+                    <FiUpload /> {t('common.chooseFile')}
                 </FileInputLabel>
                 <FileInput
                     type="file"
@@ -661,7 +663,7 @@ const TeacherLessonDetails = () => {
                     onClick={handleUploadPrimaryFile}
                     disabled={!selectedFile || uploading}
                 >
-                    <FiUpload /> {uploading ? 'Uploading...' : 'Upload File'}
+                    <FiUpload /> {uploading ? t('teacher.subjects.uploading') : t('common.uploadFile')}
                 </ActionButton>
             </UploadSection>
         </Section>

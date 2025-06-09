@@ -14,14 +14,16 @@ import {
   UpcomingClass,
   PendingAssignment
 } from '../../services/teacherDashboardService';
+import { useTranslation } from 'react-i18next';
 
 const TeacherDashboard: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState([
-    { id: 1, title: 'My Courses', value: 0, change: '+0', icon: <FiBook />, color: 'primary' },
-    { id: 2, title: 'Students', value: 0, change: '+0', icon: <FiUsers />, color: 'green' },
-    { id: 3, title: 'Assignments', value: 0, change: '+0', icon: <FiClipboard />, color: 'yellow' },
+    { id: 1, title: t('teacher.dashboard.myCourses'), value: 0, change: '+0', icon: <FiBook />, color: 'primary' },
+    { id: 2, title: t('teacher.dashboard.myStudents'), value: 0, change: '+0', icon: <FiUsers />, color: 'green' },
+    { id: 3, title: t('teacher.dashboard.myAssignments'), value: 0, change: '+0', icon: <FiClipboard />, color: 'yellow' },
   ]);
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
   const [pendingAssignments, setPendingAssignments] = useState<PendingAssignment[]>([]);
@@ -47,7 +49,7 @@ const TeacherDashboard: React.FC = () => {
         setDashboardStats([
           { 
             id: 1, 
-            title: 'My Courses', 
+            title: t('teacher.dashboard.myCourses'), 
             value: stats.coursesCount, 
             change: '+0',
             icon: <FiBook />, 
@@ -55,7 +57,7 @@ const TeacherDashboard: React.FC = () => {
           },
           { 
             id: 2, 
-            title: 'Students', 
+            title: t('teacher.dashboard.myStudents'), 
             value: stats.studentsCount, 
             change: '+0',
             icon: <FiUsers />, 
@@ -63,7 +65,7 @@ const TeacherDashboard: React.FC = () => {
           },
           { 
             id: 3, 
-            title: 'Assignments', 
+            title: t('teacher.dashboard.myAssignments'), 
             value: stats.assignmentsCount, 
             change: '+0',
             icon: <FiClipboard />, 
@@ -84,7 +86,7 @@ const TeacherDashboard: React.FC = () => {
     if (user?.id) {
       fetchDashboardData();
     }
-  }, [user?.id]);
+  }, [user?.id, t]);
 
   return (
     <DashboardContainer
@@ -95,8 +97,8 @@ const TeacherDashboard: React.FC = () => {
     >
       <WelcomeSection>
         <WelcomeMessage>
-          <h1>Welcome back, {user?.fullName || 'Teacher'}</h1>
-          <p>Here's what's happening with your classes today</p>
+          <h1>{t('teacher.dashboard.welcomeBack')}, {user?.fullName || t('userManagement.teacher')}</h1>
+          <p>{t('teacher.dashboard.todaysClassesOverview')}</p>
         </WelcomeMessage>
       </WelcomeSection>
 
@@ -132,8 +134,8 @@ const TeacherDashboard: React.FC = () => {
           transition={{ duration: 0.3, delay: 0.3 }}
         >
           <SectionHeader>
-            <SectionTitle>Today's Schedule</SectionTitle>
-            <ViewAllButton>View All <FiCalendar /></ViewAllButton>
+            <SectionTitle>{t('teacher.dashboard.todaysSchedule')}</SectionTitle>
+            <ViewAllButton>{t('teacher.dashboard.viewAll')} <FiCalendar /></ViewAllButton>
           </SectionHeader>
           <ScheduleCard>
             {upcomingClasses.length > 0 ? (
@@ -147,14 +149,14 @@ const TeacherDashboard: React.FC = () => {
                   <ScheduleDetails>
                     <SubjectName>{classItem.subject}</SubjectName>
                     <ClassDetails>
-                      Class {classItem.className} • {classItem.room}
+                      {t('teacher.dashboard.classRoom', { className: classItem.className, room: classItem.room })}
                     </ClassDetails>
                   </ScheduleDetails>
                 </ScheduleItem>
               ))
             ) : (
               <NoDataMessage>
-                {isLoading ? 'Loading schedule...' : 'No classes scheduled for today'}
+                {isLoading ? t('teacher.dashboard.loadingSchedule') : t('teacher.dashboard.noClassesScheduled')}
               </NoDataMessage>
             )}
           </ScheduleCard>
@@ -168,8 +170,8 @@ const TeacherDashboard: React.FC = () => {
           transition={{ duration: 0.3, delay: 0.4 }}
         >
           <SectionHeader>
-            <SectionTitle>Pending Assignments</SectionTitle>
-            <ViewAllButton>View All <FiClipboard /></ViewAllButton>
+            <SectionTitle>{t('teacher.dashboard.pendingAssignments')}</SectionTitle>
+            <ViewAllButton>{t('teacher.dashboard.viewAll')} <FiClipboard /></ViewAllButton>
           </SectionHeader>
           <AssignmentsCard>
             {pendingAssignments.length > 0 ? (
@@ -180,14 +182,14 @@ const TeacherDashboard: React.FC = () => {
                     <AssignmentClass>Class {assignment.className}</AssignmentClass>
                   </div>
                   <AssignmentInfo>
-                    <AssignmentDue>Due: {assignment.dueDate}</AssignmentDue>
-                    <AssignmentSubmissions>Submissions: {assignment.submissions}</AssignmentSubmissions>
+                    <AssignmentDue>{t('teacher.dashboard.assignmentDue', { dueDate: assignment.dueDate })}</AssignmentDue>
+                    <AssignmentSubmissions>{t('teacher.dashboard.submissionsCount', { count: parseInt(assignment.submissions) || 0 })}</AssignmentSubmissions>
                   </AssignmentInfo>
                 </AssignmentItem>
               ))
             ) : (
               <NoDataMessage>
-                {isLoading ? 'Loading assignments...' : 'No pending assignments'}
+                {isLoading ? t('teacher.dashboard.loadingAssignments') : t('teacher.dashboard.noPendingAssignments')}
               </NoDataMessage>
             )}
           </AssignmentsCard>
