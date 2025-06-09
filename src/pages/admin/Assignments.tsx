@@ -59,12 +59,7 @@ interface Class {
 	classname: string
 }
 
-// Interface for User
-interface User {
-	id: string
-	email: string
-	full_name?: string
-}
+
 
 // Interface for Subject
 interface Subject {
@@ -81,13 +76,7 @@ interface AssignmentFormData {
 	subject_id: string
 }
 
-// Status tags configuration
-const StatusTags = {
-	Published: { color: '#e3f2fd', textColor: '#0288d1', icon: FiClock },
-	Completed: { color: '#e8f5e9', textColor: '#388e3c', icon: FiCheck },
-	Grading: { color: '#fff8e1', textColor: '#ffa000', icon: FiAlertCircle },
-	Draft: { color: '#f5f5f5', textColor: '#616161', icon: FiEdit },
-}
+
 
 // New component for Creator Email Badge
 const CreatorEmailBadge: React.FC<{ email: string }> = ({ email }) => {
@@ -108,16 +97,7 @@ interface UserPermissions {
 	[key: string]: boolean | undefined
 }
 
-// Add these interfaces to match your database schema
-interface UserRole {
-	role_id: string
-}
 
-interface Permission {
-	id: string
-	name: string
-	description?: string
-}
 
 // Add interface for the role permissions join response
 interface RolePermissionJoin {
@@ -708,7 +688,6 @@ const AdminAssignments: React.FC = () => {
 
 			// Find the class name for the new assignment
 			const classObj = classes.find(c => c.id === formData.classid)
-			const subjectObj = subjects.find(s => s.id === formData.subject_id)
 
 			// Map the database fields to the display fields
 			const assignmentForDisplay = {
