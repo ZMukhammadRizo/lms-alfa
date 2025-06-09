@@ -4,6 +4,7 @@ import { Check, ChevronLeft, ChevronRight, Clock, FileText, X, X as XIcon } from
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
 import supabase from '../../config/supabaseClient'
+import AttendancePercentageIndicator from './AttendancePercentageIndicator'
 
 interface AttendanceCalendarModalProps {
 	isOpen: boolean
@@ -42,12 +43,24 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 	const [savingDate, setSavingDate] = useState<string | null>(null)
 	const [selectedStatus, setSelectedStatus] = useState<AttendanceStatus>(null)
 	const [showStatusDropdown, setShowStatusDropdown] = useState<string | null>(null)
+	const [attendanceStats, setAttendanceStats] = useState({
+		monthly: 0,
+		overall: 0,
+		isLoading: true,
+	})
 
 	useEffect(() => {
 		if (isOpen && student?.id) {
 			fetchAttendanceData()
 		}
 	}, [isOpen, student, currentMonth])
+
+	useEffect(() => {
+		// Calculate attendance stats whenever attendance data changes
+		if (attendanceData.length > 0) {
+			calculateAttendanceStats()
+		}
+	}, [attendanceData, currentMonth])
 
 	const fetchAttendanceData = async () => {
 		if (!student?.id) return
@@ -72,7 +85,106 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 			setAttendanceData(data || [])
 		}
 
+		// Also fetch overall attendance data
+		fetchOverallAttendance()
+
 		setLoading(false)
+	}
+
+	const fetchOverallAttendance = async () => {
+		if (!student?.id || !classId) return
+
+		try {
+			const { data: overallData, error: overallError } = await supabase
+				.from('daily_attendance')
+				.select('status, noted_for')
+				.eq('student_id', student.id)
+				.eq('class_id', classId)
+
+			if (overallError) throw overallError
+
+			// Calculate overall attendance percentage
+			const overallPercentage = calculateAttendancePercentage(overallData || [])
+
+			setAttendanceStats(prev => ({
+				...prev,
+				overall: overallPercentage,
+				isLoading: false,
+			}))
+		} catch (error) {
+			console.error('Error fetching overall attendance data:', error)
+		}
+	}
+
+	const calculateAttendanceStats = () => {
+		// Calculate monthly attendance based on current month data
+		const monthlyPercentage = calculateAttendancePercentage(attendanceData)
+
+		setAttendanceStats(prev => ({
+			...prev,
+			monthly: monthlyPercentage,
+			isLoading: false,
+		}))
+	}
+
+	const calculateAttendancePercentage = (
+		records: { status: string; noted_for: string }[]
+	): number => {
+		if (!records.length) return 0
+
+		// Get all weekdays in the month for monthly calculation
+		let totalDays = 0
+		let presentDays = 0
+
+		if (records === attendanceData) {
+			// For monthly calculation, we need to count all weekdays in the month
+			const year = currentMonth.getFullYear()
+			const month = currentMonth.getMonth()
+			const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+			// Count all weekdays (Mon-Fri) in the month
+			for (let day = 1; day <= daysInMonth; day++) {
+				const date = new Date(year, month, day)
+				const dayOfWeek = date.getDay() // 0 = Sunday, 6 = Saturday
+
+				// Skip weekends
+				if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+					totalDays++
+
+					// Check if there's an attendance record for this day
+					const dateStr = date.toISOString().split('T')[0]
+					const record = records.find(r => r.noted_for === dateStr)
+
+					// Count as present only if explicitly marked present or late
+					if (record && (record.status === 'present' || record.status === 'late')) {
+						presentDays++
+					}
+				}
+			}
+		} else {
+			// For overall calculation, count all records
+			// Group records by date to avoid counting duplicates
+			const recordsByDate = new Map<string, string>()
+			records.forEach(record => {
+				recordsByDate.set(record.noted_for, record.status)
+			})
+
+			// Count total days and present days
+			recordsByDate.forEach((status, date) => {
+				const recordDate = new Date(date)
+				const dayOfWeek = recordDate.getDay()
+
+				// Only count weekdays
+				if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+					totalDays++
+					if (status === 'present' || status === 'late') {
+						presentDays++
+					}
+				}
+			})
+		}
+
+		return totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0
 	}
 
 	const handlePreviousMonth = () => {
@@ -207,6 +319,9 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 
 				toast.success('Attendance saved successfully')
 			}
+
+			// Recalculate attendance stats after update
+			fetchOverallAttendance()
 		} catch (error) {
 			console.error('Error saving attendance:', error)
 			toast.error('Failed to save attendance')
@@ -342,6 +457,11 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 		return days
 	}
 
+	// Get formatted month name for display
+	const getFormattedMonthName = () => {
+		return currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+	}
+
 	if (!isOpen) return null
 
 	return (
@@ -369,6 +489,25 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 						<X size={24} />
 					</CloseButton>
 				</ModalHeader>
+
+				<AttendanceStatsContainer>
+					<AttendanceStatItem>
+						<StatLabel>{getFormattedMonthName()} Attendance:</StatLabel>
+						{attendanceStats.isLoading ? (
+							<LoadingSpinner size='small' />
+						) : (
+							<AttendancePercentageIndicator percentage={attendanceStats.monthly} />
+						)}
+					</AttendanceStatItem>
+					<AttendanceStatItem>
+						<StatLabel>Overall Attendance:</StatLabel>
+						{attendanceStats.isLoading ? (
+							<LoadingSpinner size='small' />
+						) : (
+							<AttendancePercentageIndicator percentage={attendanceStats.overall} />
+						)}
+					</AttendanceStatItem>
+				</AttendanceStatsContainer>
 
 				<CalendarContainer>
 					<CalendarHeader>
@@ -849,6 +988,35 @@ const HelpText = styled.p`
 	color: var(--color-text-secondary);
 	margin: 0;
 	font-style: italic;
+`
+
+const AttendanceStatsContainer = styled.div`
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	padding: 16px 0;
+	border-bottom: 1px solid var(--color-border);
+	margin-bottom: 16px;
+
+	@media (max-width: 768px) {
+		flex-direction: column;
+		gap: 12px;
+	}
+`
+
+const AttendanceStatItem = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex: 1;
+	min-width: 180px;
+`
+
+const StatLabel = styled.span`
+	font-size: 0.9rem;
+	font-weight: 500;
+	color: var(--color-text-secondary);
+	white-space: nowrap;
 `
 
 // Helper function for styled components to access

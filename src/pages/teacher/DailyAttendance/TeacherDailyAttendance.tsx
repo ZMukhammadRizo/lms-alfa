@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { Book, Calendar, ChevronRight, Search, Users } from 'react-feather'
+import { Book, Calendar, ChevronRight, FileText, Search, Users } from 'react-feather'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
+import FilterReportModal from '../../../components/admin/FilterReportModal'
 import PageHeader from '../../../components/common/PageHeader'
 import supabase from '../../../config/supabaseClient'
 import { useAuth } from '../../../contexts/AuthContext'
@@ -19,6 +20,7 @@ const TeacherDailyAttendance: React.FC = () => {
 	const [filteredLevels, setFilteredLevels] = useState<Level[]>([])
 	const [searchQuery, setSearchQuery] = useState('')
 	const [loading, setLoading] = useState(true)
+	const [isReportModalOpen, setIsReportModalOpen] = useState(false)
 	const navigate = useNavigate()
 	const { user } = useAuth()
 
@@ -163,17 +165,23 @@ const TeacherDailyAttendance: React.FC = () => {
 				<>
 					<SearchContainer>
 						<SectionTitle>Select a Level</SectionTitle>
-						<SearchInputWrapper>
-							<SearchIcon>
-								<Search size={18} />
-							</SearchIcon>
-							<SearchInput
-								type='text'
-								placeholder='Search levels...'
-								value={searchQuery}
-								onChange={handleSearchChange}
-							/>
-						</SearchInputWrapper>
+						<ActionContainer>
+							<ReportButton onClick={() => setIsReportModalOpen(true)}>
+								<FileText size={16} />
+								<span>Filter & Report</span>
+							</ReportButton>
+							<SearchInputWrapper>
+								<SearchIcon>
+									<Search size={18} />
+								</SearchIcon>
+								<SearchInput
+									type='text'
+									placeholder='Search levels...'
+									value={searchQuery}
+									onChange={handleSearchChange}
+								/>
+							</SearchInputWrapper>
+						</ActionContainer>
 					</SearchContainer>
 
 					{filteredLevels.length === 0 ? (
@@ -205,6 +213,8 @@ const TeacherDailyAttendance: React.FC = () => {
 					)}
 				</>
 			)}
+
+			<FilterReportModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} />
 		</Container>
 	)
 }
@@ -277,6 +287,30 @@ const SectionTitle = styled.h2`
 	font-weight: 500;
 	color: #464646;
 	margin: 0;
+`
+
+const ActionContainer = styled.div`
+	display: flex;
+	gap: 16px;
+	align-items: center;
+`
+
+const ReportButton = styled.button`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 16px;
+	background-color: #0ea5e9;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s;
+
+	&:hover {
+		background-color: #0284c7;
+	}
 `
 
 const SearchInputWrapper = styled.div`

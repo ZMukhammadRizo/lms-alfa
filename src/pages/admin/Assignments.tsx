@@ -260,7 +260,7 @@ const AdminAssignments: React.FC = () => {
 
 			if (permissionsData && permissionsData.length > 0) {
 				// Cast the data to the proper type
-				const typedPermissionsData = permissionsData as RolePermissionJoin[]
+				const typedPermissionsData = permissionsData as unknown as RolePermissionJoin[]
 
 				typedPermissionsData.forEach(rolePermission => {
 					if (rolePermission.permissions && rolePermission.permissions.name) {
