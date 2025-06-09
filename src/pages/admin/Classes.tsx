@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 // Import permission components
 import {
 	FiArrowLeft,
@@ -110,8 +111,8 @@ const getPerformanceColor = (percentage: number) => {
 }
 
 // Helper functions
-const formatAttendanceDays = (days: string[]): string => {
-	if (!days || days.length === 0) return 'Not scheduled'
+const formatAttendanceDays = (days: string[], t: (key: string) => string): string => {
+	if (!days || days.length === 0) return t('classes.notScheduled')
 
 	// Create an abbreviation map
 	const dayAbbreviations: { [key: string]: string } = {
@@ -152,8 +153,8 @@ const formatAttendanceDays = (days: string[]): string => {
 	return abbreviated.join(', ')
 }
 
-const formatAttendanceTimes = (times: string[]): string => {
-	if (!times || times.length === 0) return 'Not scheduled'
+const formatAttendanceTimes = (times: string[], t: (key: string) => string): string => {
+	if (!times || times.length === 0) return t('classes.notScheduled')
 	if (times.length === 2) return `${times[0]} - ${times[1]}`
 	return times.join(', ')
 }
@@ -724,6 +725,7 @@ const SectionsComponent: React.FC<SectionsProps> = ({
 	onAssignTeacher,
 	onDeleteSection,
 }) => {
+	const { t } = useTranslation()
 	// Add state to track which section's menu is open
 	const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
 
@@ -794,7 +796,7 @@ const SectionsComponent: React.FC<SectionsProps> = ({
 					<FiSearch />
 					<SectionSearchInput
 						type='text'
-						placeholder='Search sections...'
+						placeholder={t('classes.searchSections')}
 						value={searchTerm}
 						onChange={onSearchChange}
 					/>
@@ -806,7 +808,7 @@ const SectionsComponent: React.FC<SectionsProps> = ({
 					style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
 				>
 					<FiPlus />
-					<span>Add New Section</span>
+					<span>{t('classes.createNewSection')}</span>
 				</AddButton>
 			</div>
 
@@ -846,7 +848,7 @@ const SectionsComponent: React.FC<SectionsProps> = ({
 											justifyContent: 'center',
 										}}
 										onClick={e => toggleMenu(e, section.id)}
-										title='Section Options'
+										title={t('classes.sectionOptions')}
 									>
 										<FiMoreHorizontal size={18} color='#4338ca' />
 									</button>
@@ -882,7 +884,7 @@ const SectionsComponent: React.FC<SectionsProps> = ({
 												onClick={e => handleMenuItemClick(e, 'edit', section)}
 											>
 												<FiEdit size={16} />
-												Edit Section
+												{t('classes.editSection')}
 											</button>
 											<button
 												style={{
@@ -900,7 +902,7 @@ const SectionsComponent: React.FC<SectionsProps> = ({
 												onClick={e => handleMenuItemClick(e, 'assignTeacher', section)}
 											>
 												<FiUserPlus size={16} />
-												Assign Teacher
+												{t('classes.assignTeacher')}
 											</button>
 											<button
 												style={{
@@ -919,7 +921,7 @@ const SectionsComponent: React.FC<SectionsProps> = ({
 												onClick={e => handleMenuItemClick(e, 'delete', section)}
 											>
 												<FiTrash size={16} />
-												Delete Section
+												{t('classes.deleteSection')}
 											</button>
 										</div>
 									)}
@@ -936,7 +938,7 @@ const SectionsComponent: React.FC<SectionsProps> = ({
 							<SectionRow>
 								<SectionIconLabel>
 									<FiUsers />
-									<span>Students</span>
+									<span>{t('classes.students')}</span>
 								</SectionIconLabel>
 								<SectionValue>{section.students}</SectionValue>
 							</SectionRow>
@@ -944,7 +946,7 @@ const SectionsComponent: React.FC<SectionsProps> = ({
 							<SectionRow>
 								<SectionIconLabel>
 									<FiUserCheck />
-									<span>Teacher</span>
+									<span>{t('userManagement.teacher')}</span>
 								</SectionIconLabel>
 								<SectionValue>{section.teacher}</SectionValue>
 							</SectionRow>
@@ -983,7 +985,7 @@ const SectionsComponent: React.FC<SectionsProps> = ({
 									if (icon) icon.style.transform = 'translateX(0)'
 								}}
 							>
-								<span>View Students</span>
+								<span>{t('classes.students')}</span>
 								<FiChevronRight style={{ transition: 'transform 0.3s ease' }} />
 							</button>
 						</SectionCard>
@@ -1765,6 +1767,7 @@ const SelectedCount = styled.div`
 
 // Main component
 export const Classes: React.FC = () => {
+	const { t } = useTranslation()
 	// State for search, filters, and view mode
 	const [searchTerm, setSearchTerm] = useState('')
 	const [filterStatus, setFilterStatus] = useState<string>('')
@@ -2166,10 +2169,10 @@ export const Classes: React.FC = () => {
 						if (sectionCountError) console.error('Error counting sections:', sectionCountError)
 
 						// Format attendance days
-						const formattedDays = formatAttendanceDays(cls.attendanceDays || [])
+						const formattedDays = formatAttendanceDays(cls.attendanceDays || [], t)
 
 						// Format attendance times
-						const formattedTimes = formatAttendanceTimes(cls.attendanceTimes || [])
+						const formattedTimes = formatAttendanceTimes(cls.attendanceTimes || [], t)
 
 						// Assign a color based on id (for UI)
 						const colors = ['#4F46E5', '#0EA5E9', '#F59E0B', '#10B981', '#8B5CF6', '#EC4899']
@@ -3237,8 +3240,8 @@ export const Classes: React.FC = () => {
 								classname: className,
 								attendanceDays,
 								attendanceTimes,
-								formattedDays: formatAttendanceDays(attendanceDays),
-								formattedTimes: formatAttendanceTimes(attendanceTimes),
+								formattedDays: formatAttendanceDays(attendanceDays, t),
+								formattedTimes: formatAttendanceTimes(attendanceTimes, t),
 								status,
 						  }
 						: cls
@@ -3405,7 +3408,7 @@ export const Classes: React.FC = () => {
 			<ClassesContainer>
 				<LoadingMessage>
 					<LoadingSpinner />
-					<span>Loading class types...</span>
+					<span>{t('classes.loadingClassTypes')}</span>
 				</LoadingMessage>
 			</ClassesContainer>
 		)
@@ -3415,13 +3418,13 @@ export const Classes: React.FC = () => {
 		return (
 			<ClassesContainer>
 				<div style={{ textAlign: 'center', color: 'red', marginTop: '20px' }}>
-					<p>Error loading class types: {classTypesError}</p>
+					<p>{t('classes.errorLoadingClassTypes')} {classTypesError}</p>
 					<button
 						onClick={() => {
 							/* Implement refetch logic */
 						}}
 					>
-						Try Again
+						{t('classes.tryAgain')}
 					</button>
 				</div>
 			</ClassesContainer>
@@ -3434,14 +3437,14 @@ export const Classes: React.FC = () => {
 				<>
 					<HeaderSection>
 						<div>
-							<PageTitle>Class Types</PageTitle>
-							<PageDescription>Select a class type to manage levels and sections.</PageDescription>
+							<PageTitle>{t('classes.classTypes')}</PageTitle>
+							<PageDescription>{t('classes.classTypesDescription')}</PageDescription>
 						</div>
 						{/* Add button for creating new class type if needed */}
 					</HeaderSection>
 					{classTypes.length === 0 && !isLoadingClassTypes && (
 						<EmptyState>
-							<EmptyStateText>No class types found.</EmptyStateText>
+							<EmptyStateText>{t('classes.noClassTypesFound')}</EmptyStateText>
 							{/* Button to create class type */}
 						</EmptyState>
 					)}
@@ -3474,15 +3477,15 @@ export const Classes: React.FC = () => {
 								}}
 							>
 								<FiArrowLeft />
-								Back to Class Types
+								{t('classes.backToClassTypes')}
 							</BackButton>
 						</PageTitleWithBack>
-						<PageTitle>{selectedClassType.name} - Levels</PageTitle>
-						<PageDescription>Manage levels (e.g., grades) and their sections.</PageDescription>
+						<PageTitle>{selectedClassType.name} - {t('classes.levels')}</PageTitle>
+						<PageDescription>{t('classes.levelsDescription')}</PageDescription>
 					</div>
 					<AddClassButton onClick={handleCreateClass}>
 						<FiPlus />
-						<span>Create New Class</span>
+						<span>{t('classes.createNewClass')}</span>
 					</AddClassButton>
 				</HeaderSection>
 			)}
@@ -3495,13 +3498,13 @@ export const Classes: React.FC = () => {
 							<PageTitleWithBack>
 								<BackButton onClick={handleBackToClasses}>
 									<FiArrowLeft />
-									Back to{' '}
-									{selectedClassType?.name ? `${selectedClassType.name} - Levels` : 'Levels'}
+									{t('classes.backTo')}{' '}
+									{selectedClassType?.name ? `${selectedClassType.name} - ${t('classes.levels')}` : t('classes.levels')}
 								</BackButton>
 							</PageTitleWithBack>
-							<PageTitle>{selectedSection} Students</PageTitle>
+							<PageTitle>{selectedSection} {t('classes.students')}</PageTitle>
 							<PageDescription>
-								{filteredStudents.length} students in {selectedSection}
+								{filteredStudents.length} {t('classes.studentsIn')} {selectedSection}
 							</PageDescription>
 						</div>
 
@@ -3513,7 +3516,7 @@ export const Classes: React.FC = () => {
 								}}
 							>
 								<FiPlus />
-								<span>Add Students</span>
+								<span>{t('classes.addStudents')}</span>
 							</AddButton>
 							{/* New Assign Teachers Button - Assuming this is a styled AddButton or similar */}
 							<AddButton // Changed from ManageSubjectTeachersButton to AddButton, assuming similar style/functionality base
@@ -3531,11 +3534,11 @@ export const Classes: React.FC = () => {
 								}}
 							>
 								<FiBookOpen />
-								<span>Manage Subject Teachers</span>
+								<span>{t('classes.manageSubjectTeachers')}</span>
 							</AddButton>
 							<ExportDataButton>
 								<FiDownload />
-								<span>Export Data</span>
+								<span>{t('classes.exportData')}</span>
 							</ExportDataButton>
 						</div>
 					</StudentsHeaderSection>
@@ -3543,7 +3546,7 @@ export const Classes: React.FC = () => {
 					{isStudentsLoading ? (
 						<LoadingMessage>
 							<LoadingSpinner />
-							<span>Loading students...</span>
+							<span>{t('classes.loadingStudents')}</span>
 						</LoadingMessage>
 					) : (
 						<StudentsView>
@@ -3551,12 +3554,12 @@ export const Classes: React.FC = () => {
 							<StudentsControls>
 								<SearchContainer>
 									<FiSearch />
-									<SearchInput
-										type='text'
-										placeholder='Search students...'
-										value={searchTerm}
-										onChange={handleSearchChange}
-									/>
+																	<SearchInput
+									type='text'
+									placeholder={t('classes.searchStudents')}
+									value={searchTerm}
+									onChange={handleSearchChange}
+								/>
 								</SearchContainer>
 
 								<StudentsFilterGroup>
@@ -3569,7 +3572,7 @@ export const Classes: React.FC = () => {
 											$isActive={studentFilterOpen}
 										>
 											<FiFilter />
-											<span>Filter: {statusFilter === 'all' ? 'All' : statusFilter}</span>
+											<span>{t('common.filter')}: {statusFilter === 'all' ? t('classes.allStudents') : statusFilter}</span>
 											<FiChevronDown />
 										</FilterButton>
 
@@ -3579,19 +3582,19 @@ export const Classes: React.FC = () => {
 													onClick={() => handleStudentStatusFilterChange('all')}
 													$isActive={statusFilter === 'all'}
 												>
-													All Students
+													{t('classes.allStudents')}
 												</FilterOption>
 												<FilterOption
 													onClick={() => handleStudentStatusFilterChange('active')}
 													$isActive={statusFilter === 'active'}
 												>
-													Active
+													{t('classes.active')}
 												</FilterOption>
 												<FilterOption
 													onClick={() => handleStudentStatusFilterChange('inactive')}
 													$isActive={statusFilter === 'inactive'}
 												>
-													Inactive
+													{t('classes.inactive')}
 												</FilterOption>
 											</FilterDropdownMenu>
 										)}
@@ -3668,10 +3671,10 @@ export const Classes: React.FC = () => {
 											</StudentsTableCell>
 
 											<StudentsTableCell style={{ width: '15%' }}>
-												<StatusIndicator>
-													<StatusDot $active={student.status === 'active'} />
-													<span>{student.status === 'active' ? 'Active' : 'Inactive'}</span>
-												</StatusIndicator>
+																							<StatusIndicator>
+												<StatusDot $active={student.status === 'active'} />
+												<span>{student.status === 'active' ? t('classes.active') : t('classes.inactive')}</span>
+											</StatusIndicator>
 											</StudentsTableCell>
 
 											<StudentsTableCell style={{ width: '12%' }}>
@@ -3679,14 +3682,14 @@ export const Classes: React.FC = () => {
 													{/* Pass student ID and name to the handler */}
 													<ActionIconButton
 														onClick={() => handleDeleteStudentFromClass(student.id, student.name)}
-														title='Remove from class'
+														title={t('classes.removeFromClass')}
 													>
 														<FiTrash2 />
 													</ActionIconButton>
 													{/* Use handleEditStudent for the edit icon */}
 													<ActionIconButton
 														onClick={() => handleEditStudent(student)}
-														title='Change class'
+														title={t('classes.changeClass')}
 													>
 														<FiEdit />
 													</ActionIconButton>
@@ -3699,7 +3702,7 @@ export const Classes: React.FC = () => {
 
 							{filteredStudents.length === 0 && (
 								<EmptyState>
-									<EmptyStateText>No students found in this section.</EmptyStateText>
+									<EmptyStateText>{t('classes.noStudentsFound')}</EmptyStateText>
 								</EmptyState>
 							)}
 						</StudentsView>
@@ -3710,7 +3713,7 @@ export const Classes: React.FC = () => {
 				isSectionsLoading ? (
 					<LoadingMessage>
 						<LoadingSpinner />
-						<span>Loading sections...</span>
+						<span>{t('classes.loadingSections')}</span>
 					</LoadingMessage>
 				) : (
 					<SectionsComponent
@@ -3739,7 +3742,7 @@ export const Classes: React.FC = () => {
 										<FiSearch />
 										<SearchInput
 											type='text'
-											placeholder='Search for levels...' // Updated placeholder
+											placeholder={t('classes.searchLevels')} // Updated placeholder
 											value={searchTerm}
 											onChange={handleSearchChange}
 										/>
@@ -3747,9 +3750,9 @@ export const Classes: React.FC = () => {
 
 									<FilterDropdown>
 										<select value={filterStatus} onChange={handleStatusFilterChange}>
-											<option value=''>All Status</option>
-											<option value='active'>Active</option>
-											<option value='inactive'>Inactive</option>
+											<option value=''>{t('classes.allStatus')}</option>
+											<option value='active'>{t('classes.active')}</option>
+											<option value='inactive'>{t('classes.inactive')}</option>
 										</select>
 									</FilterDropdown>
 								</SearchAndFilters>
@@ -3767,15 +3770,14 @@ export const Classes: React.FC = () => {
 							{isLoading && !isLoadingClassTypes && (
 								<LoadingMessage>
 									<LoadingSpinner />
-									<span>Loading levels...</span>
+									<span>{t('classes.loadingLevels')}</span>
 								</LoadingMessage>
 							)}
 
 							{filteredClasses.length === 0 && !isLoading && (
 								<EmptyState>
 									<EmptyStateText>
-										No levels found for {selectedClassType?.name}. Try adjusting your search or
-										filters.
+										{t('classes.noLevelsFound', { classType: selectedClassType?.name })}
 									</EmptyStateText>
 								</EmptyState>
 							)}
@@ -3819,7 +3821,7 @@ export const Classes: React.FC = () => {
 																	}}
 																>
 																	<FiEdit />
-																	<span>Edit</span>
+																	<span>{t('classes.edit')}</span>
 																</ActionButton>
 																<ActionButton
 																	$isPrimary={false}
@@ -3829,7 +3831,7 @@ export const Classes: React.FC = () => {
 																	}}
 																>
 																	<FiTrash2 />
-																	<span>Delete</span>
+																	<span>{t('classes.delete')}</span>
 																</ActionButton>
 															</ActionsMenu>
 														)}
@@ -3839,12 +3841,12 @@ export const Classes: React.FC = () => {
 
 											<ClassDetails>
 												<ClassStatus $status={cls.status}>
-													{cls.status === 'active' ? 'Active' : 'Inactive'}
+													{cls.status === 'active' ? t('classes.active') : t('classes.inactive')}
 												</ClassStatus>
 												<DetailItem>
 													<FiLayers />
 													<span>
-														{cls.sectionCount} {cls.sectionCount === 1 ? 'Section' : 'Sections'}
+														{cls.sectionCount} {cls.sectionCount === 1 ? t('classes.section') : t('classes.sections')}
 													</span>
 												</DetailItem>
 											</ClassDetails>
@@ -4034,6 +4036,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 	classId, // This is the ID of the section we are adding students to
 	excludedStudentIds, // Students already in THIS section
 }) => {
+	const { t } = useTranslation()
 	console.log('AddStudentModal render - isOpen:', isOpen, 'classId:', classId)
 	const [availableStudents, setAvailableStudents] = useState<AvailableStudent[]>([])
 	const [filteredStudents, setFilteredStudents] = useState<AvailableStudent[]>([])
@@ -4161,13 +4164,13 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 		<ModalOverlay onClick={onClose}>
 			<ModalContent onClick={e => e.stopPropagation()}>
 				<StudentModalHeader>
-					<StudentModalTitle>Add Students to Class</StudentModalTitle>
+					<StudentModalTitle>{t('classes.addStudentsToClass')}</StudentModalTitle>
 					<StudentCloseButton onClick={onClose}>&times;</StudentCloseButton>
 				</StudentModalHeader>
 
 				<SearchStudentInput
 					type='text'
-					placeholder='Search students by name or email...'
+					placeholder={t('classes.searchStudentsByEmail')}
 					value={searchTerm}
 					onChange={handleStudentSearchChange}
 				/>
@@ -4175,12 +4178,12 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 				{isLoading ? (
 					<div style={{ textAlign: 'center', padding: '24px' }}>
 						<LoadingSpinner />
-						<div style={{ marginTop: '12px' }}>Loading students...</div>
+						<div style={{ marginTop: '12px' }}>{t('classes.loadingStudents')}</div>
 					</div>
 				) : (
 					<>
 						<SelectedCount>
-							{selectedCount} student{selectedCount !== 1 ? 's' : ''} selected
+							{t('classes.studentsSelected', { count: selectedCount })}
 						</SelectedCount>
 
 						{filteredStudents.length === 0 ? (
@@ -4235,13 +4238,13 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({
 				)}
 
 				<ModalActions>
-					<ClassModalCancelButton onClick={onClose}>Cancel</ClassModalCancelButton>
+					<ClassModalCancelButton onClick={onClose}>{t('common.cancel')}</ClassModalCancelButton>
 					<AddButton onClick={handleAddStudents} disabled={selectedCount === 0 || isLoading}>
 						{isLoading
-							? 'Adding...'
+							? t('classes.adding')
 							: selectedCount > 0
-							? `Add ${selectedCount} Student${selectedCount !== 1 ? 's' : ''}`
-							: 'Add Students'}
+							? t('classes.studentsSelected', { count: selectedCount })
+							: t('classes.addStudents')}
 					</AddButton>
 				</ModalActions>
 			</ModalContent>
@@ -4269,6 +4272,7 @@ const AddSectionModal: React.FC<AddSectionModalProps> = ({
 	suggestedName,
 	suggestedRoom,
 }) => {
+	const { t } = useTranslation()
 	const [sectionName, setSectionName] = useState(suggestedName)
 	const [roomName, setRoomName] = useState(suggestedRoom)
 	const [isSubmitting, setIsSubmitting] = useState(false)
@@ -4298,33 +4302,33 @@ const AddSectionModal: React.FC<AddSectionModalProps> = ({
 		<SectionModalOverlay>
 			<SectionModalContainer>
 				<SectionModalHeader>
-					<SectionModalTitle>Add New Section for Grade {grade}</SectionModalTitle>
+					<SectionModalTitle>{t('classes.addNewSectionFor', { grade })}</SectionModalTitle>
 					<SectionCloseButton onClick={onClose}>×</SectionCloseButton>
 				</SectionModalHeader>
 
 				<SectionModalBody>
-					<SectionModalLabel>Section Name *</SectionModalLabel>
+					<SectionModalLabel>{t('classes.sectionName')} *</SectionModalLabel>
 					<SectionModalInput
 						type='text'
 						value={sectionName}
 						onChange={e => setSectionName(e.target.value)}
-						placeholder='e.g., 10A or 10B'
+						placeholder={t('classes.sectionNamePlaceholder')}
 						required // Add required attribute
 					/>
 
-					<SectionModalLabel>Room (Optional)</SectionModalLabel>
+					<SectionModalLabel>{t('classes.roomOptional')}</SectionModalLabel>
 					<SectionModalInput
 						type='text'
 						value={roomName}
 						onChange={e => setRoomName(e.target.value)}
-						placeholder={`e.g., Room ${suggestedName.slice(-1)}`}
+						placeholder={t('classes.roomPlaceholder', { letter: suggestedName.slice(-1) })}
 					/>
 				</SectionModalBody>
 
 				<SectionModalFooter>
-					<ClassModalCancelButton onClick={onClose}>Cancel</ClassModalCancelButton>
+					<ClassModalCancelButton onClick={onClose}>{t('common.cancel')}</ClassModalCancelButton>
 					<AddButton onClick={handleSubmit} disabled={isSubmitting || !sectionName.trim()}>
-						{isSubmitting ? 'Adding...' : 'Add Section'}
+						{isSubmitting ? t('classes.adding') : t('classes.addSection')}
 					</AddButton>
 				</SectionModalFooter>
 			</SectionModalContainer>
@@ -4540,9 +4544,12 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
 	onClose,
 	onConfirm,
 	itemName,
-	message = `Are you sure you want to delete ${itemName}? This action cannot be undone.`,
-	title = 'Confirm Deletion',
+	message,
+	title,
 }) => {
+	const { t } = useTranslation()
+	const defaultMessage = message || t('classes.deleteConfirmMessage', { item: itemName })
+	const defaultTitle = title || t('classes.confirmDeletion')
 	if (!isOpen) return null
 
 	return (
@@ -4551,21 +4558,21 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
 			{/* Reuse SectionModal styles */}
 			<SectionModalContainer onClick={e => e.stopPropagation()} style={{ maxWidth: '450px' }}>
 				<SectionModalHeader>
-					<SectionModalTitle>{title}</SectionModalTitle>
+					<SectionModalTitle>{defaultTitle}</SectionModalTitle>
 					<SectionCloseButton onClick={onClose}>×</SectionCloseButton>
 				</SectionModalHeader>
 				<SectionModalBody>
-					<p style={{ margin: 0, lineHeight: '1.5', color: '#374151' }}>{message}</p>
+					<p style={{ margin: 0, lineHeight: '1.5', color: '#374151' }}>{defaultMessage}</p>
 				</SectionModalBody>
 				<SectionModalFooter style={{ justifyContent: 'space-between' }}>
 					<ClassModalCancelButton
 						onClick={onClose}
 						style={{ backgroundColor: '#f3f4f6', color: '#374151' }}
 					>
-						Cancel
+						{t('common.cancel')}
 					</ClassModalCancelButton>
 					<AddButton onClick={onConfirm} style={{ backgroundColor: '#ef4444' }}>
-						Confirm Delete
+						{t('classes.confirmDelete')}
 					</AddButton>
 				</SectionModalFooter>
 			</SectionModalContainer>
@@ -5132,6 +5139,7 @@ interface CreateClassModalProps {
 }
 
 const CreateClassModal: React.FC<CreateClassModalProps> = ({ isOpen, onClose, onSave }) => {
+	const { t } = useTranslation()
 	const [className, setClassName] = useState('')
 	const [status, setStatus] = useState('active')
 	const [error, setError] = useState('')
@@ -5192,27 +5200,27 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({ isOpen, onClose, on
 			isOpen={isOpen}
 			onRequestClose={handleClose}
 			style={customModalStyles}
-			contentLabel='Create New Class'
+			contentLabel={t('classes.createNewClass')}
 			ariaHideApp={false}
 		>
 			<ModalHeader>
-				<h2>Create New Class</h2>
+				<h2>{t('classes.createNewClass')}</h2>
 				<CloseButton onClick={handleClose}>&times;</CloseButton>
 			</ModalHeader>
 			<ModalBody>
 				{error && <ErrorMessage>{error}</ErrorMessage>}
 				<FormGroup>
-					<label htmlFor='className'>Class Name</label>
+					<label htmlFor='className'>{t('classes.className')}</label>
 					<input
 						id='className'
 						type='text'
 						value={className}
 						onChange={e => setClassName(e.target.value)}
-						placeholder='Enter class name'
+						placeholder={t('classes.classNamePlaceholder')}
 					/>
 				</FormGroup>
 				<FormGroup>
-					<label htmlFor='classStatus'>Class Activity</label>
+					<label htmlFor='classStatus'>{t('classes.classActivity')}</label>
 					<select
 						id='classStatus'
 						value={status}
@@ -5226,16 +5234,16 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({ isOpen, onClose, on
 							width: '100%',
 						}}
 					>
-						<option value='active'>Active</option>
-						<option value='inactive'>Inactive</option>
+						<option value='active'>{t('classes.active')}</option>
+						<option value='inactive'>{t('classes.inactive')}</option>
 					</select>
 				</FormGroup>
 				<ButtonGroup>
 					<CreateClassCancelButton type='button' onClick={handleClose}>
-						Cancel
+						{t('common.cancel')}
 					</CreateClassCancelButton>
 					<SaveButton type='button' onClick={handleSave}>
-						Create Class
+						{t('classes.createClass')}
 					</SaveButton>
 				</ButtonGroup>
 			</ModalBody>
@@ -5364,6 +5372,7 @@ const ManageClassSubjectTeachersModal: React.FC<ManageClassSubjectTeachersModalP
 	onClose,
 	section,
 }) => {
+	const { t } = useTranslation()
 	const [selectedTeacherId, setSelectedTeacherId] = useState<string>('')
 	const [selectedSubjectId, setSelectedSubjectId] = useState<string>('')
 
@@ -5528,26 +5537,26 @@ const ManageClassSubjectTeachersModal: React.FC<ManageClassSubjectTeachersModalP
 				style={{ width: '800px', maxHeight: '90vh' }}
 			>
 				<ModalHeader>
-					<h2 style={{ fontSize: '18px' }}>Manage Subject Teachers for {section.name}</h2>
+					<h2 style={{ fontSize: '18px' }}>{t('classes.manageSubjectTeachersFor', { className: section.name })}</h2>
 					<CloseButton onClick={onClose}>&times;</CloseButton>
 				</ModalHeader>
 				<ModalBody>
 					{isLoading ? (
-						<LoadingMessage>Loading data...</LoadingMessage>
+						<LoadingMessage>{t('classes.loadingStudents')}</LoadingMessage>
 					) : (
 						<>
 							<NewAssignmentSection>
-								<h3>Assign New Teacher to Subject</h3>
+								<h3>{t('classes.assignNewTeacherToSubject')}</h3>
 								<div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
 									<ModalFormGroup>
-										<label>Teacher</label>
+										<label>{t('classes.teacher')}</label>
 										<StyledSelect
 											value={selectedTeacherId}
 											onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
 												setSelectedTeacherId(e.target.value)
 											}
 										>
-											<option value=''>-- Select Teacher --</option>
+											<option value=''>{t('classes.selectTeacher')}</option>
 											{availableTeachers.map(teacher => (
 												<option key={teacher.id} value={teacher.id}>
 													{teacher.name}
@@ -5556,7 +5565,7 @@ const ManageClassSubjectTeachersModal: React.FC<ManageClassSubjectTeachersModalP
 										</StyledSelect>
 									</ModalFormGroup>
 									<ModalFormGroup>
-										<label>Subject for this Class</label>
+										<label>{t('classes.subjectForClass')}</label>
 										<StyledSelect
 											value={selectedSubjectId}
 											onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -5564,7 +5573,7 @@ const ManageClassSubjectTeachersModal: React.FC<ManageClassSubjectTeachersModalP
 											}
 											disabled={classSubjects.length === 0}
 										>
-											<option value=''>-- Select Subject --</option>
+											<option value=''>{t('classes.selectSubject')}</option>
 											{classSubjects.map(subject => (
 												<option key={subject.id} value={subject.id}>
 													{subject.name}
@@ -5578,13 +5587,13 @@ const ManageClassSubjectTeachersModal: React.FC<ManageClassSubjectTeachersModalP
 										disabled={isSubmitting || !selectedTeacherId || !selectedSubjectId}
 										style={{ height: '44px', padding: '10px 16px', flexShrink: 0 }}
 									>
-										{isSubmitting ? 'Assigning...' : 'Assign'}
+										{isSubmitting ? t('classes.adding') : t('classes.assign')}
 									</AddButton>
 								</div>
 							</NewAssignmentSection>
 
 							<CurrentAssignmentsSection>
-								<h3>Current Assignments</h3>
+								<h3>{t('classes.currentAssignments')}</h3>
 								{currentAssignments.length === 0 ? (
 									<p
 										style={{
@@ -5594,7 +5603,7 @@ const ManageClassSubjectTeachersModal: React.FC<ManageClassSubjectTeachersModalP
 											padding: '20px 0',
 										}}
 									>
-										No teachers are assigned to subjects yet.
+										{t('classes.noTeachersAssigned')}
 									</p>
 								) : (
 									<AssignmentsTable>
@@ -5631,7 +5640,7 @@ const ManageClassSubjectTeachersModal: React.FC<ManageClassSubjectTeachersModalP
 					)}
 				</ModalBody>
 				<ModalActions>
-					<ClassModalCancelButton onClick={onClose}>Close</ClassModalCancelButton>
+					<ClassModalCancelButton onClick={onClose}>{t('classes.close')}</ClassModalCancelButton>
 				</ModalActions>
 			</ModalContent>
 		</ModalOverlay>

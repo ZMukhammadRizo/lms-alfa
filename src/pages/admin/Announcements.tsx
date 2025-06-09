@@ -1,5 +1,6 @@
 import { format } from 'date-fns'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
 	FiAlertCircle,
 	FiAlertTriangle,
@@ -55,6 +56,7 @@ interface Announcement {
 }
 
 const Announcements: React.FC = () => {
+	const { t } = useTranslation()
 	const { createAnnouncement, deleteAnnouncement, isLoading, error } = useAnnouncements()
 	const { user } = useAuth()
 	const [isCreating, setIsCreating] = useState(false)
@@ -157,7 +159,7 @@ const Announcements: React.FC = () => {
 		e.preventDefault()
 
 		if (!formData.title || !formData.content) {
-			setFormError('Please fill out all required fields')
+			setFormError(t('announcements.fillRequiredFields'))
 			return
 		}
 
@@ -177,13 +179,13 @@ const Announcements: React.FC = () => {
 			if (success) {
 				setIsCreating(false)
 				setFormData(emptyFormData)
-				setSuccessMessage('Announcement created successfully!')
+				setSuccessMessage(t('announcements.announcementCreatedSuccess'))
 			} else {
-				setFormError('Failed to create announcement. Please try again.')
+				setFormError(t('announcements.failedToCreate'))
 			}
 		} catch (err) {
 			console.error('Error creating announcement:', err)
-			setFormError('An unexpected error occurred. Please try again.')
+			setFormError(t('announcements.unexpectedError'))
 		} finally {
 			setFormSubmitting(false)
 		}
@@ -210,7 +212,7 @@ const Announcements: React.FC = () => {
 						prev.filter(announcement => announcement.id !== selectedAnnouncementId)
 					)
 					localStorage.removeItem('announcements-storage')
-					setSuccessMessage('Announcement deleted successfully!')
+					setSuccessMessage(t('announcements.announcementDeletedSuccess'))
 				}
 			} catch (err) {
 				console.error('Error deleting announcement:', err)
@@ -231,13 +233,13 @@ const Announcements: React.FC = () => {
 
 			if (error) {
 				console.error('Error refreshing announcements:', error)
-				showError('Failed to refresh announcements')
+				showError(t('announcements.failedToRefresh'))
 			} else {
 				setAnnouncements(data || [])
 			}
 		} catch (err) {
 			console.error('Error refreshing announcements:', err)
-			showError('Failed to refresh announcements')
+			showError(t('announcements.failedToRefresh'))
 		} finally {
 			setIsLoadingAnnouncements(false)
 		}
@@ -246,7 +248,7 @@ const Announcements: React.FC = () => {
 	const getTargetDisplay = (target: string) => {
 		console.log(target)
 
-		if (target === 'all') return 'All Users'
+		if (target === 'all') return t('announcements.allUsers')
 		const role = roles.find(r => r.name.toLowerCase() === target.toLowerCase())
 		return role ? `${role.name}s` : target
 	}
@@ -289,7 +291,7 @@ const Announcements: React.FC = () => {
 
 				if (!data && error) {
 					console.error('Error fetching announcements:', error)
-					showError('Failed to fetch announcements')
+					showError(t('announcements.failedToRefresh'))
 				} else if (data.length === 0) {
 					localStorage.removeItem('announcements-storage')
 				} else {
@@ -298,7 +300,7 @@ const Announcements: React.FC = () => {
 				// clear announcements from local storage
 			} catch (err) {
 				console.error('Error fetching announcements:', err)
-				showError('Failed to fetch announcements')
+				showError(t('announcements.failedToRefresh'))
 			} finally {
 				setIsLoadingAnnouncements(false)
 			}
@@ -322,7 +324,7 @@ const Announcements: React.FC = () => {
 			)
 		)
 
-		setSuccessMessage('Announcement updated successfully!')
+		setSuccessMessage(t('announcements.announcementUpdatedSuccess'))
 		setEditModalOpen(false)
 		setSelectedAnnouncement(null)
 	}
@@ -331,8 +333,8 @@ const Announcements: React.FC = () => {
 		<Container>
 			<Header>
 				<div>
-					<Title>Announcements</Title>
-					<Description>Manage system announcements for all users</Description>
+					<Title>{t('announcements.title')}</Title>
+					<Description>{t('announcements.description')}</Description>
 				</div>
 
 				{canCreateAnnouncements && (
@@ -342,7 +344,7 @@ const Announcements: React.FC = () => {
 						variant='primary'
 						disabled={isLoading}
 					>
-						Create Announcement
+						{t('announcements.createAnnouncement')}
 					</CreateAnnouncementButton>
 				)}
 			</Header>
@@ -364,7 +366,7 @@ const Announcements: React.FC = () => {
 					<FiSearch size={18} />
 					<SearchInput
 						type='text'
-						placeholder='Search announcements...'
+						placeholder={t('announcements.searchPlaceholder')}
 						value={searchTerm}
 						onChange={e => setSearchTerm(e.target.value)}
 					/>
@@ -381,7 +383,7 @@ const Announcements: React.FC = () => {
 					variant='secondary'
 					disabled={isLoading}
 				>
-					Refresh
+					{t('announcements.refresh')}
 				</RefreshButton>
 			</ToolBar>
 
@@ -403,20 +405,20 @@ const Announcements: React.FC = () => {
 					onClick={() => handleFilterChipToggle('All')}
 				>
 					<FiUsers size={14} />
-					<span>All</span>
+					<span>{t('announcements.all')}</span>
 					{filterChips.includes('All') && <FiX size={14} />}
 				</FilterChip>
 
 				{filterChips.length > 0 && (
 					<ClearFiltersButton onClick={() => setFilterChips([])}>
-						Clear all filters
+						{t('announcements.clearAllFilters')}
 					</ClearFiltersButton>
 				)}
 			</FilterChipsContainer>
 
 			{isCreating && (
 				<FormCard>
-					<CardTitle>Create New Announcement</CardTitle>
+					<CardTitle>{t('announcements.createNewAnnouncement')}</CardTitle>
 					{formError && (
 						<FormErrorMessage>
 							<FiAlertCircle /> {formError}
@@ -424,27 +426,27 @@ const Announcements: React.FC = () => {
 					)}
 					<form onSubmit={handleSubmit}>
 						<FormGroup>
-							<FormLabel htmlFor='title'>Title*</FormLabel>
+							<FormLabel htmlFor='title'>{t('announcements.titleLabel')}</FormLabel>
 							<FormInput
 								type='text'
 								id='title'
 								name='title'
 								value={formData.title}
 								onChange={handleFormChange}
-								placeholder='Enter announcement title'
+								placeholder={t('announcements.titlePlaceholder')}
 								required
 								disabled={formSubmitting}
 							/>
 						</FormGroup>
 
 						<FormGroup>
-							<FormLabel htmlFor='content'>Content*</FormLabel>
+							<FormLabel htmlFor='content'>{t('announcements.contentLabel')}</FormLabel>
 							<FormTextarea
 								id='content'
 								name='content'
 								value={formData.content}
 								onChange={handleFormChange}
-								placeholder='Enter announcement content'
+								placeholder={t('announcements.contentPlaceholder')}
 								rows={4}
 								required
 								disabled={formSubmitting}
@@ -453,7 +455,7 @@ const Announcements: React.FC = () => {
 
 						<FormRow>
 							<FormGroup>
-								<FormLabel htmlFor='targetAudience'>Target Audience*</FormLabel>
+								<FormLabel htmlFor='targetAudience'>{t('announcements.targetAudienceLabel')}</FormLabel>
 								<FormSelect
 									id='targetAudience'
 									name='targetAudience'
@@ -461,10 +463,10 @@ const Announcements: React.FC = () => {
 									onChange={handleFormChange}
 									disabled={formSubmitting}
 								>
-									<option value='all'>All Users</option>
-									<option value='student'>Students Only</option>
-									<option value='teacher'>Teachers Only</option>
-									<option value='admin'>Administrators Only</option>
+									<option value='all'>{t('announcements.allUsers')}</option>
+									<option value='student'>{t('announcements.studentsOnly')}</option>
+									<option value='teacher'>{t('announcements.teachersOnly')}</option>
+									<option value='admin'>{t('announcements.administratorsOnly')}</option>
 								</FormSelect>
 							</FormGroup>
 
@@ -477,7 +479,7 @@ const Announcements: React.FC = () => {
 										onChange={handleFormChange}
 										disabled={formSubmitting}
 									/>
-									<span>Mark as Important</span>
+									<span>{t('announcements.markAsImportant')}</span>
 								</FormCheckboxLabel>
 							</FormGroup>
 						</FormRow>
@@ -489,7 +491,7 @@ const Announcements: React.FC = () => {
 								onClick={handleCancelCreate}
 								disabled={formSubmitting}
 							>
-								Cancel
+								{t('announcements.cancel')}
 							</Button>
 							<Button
 								type='submit'
@@ -497,7 +499,7 @@ const Announcements: React.FC = () => {
 								disabled={formSubmitting}
 								isLoading={formSubmitting}
 							>
-								{formSubmitting ? 'Creating...' : 'Create Announcement'}
+								{formSubmitting ? t('announcements.creating') : t('announcements.createAnnouncementButton')}
 							</Button>
 						</ButtonRow>
 					</form>
@@ -508,7 +510,7 @@ const Announcements: React.FC = () => {
 				{isLoadingAnnouncements ? (
 					<LoadingState>
 						<FiLoader className='spin' size={24} />
-						<span>Loading announcements...</span>
+						<span>{t('announcements.loadingAnnouncements')}</span>
 					</LoadingState>
 				) : filteredAnnouncements.length > 0 ? (
 					filteredAnnouncements.map(announcement => (
@@ -516,12 +518,12 @@ const Announcements: React.FC = () => {
 							<AnnouncementHeader>
 								<AnnouncementTitle>{announcement.title}</AnnouncementTitle>
 								<HeaderBadges>
-									{announcement.isImportant && (
-										<ImportantBadge>
-											<FiAlertTriangle size={14} />
-											<span>Important</span>
-										</ImportantBadge>
-									)}
+																	{announcement.isImportant && (
+									<ImportantBadge>
+										<FiAlertTriangle size={14} />
+										<span>{t('announcements.important')}</span>
+									</ImportantBadge>
+								)}
 									<TargetBadge>
 										<FiUsers size={14} />
 										<span>{getTargetDisplay(announcement.targetAudience)}</span>
@@ -542,7 +544,7 @@ const Announcements: React.FC = () => {
 												}
 											>
 												<source src={announcement.video_url} type='video/mp4' />
-												Your browser does not support the video tag.
+												{t('announcements.videoNotSupported')}
 											</AnnouncementVideo>
 										</MediaItem>
 									)}
@@ -565,7 +567,7 @@ const Announcements: React.FC = () => {
 
 							<AnnouncementMeta>
 								<MetaInfo>
-									<span>Posted by {announcement.created_by_name}</span>
+									<span>{t('announcements.postedBy')} {announcement.created_by_name}</span>
 									<span>•</span>
 									<span>{format(new Date(announcement.created_at), 'MMM d, yyyy h:mm a')}</span>
 								</MetaInfo>
@@ -588,11 +590,11 @@ const Announcements: React.FC = () => {
 				) : (
 					<EmptyState>
 						<FiInfo size={48} />
-						<EmptyStateTitle>No announcements found</EmptyStateTitle>
+						<EmptyStateTitle>{t('announcements.noAnnouncementsFound')}</EmptyStateTitle>
 						<EmptyStateDescription>
 							{searchTerm || filterChips.length > 0
-								? 'Try adjusting your filters or search term'
-								: 'There are no announcements created yet'}
+								? t('announcements.tryAdjustingFilters')
+								: t('announcements.noAnnouncementsYet')}
 						</EmptyStateDescription>
 					</EmptyState>
 				)}
@@ -603,10 +605,10 @@ const Announcements: React.FC = () => {
 				isOpen={deleteConfirmOpen}
 				onCancel={() => setDeleteConfirmOpen(false)}
 				onConfirm={handleConfirmDelete}
-				title='Delete Announcement'
-				message='Are you sure you want to delete this announcement? This action cannot be undone.'
-				confirmText='Delete'
-				cancelText='Cancel'
+				title={t('announcements.deleteAnnouncement')}
+				message={t('announcements.deleteConfirmMessage')}
+				confirmText={t('announcements.delete')}
+				cancelText={t('announcements.cancel')}
 				isDanger={true}
 			/>
 

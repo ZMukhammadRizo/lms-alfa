@@ -1210,11 +1210,11 @@ const StatusOption = styled.div<StatusOptionProps>`
 	border: 2px solid
 		${props =>
 			props.$active
-				? props.theme.colors.success[500]
+					? props.theme.colors.success[500]
 				: props.theme.colors.neutral[300]};
 	background-color: ${props =>
 		props.$active
-			? props.theme.colors.success[50]
+				? props.theme.colors.success[50]
 			: 'transparent'};
 	box-shadow: ${props => (props.$active ? '0 2px 4px rgba(0, 0, 0, 0.05)' : 'none')};
 	cursor: pointer;

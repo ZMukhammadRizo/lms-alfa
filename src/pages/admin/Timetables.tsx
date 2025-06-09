@@ -5,6 +5,7 @@ import {
   FiChevronLeft, FiChevronRight, FiArrowUp, FiUser,
   FiMapPin, FiEdit, FiPlus, FiX, FiUsers, FiBook, FiTrash
 } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 import supabase from '../../config/supabaseClient';
 
 // Helper functions
@@ -24,16 +25,20 @@ const getWeekDays = (date: Date): Date[] => {
   return days;
 };
 
-const formatDate = (date: Date): string => {
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const formatDate = (date: Date, t: any): string => {
+  const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  const month = t(`timetables.monthShort.${monthNames[date.getMonth()]}`);
+  const day = date.getDate();
+  return `${month} ${day}`;
 };
 
-const formatDay = (date: Date): string => {
-  return date.toLocaleDateString('en-US', { weekday: 'short' });
+const formatDay = (date: Date, t: any): string => {
+  const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  return t(`timetables.dayShort.${dayNames[date.getDay()]}`);
 };
 
-const formatTime = (hour: number, minute: number = 0): string => {
-  const ampm = hour >= 12 ? 'PM' : 'AM';
+const formatTime = (hour: number, minute: number = 0, t: any): string => {
+  const ampm = hour >= 12 ? t('timetables.pm') : t('timetables.am');
   const formattedHour = hour % 12 || 12;
   return `${formattedHour}:${minute === 0 ? '00' : minute} ${ampm}`;
 };
@@ -948,6 +953,7 @@ const TeacherDetail = styled(ClassDetails)`
 
 const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = false }): React.ReactNode => {
   // State variables and hooks
+  const { t } = useTranslation();
   const theme = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filterCourse, setFilterCourse] = useState<string | null>(null);
@@ -2194,8 +2200,8 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
   
   // Format date range for header
   const formatDateRange = () => {
-    const startDate = formatDate(weekDays[0]);
-    const endDate = formatDate(weekDays[6]);
+    const startDate = formatDate(weekDays[0], t);
+    const endDate = formatDate(weekDays[6], t);
     return `${startDate} - ${endDate}`;
   };
 
@@ -2203,7 +2209,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
   const renderForm = () => (
     <Form onSubmit={handleSubmit}>
       <FormGroup>
-        <Label htmlFor="assignedClass">Assign Class <span style={{ color: 'red' }}>*</span></Label>
+        <Label htmlFor="assignedClass">{t('timetables.assignClass')} <span style={{ color: 'red' }}>*</span></Label>
         <Select 
           id="assignedClass" 
           name="assignedClass" 
@@ -2211,15 +2217,15 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
           onChange={handleInputChange}
           required
         >
-          <option value="">Select class</option>
+          <option value="">{t('timetables.selectClass')}</option>
           {isLoading ? (
-            <option value="" disabled>Loading classes...</option>
+            <option value="" disabled>{t('timetables.loadingClassesOption')}</option>
           ) : classes.length > 0 ? (
             classes.map((classItem) => (
               <option key={classItem.id} value={classItem.name}>{classItem.name}</option>
             ))
           ) : (
-            <option value="" disabled>No classes available</option>
+            <option value="" disabled>{t('timetables.noClassesAvailableOption')}</option>
           )}
         </Select>
       </FormGroup>
@@ -2227,7 +2233,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
       {formData.assignedClass && (
         <>
           <FormGroup>
-            <Label htmlFor="title">Lesson Title <span style={{ color: 'red' }}>*</span></Label>
+            <Label htmlFor="title">{t('timetables.lessonTitle')} <span style={{ color: 'red' }}>*</span></Label>
             <Input 
               type="text" 
               id="title" 
@@ -2235,12 +2241,12 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
               value={formData.title} 
               onChange={handleInputChange}
               required 
-              placeholder="Enter lesson title"
+              placeholder={t('timetables.enterLessonTitle')}
             />
           </FormGroup>
           
           <FormGroup>
-            <Label htmlFor="course">Course <span style={{ color: 'red' }}>*</span></Label>
+            <Label htmlFor="course">{t('timetables.course')} <span style={{ color: 'red' }}>*</span></Label>
             <Select 
               id="course" 
               name="course" 
@@ -2248,9 +2254,9 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
               onChange={handleInputChange}
               required
             >
-              <option value="">Select course</option>
+              <option value="">{t('timetables.selectCourse')}</option>
               {isLoading ? (
-                <option value="" disabled>Loading courses...</option>
+                <option value="" disabled>{t('timetables.loadingCoursesOption')}</option>
               ) : availableCourses.length > 0 ? (
                 availableCourses.map((course) => {
                   // Make sure we're using the most reliable name property
@@ -2260,13 +2266,13 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                   );
                 })
               ) : (
-                <option value="" disabled>No courses available for this class</option>
+                <option value="" disabled>{t('timetables.noCoursesAvailable')}</option>
               )}
             </Select>
           </FormGroup>
           
           <FormGroup>
-            <Label htmlFor="day">Day <span style={{ color: 'red' }}>*</span></Label>
+            <Label htmlFor="day">{t('timetables.day')} <span style={{ color: 'red' }}>*</span></Label>
             <Select 
               id="day" 
               name="day" 
@@ -2274,18 +2280,18 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
               onChange={handleInputChange}
               required
             >
-              <option value="0">Monday</option>
-              <option value="1">Tuesday</option>
-              <option value="2">Wednesday</option>
-              <option value="3">Thursday</option>
-              <option value="4">Friday</option>
-              <option value="5">Saturday</option>
-              <option value="6">Sunday</option>
+              <option value="0">{t('timetables.monday')}</option>
+              <option value="1">{t('timetables.tuesday')}</option>
+              <option value="2">{t('timetables.wednesday')}</option>
+              <option value="3">{t('timetables.thursday')}</option>
+              <option value="4">{t('timetables.friday')}</option>
+              <option value="5">{t('timetables.saturday')}</option>
+              <option value="6">{t('timetables.sunday')}</option>
             </Select>
           </FormGroup>
           
           <FormGroup>
-            <Label htmlFor="startTime">Start Time <span style={{ color: 'red' }}>*</span></Label>
+            <Label htmlFor="startTime">{t('timetables.startTime')} <span style={{ color: 'red' }}>*</span></Label>
             <Input 
               type="time" 
               id="startTime" 
@@ -2297,7 +2303,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
           </FormGroup>
           
           <FormGroup>
-            <Label htmlFor="endTime">End Time <span style={{ color: 'red' }}>*</span></Label>
+            <Label htmlFor="endTime">{t('timetables.endTime')} <span style={{ color: 'red' }}>*</span></Label>
             <Input 
               type="time" 
               id="endTime" 
@@ -2309,14 +2315,14 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
           </FormGroup>
           
           <FormGroup>
-            <Label htmlFor="location">Location</Label>
+            <Label htmlFor="location">{t('timetables.location')}</Label>
             <Input 
               type="text" 
               id="location" 
               name="location" 
               value={formData.location} 
               onChange={handleInputChange}
-              placeholder="Enter location (e.g. Room 101)" 
+              placeholder={t('timetables.enterLocation')} 
             />
           </FormGroup>
         </>
@@ -2339,10 +2345,10 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
       
       <ButtonGroup>
         <CancelButton type="button" onClick={resetForm}>
-          Cancel
+          {t('timetables.cancel')}
         </CancelButton>
         <SubmitButton type="submit" disabled={isLoading || !formData.assignedClass}>
-          {isLoading ? 'Saving...' : 'Schedule Lesson'}
+          {isLoading ? t('timetables.saving') : t('timetables.scheduleLesson')}
         </SubmitButton>
       </ButtonGroup>
     </Form>
@@ -2545,17 +2551,17 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
   return (
     <Container>
       <Header>
-        <Title>Weekly Schedule</Title>
+        <Title>{t('timetables.title')}</Title>
         <HeaderControls>
           <Button onClick={scrollToCurrentTime}>
             <FiArrowUp size={14} />
-            Current Time
+            {t('timetables.currentTime')}
           </Button>
           {/* Only show Schedule button if not in read-only mode */}
           {!readOnly && (
             <PrimaryButton onClick={() => setShowScheduleModal(true)}>
               <FiPlus size={14} />
-              {loggedInTeacherId ? 'Add Lesson to Schedule' : 'Schedule Lesson'}
+              {loggedInTeacherId ? t('timetables.addLessonToSchedule') : t('timetables.scheduleLesson')}
             </PrimaryButton>
           )}
         </HeaderControls>
@@ -2584,7 +2590,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
               <FilterDropdown>
             <FilterButton onClick={() => setShowCourseFilter(!showCourseFilter)}>
               <FiFilter size={14} />
-              {filterCourse || "All Courses"}
+              {filterCourse || t('timetables.allCourses')}
               <FiChevronDown size={14} />
             </FilterButton>
             {showCourseFilter && (
@@ -2596,7 +2602,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                     setShowCourseFilter(false);
                   }}
                 >
-                  All Courses
+                  {t('timetables.allCourses')}
                 </DropdownItem>
                 {uniqueCourseNamesForDropdown.map((courseName, index) => (
                   <DropdownItem 
@@ -2619,7 +2625,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
             <FilterDropdown>
               <FilterButton onClick={() => setShowTeacherFilter(!showTeacherFilter)}>
                 <FiUser size={14} />
-                {filterTeacher || "All Teachers"}
+                {filterTeacher || t('timetables.allTeachers')}
                 <FiChevronDown size={14} />
               </FilterButton>
               {showTeacherFilter && (
@@ -2631,7 +2637,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                       setShowTeacherFilter(false);
                     }}
                   >
-                    All Teachers
+                    {t('timetables.allTeachers')}
                   </DropdownItem>
                   {uniqueTeachers.map((teacher, index) => (
                     <DropdownItem 
@@ -2653,7 +2659,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
           <FilterDropdown>
             <FilterButton onClick={() => setShowClassFilter(!showClassFilter)}>
               <FiUsers size={14} />
-              {filterClass || "All Grade Sections"}
+              {filterClass || t('timetables.allGradeSections')}
               <FiChevronDown size={14} />
             </FilterButton>
             {showClassFilter && (
@@ -2665,11 +2671,11 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                     setShowClassFilter(false);
                   }}
                 >
-                  All Grade Sections
+                  {t('timetables.allGradeSections')}
                 </DropdownItem>
                 {isLoading ? (
                   <DropdownItem $isActive={false}>
-                    Loading classes...
+                    {t('timetables.loadingClasses')}
                   </DropdownItem>
                 ) : uniqueClasses.length > 0 ? (
                   uniqueClasses.map((className, index) => (
@@ -2686,7 +2692,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                   ))
                 ) : (
                   <DropdownItem $isActive={false}>
-                    No classes available
+                    {t('timetables.noClassesAvailable')}
                   </DropdownItem>
                 )}
               </DropdownContent>
@@ -2729,9 +2735,9 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                 cursor: 'pointer',
                 fontSize: '14px'
               }}
-            >
-              Try Again
-            </button>
+                          >
+                {t('timetables.tryAgain')}
+              </button>
           )}
         </div>
       )}
@@ -2741,7 +2747,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
           {isLoading && (
             <LoadingOverlay>
               <LoadingSpinner />
-              <div style={{ marginTop: '10px', color: '#3b82f6', fontWeight: 500 }}>Loading schedule...</div>
+              <div style={{ marginTop: '10px', color: '#3b82f6', fontWeight: 500 }}>{t('timetables.loadingSchedule')}</div>
             </LoadingOverlay>
           )}
           
@@ -2749,16 +2755,15 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
         <TimetableHeader>
           <HeaderCell></HeaderCell>
           {weekDays.map((day, index) => {
-            const dayName = formatDay(day);
-            const monthName = day.toLocaleDateString('en-US', { month: 'short' });
-            const dayNum = day.getDate();
+            const dayName = formatDay(day, t);
+            const dateFormatted = formatDate(day, t);
             
             return (
               <HeaderCell key={index}>
                 <DayHeader>
                   <DayName>{dayName}</DayName>
                   <DayDate>
-                    {monthName} {dayNum}
+                    {dateFormatted}
                   </DayDate>
                 </DayHeader>
               </HeaderCell>
@@ -2769,7 +2774,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
         {/* Conditional Rendering: Show placeholder or timetable body */}
         {!filterClass && (
           <PlaceholderMessage>
-            Select a Grade Section to view their schedule
+            {t('timetables.selectGradeSectionToView')}
           </PlaceholderMessage>
         )}
         
@@ -2780,7 +2785,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                   <TimeSlot key={hour}>
                   <TimeLabel>
                     <TimePart>{hour % 12 || 12}:00</TimePart>
-                    <TimePart>{hour >= 12 ? 'PM' : 'AM'}</TimePart>
+                    <TimePart>{hour >= 12 ? t('timetables.pm') : t('timetables.am')}</TimePart>
                   </TimeLabel>
                   </TimeSlot>
                 ))}
@@ -2810,8 +2815,8 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                     const top = ((event.startTime - 8) + (startMinute / 60)) * 80;
                     const height = ((event.endTime - event.startTime) * 60 - startMinute + endMinute) / 60 * 80;
                     
-                    const startTimeFormatted = formatTime(event.startTime, startMinute);
-                    const endTimeFormatted = formatTime(event.endTime, endMinute);
+                    const startTimeFormatted = formatTime(event.startTime, startMinute, t);
+                    const endTimeFormatted = formatTime(event.endTime, endMinute, t);
                     
                     // Handle teacher display - ensure we have valid data
                     let teacherDisplay = 'No teacher assigned';
@@ -2898,7 +2903,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                         {event.className && (
                           <ClassDetails>
                             <ClassIcon><FiUsers size={12} /></ClassIcon>
-                            Class: {event.className}
+                            {t('timetables.classLabel')} {event.className}
                           </ClassDetails>
                         )}
                         <TeacherDetail>
@@ -2923,7 +2928,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
         <Modal>
           <ModalContent>
             <ModalHeader>
-              <ModalTitle>{isEditing ? 'Edit Lesson' : 'Schedule New Lesson'}</ModalTitle>
+              <ModalTitle>{isEditing ? t('timetables.editLesson') : t('timetables.scheduleNewLesson')}</ModalTitle>
               <CloseButton onClick={resetForm}>
                 <FiX size={20} />
               </CloseButton>
@@ -2939,20 +2944,20 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
         <Modal>
           <ModalContent>
             <ModalHeader>
-              <ModalTitle>Confirm Deletion</ModalTitle>
+              <ModalTitle>{t('timetables.confirmDeletion')}</ModalTitle>
               <CloseButton onClick={() => setShowDeleteModal(false)}>
                 <FiX size={20} />
               </CloseButton>
             </ModalHeader>
             <ModalBody>
-              <p>Are you sure you want to delete this class from the schedule? This action cannot be undone.</p>
+              <p>{t('timetables.deleteConfirmMessage')}</p>
             </ModalBody>
             <ModalFooter>
               <CancelButton onClick={() => setShowDeleteModal(false)}>
-                Cancel
+                {t('timetables.cancel')}
               </CancelButton>
               <DeleteConfirmButton onClick={handleDeleteLesson}>
-                Delete
+                {t('timetables.delete')}
               </DeleteConfirmButton>
             </ModalFooter>
           </ModalContent>
@@ -2968,7 +2973,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
               paddingBottom: '16px', 
               marginBottom: '20px'
             }}>
-              <ModalTitle>Lesson Details</ModalTitle>
+              <ModalTitle>{t('timetables.lessonDetails')}</ModalTitle>
               <CloseButton onClick={() => setShowDetailsModal(false)}>
                 <FiX size={20} />
               </CloseButton>
@@ -3001,7 +3006,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                 fontWeight: '600',
                 alignSelf: 'flex-start'
               }}>
-                {selectedEvent.course || 'No course assigned'}
+                {selectedEvent.course || t('timetables.noCourseAssigned')}
               </div>
             </div>
             
@@ -3027,9 +3032,9 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                   <FiClock size={20} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Time</div>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>{t('timetables.time')}</div>
                   <div style={{ fontSize: '16px', fontWeight: '600', color: '#334155' }}>
-                    {formatTime(selectedEvent.startTime, selectedEvent.startMinute || 0)} - {formatTime(selectedEvent.endTime, selectedEvent.endMinute || 0)}
+                    {formatTime(selectedEvent.startTime, selectedEvent.startMinute || 0, t)} - {formatTime(selectedEvent.endTime, selectedEvent.endMinute || 0, t)}
                   </div>
                 </div>
               </div>
@@ -3048,9 +3053,9 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                   <FiCalendar size={20} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Day</div>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>{t('timetables.day')}</div>
                   <div style={{ fontSize: '16px', fontWeight: '600', color: '#334155' }}>
-                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][selectedEvent.day]}
+                    {[t('timetables.monday'), t('timetables.tuesday'), t('timetables.wednesday'), t('timetables.thursday'), t('timetables.friday'), t('timetables.saturday'), t('timetables.sunday')][selectedEvent.day]}
                   </div>
                 </div>
               </div>
@@ -3069,9 +3074,9 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                   <FiUsers size={20} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Class</div>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>{t('timetables.class')}</div>
                   <div style={{ fontSize: '16px', fontWeight: '600', color: '#334155' }}>
-                    {selectedEvent.className || 'Not assigned'}
+                    {selectedEvent.className || t('timetables.notAssigned')}
                   </div>
                 </div>
               </div>
@@ -3090,9 +3095,9 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                   <FiMapPin size={20} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Location</div>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>{t('timetables.location')}</div>
                   <div style={{ fontSize: '16px', fontWeight: '600', color: '#334155' }}>
-                    {selectedEvent.location || 'No location specified'}
+                    {selectedEvent.location || t('timetables.noLocationSpecified')}
                   </div>
                 </div>
               </div>
@@ -3116,7 +3121,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                   <FiUser size={20} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>Teacher</div>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>{t('timetables.teacher')}</div>
                   <div style={{ fontSize: '16px', fontWeight: '600', color: '#334155' }}>
                     {selectedEvent.teacher}
                   </div>
@@ -3135,7 +3140,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
                 onClick={() => setShowDetailsModal(false)} 
                 style={{ minWidth: '100px' }}
               >
-                Close
+                {t('timetables.close')}
               </SubmitButton>
             </ModalFooter>
           </ModalContent>

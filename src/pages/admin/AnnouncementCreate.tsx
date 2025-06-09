@@ -1,10 +1,12 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import AnnouncementModal from '../../components/admin/AnnouncementModal';
 import { FiArrowLeft } from 'react-icons/fi';
 
 const AnnouncementCreate: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleClose = () => {
@@ -16,9 +18,9 @@ const AnnouncementCreate: React.FC = () => {
       <Header>
         <BackButton onClick={handleClose}>
           <FiArrowLeft size={18} />
-          <span>Back to Announcements</span>
+          <span>{t('announcements.backToAnnouncements')}</span>
         </BackButton>
-        <Title>Create New Announcement</Title>
+        <Title>{t('announcements.createNewAnnouncement')}</Title>
       </Header>
       
       <Content>
