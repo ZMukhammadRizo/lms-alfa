@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FiAward, FiBarChart2, FiBookOpen, FiChevronRight, FiSearch, FiUsers } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -21,6 +22,7 @@ interface GradeLevel {
 }
 
 const GradeLevelSelect: React.FC = () => {
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const [searchTerm, setSearchTerm] = useState('')
 	const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -94,9 +96,9 @@ const GradeLevelSelect: React.FC = () => {
 		console.log('[GradeLevelSelect] Initial fetch triggered.')
 		fetchTeacherLevels().catch(err => {
 			console.error('Initial fetchTeacherLevels failed:', err)
-			setError('Failed to load initial grade levels.')
+			setError(t('errors.loadingFailed'))
 		})
-	}, [fetchTeacherLevels]) // fetchTeacherLevels should be stable
+	}, [fetchTeacherLevels, t]) // fetchTeacherLevels should be stable
 
 	// Effect 2: Calculate accurate counts when levels data changes from the store
 	useEffect(() => {
@@ -111,7 +113,7 @@ const GradeLevelSelect: React.FC = () => {
 					setGradeLevelsWithCounts(levelsWithCounts)
 				} catch (err) {
 					console.error('Error fetching accurate student counts:', err)
-					setError('Failed to load student counts for levels.')
+					setError(t('errors.loadingFailed'))
 					setGradeLevelsWithCounts([]) // Clear potentially stale data
 				} finally {
 					setLoading(false)
@@ -125,7 +127,7 @@ const GradeLevelSelect: React.FC = () => {
 		}
 
 		calculateCounts()
-	}, [gradeLevels, isLoadingStoreLevels]) // Depend on store data and its loading state
+	}, [gradeLevels, isLoadingStoreLevels, t]) // Depend on store data and its loading state
 
 	// Filter grade levels based on search term
 	const filteredGradeLevels = gradeLevelsWithCounts.filter(level =>
@@ -157,7 +159,7 @@ const GradeLevelSelect: React.FC = () => {
 		// Show initial loading message only when store is fetching levels
 		return (
 			<PageContainer>
-				<LoadingMessage>Loading grade levels...</LoadingMessage>
+				<LoadingMessage>{t('grades.loadingLevels')}</LoadingMessage>
 			</PageContainer>
 		)
 	}
@@ -166,7 +168,7 @@ const GradeLevelSelect: React.FC = () => {
 		// Show generic loading message if calculating counts (or potentially other loading)
 		return (
 			<PageContainer>
-				<LoadingMessage>Loading data...</LoadingMessage>
+				<LoadingMessage>{t('common.loading')}</LoadingMessage>
 			</PageContainer>
 		)
 	}
@@ -184,14 +186,14 @@ const GradeLevelSelect: React.FC = () => {
 			<PageHeaderWrapper>
 				<PageHeader>
 					<HeaderContent>
-						<PageTitle>Grade Management</PageTitle>
-						<SubTitle>Select a grade level to view and manage student grades</SubTitle>
+						<PageTitle>{t('grades.title')}</PageTitle>
+						<SubTitle>{t('grades.selectGradeLevel')}</SubTitle>
 					</HeaderContent>
 					<HeaderRight>
 						<SearchWrapper>
 							<StyledInput
 								prefix={<FiSearch />}
-								placeholder='Search grade levels...'
+								placeholder={t('grades.searchGradeLevels')}
 								value={searchTerm}
 								onChange={e => setSearchTerm(e.target.value)}
 							/>
@@ -223,7 +225,9 @@ const GradeLevelSelect: React.FC = () => {
 									<GradeLevelIcon>
 										<FiBookOpen />
 									</GradeLevelIcon>
-									<GradeLevelName>{level.levelName}th Grade</GradeLevelName>
+									<GradeLevelName>
+										{level.levelName}th {t('grades.grade')}
+									</GradeLevelName>
 								</CardTop>
 								<CardContent>
 									<GradeMetricRow>
@@ -237,7 +241,7 @@ const GradeLevelSelect: React.FC = () => {
 														? level.actualStudentCount
 														: level.studentCount}
 												</GradeMetricValue>
-												<GradeMetricLabel>Students</GradeMetricLabel>
+												<GradeMetricLabel>{t('grades.students')}</GradeMetricLabel>
 											</GradeMetricContent>
 										</GradeMetric>
 										<GradeMetric>
@@ -246,7 +250,7 @@ const GradeLevelSelect: React.FC = () => {
 											</GradeMetricIcon>
 											<GradeMetricContent>
 												<GradeMetricValue>{level.classCount}</GradeMetricValue>
-												<GradeMetricLabel>Classes</GradeMetricLabel>
+												<GradeMetricLabel>{t('grades.classes')}</GradeMetricLabel>
 											</GradeMetricContent>
 										</GradeMetric>
 										<GradeMetric>
@@ -255,23 +259,25 @@ const GradeLevelSelect: React.FC = () => {
 											</GradeMetricIcon>
 											<GradeMetricContent>
 												<GradeMetricValue>{level.subjectCount}</GradeMetricValue>
-												<GradeMetricLabel>Subjects</GradeMetricLabel>
+												<GradeMetricLabel>{t('grades.subjects')}</GradeMetricLabel>
 											</GradeMetricContent>
 										</GradeMetric>
 									</GradeMetricRow>
-									<CardArrow $isHovered={hoveredCard === level.levelId}>
-										<FiChevronRight />
-										<span>View Classes</span>
-									</CardArrow>
+									<ViewButton>
+										<ViewButtonText>{t('grades.viewJournal')}</ViewButtonText>
+										<ViewButtonIcon>
+											<FiChevronRight />
+										</ViewButtonIcon>
+									</ViewButton>
 								</CardContent>
 							</GradeLevelCard>
 						))
 					) : (
-						<NoResults>
-							{searchTerm
-								? `No grade levels found matching "${searchTerm}"`
-								: 'No grade levels assigned to you yet.'}
-						</NoResults>
+						<EmptyState>
+							<EmptyStateMessage>
+								{searchTerm ? t('grades.noGradeLevelsFound') : t('grades.noGradeLevelsFound')}
+							</EmptyStateMessage>
+						</EmptyState>
 					)}
 				</GradeLevelGrid>
 			</ContentContainer>
@@ -466,36 +472,39 @@ const GradeMetricLabel = styled.div`
 	color: ${props => props.theme.colors.text.secondary};
 `
 
-const CardArrow = styled.div<{ $isHovered?: boolean }>`
+const ViewButton = styled.div`
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
 	margin-top: auto;
-	color: ${props =>
-		props.$isHovered ? props.theme.colors.primary[600] : props.theme.colors.text.tertiary};
+	color: ${props => props.theme.colors.primary[600]};
 	font-size: 0.9rem;
 	transition: all 0.3s ease;
 	font-weight: 500;
-
-	span {
-		transform: translateX(${props => (props.$isHovered ? '4px' : '0')});
-		opacity: ${props => (props.$isHovered ? 1 : 0.7)};
-		transition: all 0.3s ease;
-	}
-
-	svg {
-		transition: all 0.3s ease;
-		transform: translateX(${props => (props.$isHovered ? '4px' : '0')});
-	}
 `
 
-const NoResults = styled.div`
+const ViewButtonText = styled.span`
+	transform: translateX(${props => (props.$isHovered ? '4px' : '0')});
+	opacity: ${props => (props.$isHovered ? 1 : 0.7)};
+	transition: all 0.3s ease;
+`
+
+const ViewButtonIcon = styled.div`
+	transition: all 0.3s ease;
+	transform: translateX(${props => (props.$isHovered ? '4px' : '0')});
+`
+
+const EmptyState = styled.div`
 	grid-column: 1 / -1;
 	text-align: center;
 	padding: 48px 0;
 	color: ${props => props.theme.colors.text.secondary};
 	font-size: 1.1rem;
+`
+
+const EmptyStateMessage = styled.div`
+	margin-bottom: 16px;
 `
 
 const LoadingMessage = styled.div`
