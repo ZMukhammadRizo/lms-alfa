@@ -1,9 +1,10 @@
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import { ArrowLeft, Calendar, Grid, List, Search } from 'react-feather'
+import { ArrowLeft, Calendar, FileText, Grid, List, Search } from 'react-feather'
 import { Link, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
+import * as XLSX from 'xlsx'
 import AttendanceCalendarModal from '../../../components/common/AttendanceCalendarModal'
 import PageHeader from '../../../components/common/PageHeader'
 import supabase from '../../../config/supabaseClient'
@@ -38,6 +39,9 @@ interface StudentResponse {
 
 type ViewMode = 'grid' | 'table'
 
+// Define period type for export
+type ExportPeriod = 'weekly' | 'monthly' | null
+
 const TeacherDailyAttendanceClass: React.FC = () => {
 	const { levelId, classId } = useParams<{ levelId: string; classId: string }>()
 	const [students, setStudents] = useState<Student[]>([])
@@ -50,6 +54,9 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 	const [isModalOpen, setIsModalOpen] = useState(false)
 	const [currentQuarter, setCurrentQuarter] = useState<string | null>(null)
 	const [viewMode, setViewMode] = useState<ViewMode>('grid')
+	const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+	const [exportPeriod, setExportPeriod] = useState<ExportPeriod>(null)
+	const [exportLoading, setExportLoading] = useState(false)
 	const { user } = useAuth()
 
 	useEffect(() => {
@@ -200,6 +207,157 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 		setViewMode(prev => (prev === 'grid' ? 'table' : 'grid'))
 	}
 
+	const handleExportClick = () => {
+		setExportPeriod(null)
+		setIsExportModalOpen(true)
+	}
+
+	const handleExportClose = () => {
+		setIsExportModalOpen(false)
+	}
+
+	const handleExportData = async (period: ExportPeriod) => {
+		if (!period || !classId || !classData) return
+
+		try {
+			setExportLoading(true)
+			setExportPeriod(period)
+
+			// Calculate date range based on selected period
+			const today = new Date()
+			let startDate: Date
+			let endDate: Date
+
+			if (period === 'monthly') {
+				// Get the first day of the current month
+				startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+				// Get the last day of the current month
+				endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+			} else {
+				// Get the first day of the current week (Monday)
+				const day = today.getDay()
+				const diff = today.getDate() - day + (day === 0 ? -6 : 1) // Adjust for Sunday
+				startDate = new Date(today.setDate(diff))
+				// Get the last day of the current week (Sunday)
+				endDate = new Date(startDate)
+				endDate.setDate(startDate.getDate() + 6)
+			}
+
+			const formattedStartDate = startDate.toISOString().split('T')[0]
+			const formattedEndDate = endDate.toISOString().split('T')[0]
+
+			// First, ensure we have all students in the class
+			const studentsInClass = [...students]
+
+			// Fetch attendance data for all students in this class for the selected period
+			const { data: attendanceData, error: attendanceError } = await supabase
+				.from('daily_attendance')
+				.select(
+					`
+					id,
+					student_id,
+					noted_for,
+					status,
+					users:student_id (
+						fullName
+					)
+				`
+				)
+				.eq('class_id', classId)
+				.gte('noted_for', formattedStartDate)
+				.lte('noted_for', formattedEndDate)
+				.order('noted_for', { ascending: true })
+
+			if (attendanceError) throw attendanceError
+
+			// Transform data for export
+			const groupedByStudent: Record<string, any> = {}
+
+			// Get all dates in the range
+			const allDates: string[] = []
+			const currentDate = new Date(startDate)
+			while (currentDate <= endDate) {
+				// Skip weekends (Saturday = 6, Sunday = 0)
+				const day = currentDate.getDay()
+				if (day !== 0 && day !== 6) {
+					allDates.push(currentDate.toISOString().split('T')[0])
+				}
+				currentDate.setDate(currentDate.getDate() + 1)
+			}
+
+			// Initialize all students with empty attendance records
+			studentsInClass.forEach(student => {
+				groupedByStudent[student.id] = {
+					studentId: student.id,
+					studentName: student.fullName,
+					attendance: {},
+				}
+			})
+
+			// Add attendance data for students who have records
+			attendanceData?.forEach(record => {
+				const studentId = record.student_id
+
+				if (groupedByStudent[studentId]) {
+					groupedByStudent[studentId].attendance[record.noted_for] = record.status
+				}
+			})
+
+			// Create export data
+			const exportData = Object.values(groupedByStudent).map((studentData: any) => {
+				const row: Record<string, any> = {
+					'Student Name': studentData.studentName,
+				}
+
+				// Add attendance status for each date
+				allDates.forEach(date => {
+					const formattedDate = new Date(date).toLocaleDateString('en-US', {
+						month: 'short',
+						day: 'numeric',
+					})
+					row[formattedDate] = studentData.attendance[date] || 'Absent'
+				})
+
+				// Calculate attendance percentage - consider N/A (now "Absent") as absent
+				const totalDays = allDates.length
+				const presentDays = Object.values(studentData.attendance).filter(
+					(status: any) => status === 'present' || status === 'late'
+				).length
+
+				const percentage = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0
+				row['Attendance %'] = `${percentage}%`
+
+				return row
+			})
+
+			// Create worksheet
+			const ws = XLSX.utils.json_to_sheet(exportData)
+			const wb = XLSX.utils.book_new()
+			XLSX.utils.book_append_sheet(wb, ws, 'Attendance')
+
+			// Generate filename
+			const periodText = period === 'monthly' ? 'Monthly' : 'Weekly'
+			const dateRange = `${new Date(formattedStartDate).toLocaleDateString()} to ${new Date(
+				formattedEndDate
+			).toLocaleDateString()}`
+			const filename = `${classData.classname}_${periodText}_Attendance_${dateRange.replace(
+				/\//g,
+				'-'
+			)}.xlsx`
+
+			// Export to file
+			XLSX.writeFile(wb, filename)
+
+			toast.success(`${periodText} attendance data exported successfully`)
+			setIsExportModalOpen(false)
+		} catch (error) {
+			console.error('Error exporting attendance data:', error)
+			toast.error('Failed to export attendance data')
+		} finally {
+			setExportLoading(false)
+		}
+	}
+
 	const renderGridView = () => {
 		return (
 			<StudentGrid>
@@ -299,17 +457,23 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 								</ViewToggleButton>
 							</ViewToggle>
 						</LeftSection>
-						<SearchInputWrapper>
-							<SearchIcon>
-								<Search size={18} />
-							</SearchIcon>
-							<SearchInput
-								type='text'
-								placeholder='Search students...'
-								value={searchQuery}
-								onChange={handleSearchChange}
-							/>
-						</SearchInputWrapper>
+						<ActionContainer>
+							<ExportButton onClick={handleExportClick}>
+								<FileText size={16} />
+								<span>Export Attendance</span>
+							</ExportButton>
+							<SearchInputWrapper>
+								<SearchIcon>
+									<Search size={18} />
+								</SearchIcon>
+								<SearchInput
+									type='text'
+									placeholder='Search students...'
+									value={searchQuery}
+									onChange={handleSearchChange}
+								/>
+							</SearchInputWrapper>
+						</ActionContainer>
 					</SearchContainer>
 
 					{filteredStudents.length === 0 ? (
@@ -334,6 +498,15 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 						classId={classId || ''}
 						teacherId={user?.id}
 						quarterId={currentQuarter || undefined}
+					/>
+				)}
+
+				{isExportModalOpen && (
+					<ExportModal
+						isOpen={isExportModalOpen}
+						onClose={handleExportClose}
+						onExport={handleExportData}
+						loading={exportLoading}
 					/>
 				)}
 			</AnimatePresence>
@@ -658,6 +831,298 @@ const EmptyState = styled.div`
 	h3 {
 		margin: 0 0 8px;
 		color: #0ea5e9;
+	}
+`
+
+const ActionContainer = styled.div`
+	display: flex;
+	gap: 16px;
+	align-items: center;
+`
+
+const ExportButton = styled.button`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 16px;
+	background-color: #0ea5e9;
+	color: white;
+	border: none;
+	border-radius: 8px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s;
+
+	&:hover {
+		background-color: #0284c7;
+	}
+`
+
+// Export Period Selection Modal
+interface ExportModalProps {
+	isOpen: boolean
+	onClose: () => void
+	onExport: (period: ExportPeriod) => void
+	loading: boolean
+}
+
+const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onExport, loading }) => {
+	const [selectedPeriod, setSelectedPeriod] = useState<ExportPeriod>(null)
+
+	const handlePeriodSelect = (period: ExportPeriod) => {
+		setSelectedPeriod(period)
+	}
+
+	const handleExport = () => {
+		if (selectedPeriod) {
+			onExport(selectedPeriod)
+		}
+	}
+
+	if (!isOpen) return null
+
+	return (
+		<ModalOverlay
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			exit={{ opacity: 0 }}
+			onClick={onClose}
+		>
+			<ModalContent
+				initial={{ scale: 0.9, opacity: 0 }}
+				animate={{ scale: 1, opacity: 1 }}
+				exit={{ scale: 0.9, opacity: 0 }}
+				onClick={e => e.stopPropagation()}
+			>
+				<ModalHeader>
+					<h3>Export Attendance Data</h3>
+					<CloseButton onClick={onClose}>
+						<ArrowLeft size={20} />
+					</CloseButton>
+				</ModalHeader>
+
+				<ModalBody>
+					<p>Select the period for which you want to export attendance data:</p>
+
+					<RadioGroup>
+						<RadioOption>
+							<RadioInput
+								type='radio'
+								id='weekly'
+								name='exportPeriod'
+								checked={selectedPeriod === 'weekly'}
+								onChange={() => handlePeriodSelect('weekly')}
+							/>
+							<RadioLabel htmlFor='weekly'>
+								<RadioButton />
+								Weekly (Current Week)
+							</RadioLabel>
+						</RadioOption>
+						<RadioOption>
+							<RadioInput
+								type='radio'
+								id='monthly'
+								name='exportPeriod'
+								checked={selectedPeriod === 'monthly'}
+								onChange={() => handlePeriodSelect('monthly')}
+							/>
+							<RadioLabel htmlFor='monthly'>
+								<RadioButton />
+								Monthly (Current Month)
+							</RadioLabel>
+						</RadioOption>
+					</RadioGroup>
+				</ModalBody>
+
+				<ModalFooter>
+					<CancelButton onClick={onClose} disabled={loading}>
+						Cancel
+					</CancelButton>
+					<ExportActionButton onClick={handleExport} disabled={!selectedPeriod || loading}>
+						{loading ? 'Exporting...' : 'Export'}
+					</ExportActionButton>
+				</ModalFooter>
+			</ModalContent>
+		</ModalOverlay>
+	)
+}
+
+const ModalOverlay = styled(motion.div)`
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	padding: 20px;
+	backdrop-filter: blur(2px);
+`
+
+const ModalContent = styled(motion.div)`
+	background-color: #fff;
+	border-radius: 12px;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+	width: 100%;
+	max-width: 500px;
+	overflow-y: auto;
+	z-index: 1001;
+`
+
+const ModalHeader = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 16px 20px;
+	border-bottom: 1px solid #e5e7eb;
+
+	h3 {
+		margin: 0;
+		font-size: 1.2rem;
+		font-weight: 600;
+	}
+`
+
+const ModalBody = styled.div`
+	padding: 20px;
+
+	p {
+		margin-top: 0;
+		margin-bottom: 16px;
+		color: #4b5563;
+	}
+`
+
+const ModalFooter = styled.div`
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	padding: 16px 20px;
+	border-top: 1px solid #e5e7eb;
+`
+
+const RadioGroup = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin: 20px 0;
+`
+
+const RadioOption = styled.div`
+	display: flex;
+	align-items: center;
+`
+
+const RadioInput = styled.input`
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+`
+
+const RadioLabel = styled.label`
+	display: flex;
+	align-items: center;
+	font-size: 1rem;
+	color: #4b5563;
+	cursor: pointer;
+
+	${RadioInput}:checked + & {
+		color: #111827;
+		font-weight: 500;
+	}
+`
+
+const RadioButton = styled.span`
+	position: relative;
+	display: inline-block;
+	width: 20px;
+	height: 20px;
+	margin-right: 10px;
+	border-radius: 50%;
+	border: 2px solid #d1d5db;
+	transition: all 0.2s;
+
+	&::after {
+		content: '';
+		position: absolute;
+		display: none;
+		top: 4px;
+		left: 4px;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background-color: #0ea5e9;
+	}
+
+	${RadioInput}:checked + ${RadioLabel} & {
+		border-color: #0ea5e9;
+
+		&::after {
+			display: block;
+		}
+	}
+`
+
+const CloseButton = styled.button`
+	background: none;
+	border: none;
+	color: #6b7280;
+	cursor: pointer;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+
+	&:hover {
+		background-color: #f3f4f6;
+		color: #111827;
+	}
+`
+
+const CancelButton = styled.button`
+	padding: 8px 16px;
+	background: none;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	color: #4b5563;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s;
+
+	&:hover:not(:disabled) {
+		background-color: #f3f4f6;
+		border-color: #9ca3af;
+	}
+
+	&:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+`
+
+const ExportActionButton = styled.button`
+	padding: 8px 16px;
+	background-color: #0ea5e9;
+	border: none;
+	border-radius: 6px;
+	color: white;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s;
+
+	&:hover:not(:disabled) {
+		background-color: #0284c7;
+	}
+
+	&:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 `
 

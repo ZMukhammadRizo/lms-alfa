@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -18,6 +18,7 @@ import { Classes } from './pages/admin/Classes'
 import AdminDailyAttendance from './pages/admin/DailyAttendance/AdminDailyAttendance'
 import AdminDailyAttendanceClass from './pages/admin/DailyAttendance/AdminDailyAttendanceClass'
 import AdminDailyAttendanceLevel from './pages/admin/DailyAttendance/AdminDailyAttendanceLevel'
+import DailyAttendanceReports from './pages/admin/DailyAttendance/DailyAttendanceReports'
 import Dashboard from './pages/admin/Dashboard'
 import AdminGradesModule from './pages/admin/GradesModule'
 import LessonDetail from './pages/admin/LessonDetail'
@@ -29,8 +30,8 @@ import Settings from './pages/admin/Settings'
 import Subjects from './pages/admin/Subjects'
 import AdminSubmissions from './pages/admin/Submissions'
 import Timetables from './pages/admin/Timetables'
-import Users from './pages/admin/Users'
 import UserProfile from './pages/admin/UserProfile'
+import Users from './pages/admin/Users'
 import Debug from './pages/auth/Debug'
 import Login from './pages/auth/Login'
 import RedirectPage from './pages/auth/RedirectPage'
@@ -71,11 +72,10 @@ import TeacherSubmissions from './pages/teacher/TeacherSubmissions'
 import GlobalStyle from './styles/globalStyles'
 import { createTheme } from './styles/theme'
 
-import StudentDailyAttendance from './pages/student/DailyAttendance'
 import ParentDailyAttendance from './pages/parent/DailyAttendance'
+import StudentDailyAttendance from './pages/student/DailyAttendance'
 
 import { debugCheckTables } from './services/gradesService'
-
 
 // Create a context for theme settings
 export interface ThemeContextType {
@@ -175,6 +175,7 @@ function AppContent() {
 								path='daily-attendance/:levelId/classes/:classId'
 								element={<AdminDailyAttendanceClass />}
 							/>
+							<Route path='daily-attendance/reports' element={<DailyAttendanceReports />} />
 							<Route path='timetables' element={<Timetables />} />
 							<Route path='settings' element={<Settings />} />
 							<Route path='profile' element={<ProfilePage />} />
@@ -221,6 +222,7 @@ function AppContent() {
 								path='daily-attendance/:levelId/classes/:classId'
 								element={<TeacherDailyAttendanceClass />}
 							/>
+							<Route path='daily-attendance/reports' element={<DailyAttendanceReports />} />
 						</Route>
 					</Route>
 
