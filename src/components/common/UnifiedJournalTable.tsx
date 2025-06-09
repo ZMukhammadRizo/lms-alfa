@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Check, Edit2, Loader, Plus, Save, X } from 'react-feather'
 import styled from 'styled-components'
+import { useTranslation } from 'react-i18next'
 
 // Define the types that were imported from JournalData
 interface Student {
@@ -54,6 +55,7 @@ const UnifiedJournalTable: React.FC<StudentJournalTableProps> = ({
 	onLessonUpdate,
 	onLessonSelect,
 }) => {
+	const { t } = useTranslation()
 	const [editingCell, setEditingCell] = useState<{ studentId: string; date: string } | null>(null)
 	const [editValue, setEditValue] = useState<string>('')
 	const [recentlyEdited, setRecentlyEdited] = useState<Set<string>>(new Set())
@@ -446,7 +448,7 @@ const UnifiedJournalTable: React.FC<StudentJournalTableProps> = ({
 			{commentModalOpen && (
 				<CommentModal ref={commentModalRef} onClick={e => e.stopPropagation()}>
 					<CommentModalHeader>
-						<h3>Add Comment</h3>
+						<h3>{t('grades.addComment')}</h3>
 						<CloseButton onClick={() => setCommentModalOpen(null)}>
 							<X size={18} />
 						</CloseButton>
@@ -455,34 +457,34 @@ const UnifiedJournalTable: React.FC<StudentJournalTableProps> = ({
 						<CommentTextarea
 							value={commentText}
 							onChange={e => setCommentText(e.target.value)}
-							placeholder='Enter your comment here...'
+							placeholder={t('grades.enterCommentHere')}
 							autoFocus
 						/>
 					</CommentModalBody>
 					<CommentModalFooter>
 						<CommentModalButton $primary onClick={handleCommentSave}>
-							Save Comment
+							{t('grades.saveComment')}
 						</CommentModalButton>
 						<CommentModalButton onClick={() => setCommentModalOpen(null)}>
-							Cancel
+							{t('grades.cancel')}
 						</CommentModalButton>
 					</CommentModalFooter>
 				</CommentModal>
 			)}
 
 			<JournalHeader>
-				<JournalTitle>Grades & Attendance Journal</JournalTitle>
-				<HeaderSubtitle>Manage grades, attendance, and comments in one place</HeaderSubtitle>
+				<JournalTitle>{t('grades.gradesAttendanceJournal')}</JournalTitle>
+				<HeaderSubtitle>{t('grades.manageGradesAttendanceComments')}</HeaderSubtitle>
 			</JournalHeader>
 
 			<TableScrollContainer>
 				<JournalTable>
 					<TableHeader>
 						<HeaderRow>
-							<StudentNameHeader>Student</StudentNameHeader>
+							<StudentNameHeader>{t('grades.student')}</StudentNameHeader>
 							{sortedLessons.map(lesson => (
 								<LessonHeader key={lesson.date}>
-									<LessonTitle>{lesson.topic || 'Lesson'}</LessonTitle>
+									<LessonTitle>{lesson.topic || t('grades.lesson')}</LessonTitle>
 									<LessonDate>{formatDate(lesson.date)}</LessonDate>
 								</LessonHeader>
 							))}
@@ -551,10 +553,10 @@ const UnifiedJournalTable: React.FC<StudentJournalTableProps> = ({
 													</ActionButtons>
 												</GradeEditContainer>
 											) : isSaving ? (
-												<SavingIndicator>
-													<Loader size={20} />
-													<SavingText>Saving...</SavingText>
-												</SavingIndicator>
+																							<SavingIndicator>
+												<Loader size={20} />
+												<SavingText>{t('grades.saving')}</SavingText>
+											</SavingIndicator>
 											) : (
 												<CellContentWrapper>
 													{/* Grade component */}
@@ -605,7 +607,7 @@ const UnifiedJournalTable: React.FC<StudentJournalTableProps> = ({
 																	}}
 																>
 																	<AttendanceIcon>✅</AttendanceIcon>
-																	<AttendanceText>Present</AttendanceText>
+																	<AttendanceText>{t('grades.present')}</AttendanceText>
 																</AttendanceOption>
 																<AttendanceOption
 																	$isSelected={attendanceStatus === 'late'}
@@ -616,7 +618,7 @@ const UnifiedJournalTable: React.FC<StudentJournalTableProps> = ({
 																	}}
 																>
 																	<AttendanceIcon>⏰</AttendanceIcon>
-																	<AttendanceText>Late</AttendanceText>
+																	<AttendanceText>{t('grades.late')}</AttendanceText>
 																</AttendanceOption>
 																<AttendanceOption
 																	$isSelected={attendanceStatus === 'absent'}
@@ -627,7 +629,7 @@ const UnifiedJournalTable: React.FC<StudentJournalTableProps> = ({
 																	}}
 																>
 																	<AttendanceIcon>❌</AttendanceIcon>
-																	<AttendanceText>Absent</AttendanceText>
+																	<AttendanceText>{t('grades.absent')}</AttendanceText>
 																</AttendanceOption>
 																<AttendanceOption
 																	$isSelected={attendanceStatus === 'excused'}
@@ -638,7 +640,7 @@ const UnifiedJournalTable: React.FC<StudentJournalTableProps> = ({
 																	}}
 																>
 																	<AttendanceIcon>📝</AttendanceIcon>
-																	<AttendanceText>Excused</AttendanceText>
+																	<AttendanceText>{t('grades.excused')}</AttendanceText>
 																</AttendanceOption>
 															</AttendanceDropdown>
 														)}

@@ -2,6 +2,7 @@ import React from 'react'
 import { Calendar, Search, X } from 'react-feather'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import { useTranslation } from 'react-i18next'
 
 // Component props interface
 interface TopSectionProps {
@@ -36,15 +37,16 @@ const TopSection: React.FC<TopSectionProps> = ({
 	handleQuarterSelect,
 }) => {
 	const navigate = useNavigate()
+	const { t } = useTranslation()
 
 	// Find the selected quarter's name
 	const selectedQuarterName =
-		quarters.find(q => q.id === selectedQuarterId)?.name || 'Select Quarter'
+		quarters.find(q => q.id === selectedQuarterId)?.name || t('grades.selectQuarter')
 
 	return (
 		<TopSectionContainer style={{ width: '100%' }}>
 			<HeaderInfo>
-				<HeaderTitle>{subjectName || 'Select a subject'}</HeaderTitle>
+				<HeaderTitle>{subjectName || t('grades.selectSubject')}</HeaderTitle>
 				{className && gradeName && (
 					<HeaderSubtitle>
 						{className} - {gradeName}
@@ -57,7 +59,7 @@ const TopSection: React.FC<TopSectionProps> = ({
 					<Search size={16} />
 					<SearchInput
 						type='text'
-						placeholder='Search students...'
+						placeholder={t('grades.searchStudents')}
 						value={searchQuery}
 						onChange={e => setSearchQuery(e.target.value)}
 					/>
