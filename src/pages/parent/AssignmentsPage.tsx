@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
 	FiAlertTriangle,
 	FiCalendar,
@@ -155,6 +156,7 @@ interface Assignment {
 }
 
 const AssignmentsPage: React.FC = () => {
+	const { t } = useTranslation()
 	const [activeFilter, setActiveFilter] = useState<FilterType>('all')
 	const [childFilter, setChildFilter] = useState<ChildFilter>('all')
 	const [assignments, setAssignments] = useState<Assignment[]>([])
@@ -172,7 +174,7 @@ const AssignmentsPage: React.FC = () => {
 	useEffect(() => {
 		const loadData = async () => {
 			if (!parentId) {
-				setError('Parent ID not found. Please log in again.')
+				setError(t('parent.assignments.parentIdNotFound'))
 				setIsLoading(false)
 				return
 			}
@@ -192,7 +194,7 @@ const AssignmentsPage: React.FC = () => {
 				setSubmissions(dashboardData.submissions || [])
 			} catch (err) {
 				console.error('Failed to load data:', err)
-				setError('Could not load data. Please try again.')
+				setError(t('parent.assignments.couldNotLoadData'))
 			} finally {
 				setIsLoading(false)
 			}
@@ -227,6 +229,23 @@ const AssignmentsPage: React.FC = () => {
 		}
 	}
 
+	const getStatusText = (status: Assignment['status']) => {
+		switch (status) {
+			case 'completed':
+				return t('parent.assignments.filters.completed')
+			case 'pending':
+				return t('parent.assignments.filters.pending')
+			case 'late':
+				return t('parent.assignments.filters.late')
+			case 'overdue':
+				return t('parent.assignments.filters.overdue')
+			case 'upcoming':
+				return t('parent.assignments.filters.upcoming')
+			default:
+				return t('parent.assignments.filters.pending')
+		}
+	}
+
 	const openModal = (assignment: Assignment) => {
 		setSelectedAssignment(assignment)
 		const submission = getSubmissionForAssignment(assignment.id, assignment.studentId || '')
@@ -243,42 +262,42 @@ const AssignmentsPage: React.FC = () => {
 	return (
 		<Container>
 			<TitleWrapper>
-				<PageTitle>Assignments</PageTitle>
-				<SubTitle>Track your children's assignments and homework</SubTitle>
+				<PageTitle>{t('parent.assignments.title')}</PageTitle>
+				<SubTitle>{t('parent.assignments.description')}</SubTitle>
 			</TitleWrapper>
 
 			<FiltersRow>
 				<FilterGroup>
 					<FilterButton $active={activeFilter === 'all'} onClick={() => setActiveFilter('all')}>
-						All
+						{t('common.all')}
 					</FilterButton>
 					<FilterButton
 						$active={activeFilter === 'pending'}
 						onClick={() => setActiveFilter('pending')}
 						$color='warning'
 					>
-						<FiClock /> Pending
+						<FiClock /> {t('parent.assignments.filters.pending')}
 					</FilterButton>
 					<FilterButton
 						$active={activeFilter === 'completed'}
 						onClick={() => setActiveFilter('completed')}
 						$color='success'
 					>
-						<FiCheck /> Completed
+						<FiCheck /> {t('parent.assignments.filters.completed')}
 					</FilterButton>
 					<FilterButton
 						$active={activeFilter === 'overdue'}
 						onClick={() => setActiveFilter('overdue')}
 						$color='danger'
 					>
-						<FiAlertTriangle /> Overdue
+						<FiAlertTriangle /> {t('parent.assignments.filters.overdue')}
 					</FilterButton>
 					<FilterButton
 						$active={activeFilter === 'upcoming'}
 						onClick={() => setActiveFilter('upcoming')}
 						$color='info'
 					>
-						<FiCalendar /> Upcoming
+						<FiCalendar /> {t('parent.assignments.filters.upcoming')}
 					</FilterButton>
 				</FilterGroup>
 
@@ -287,7 +306,7 @@ const AssignmentsPage: React.FC = () => {
 					onChange={e => setChildFilter(e.target.value as ChildFilter)}
 					disabled={isLoading}
 				>
-					<option value='all'>All Children</option>
+					<option value='all'>{t('parent.assignments.allChildren')}</option>
 					{children.map(child => (
 						<option key={child.id} value={child.id}>
 							{child.name}
@@ -299,7 +318,7 @@ const AssignmentsPage: React.FC = () => {
 			<AssignmentsList>
 				{isLoading ? (
 					<LoadingState>
-						<FiLoader /> Loading assignments...
+						<FiLoader /> {t('parent.assignments.loadingAssignments')}
 					</LoadingState>
 				) : error ? (
 					<NoAssignments>
@@ -307,7 +326,7 @@ const AssignmentsPage: React.FC = () => {
 					</NoAssignments>
 				) : filteredAssignments.length === 0 ? (
 					<NoAssignments>
-						<p>No assignments match the selected filters.</p>
+						<p>{t('parent.assignments.noAssignmentsMatch')}</p>
 					</NoAssignments>
 				) : (
 					filteredAssignments.map(assignment => {
@@ -320,7 +339,7 @@ const AssignmentsPage: React.FC = () => {
 											<AssignmentTitle>{assignment.title}</AssignmentTitle>
 											<StatusBadge $status={assignment.status as FilterType | 'overdue'}>
 												{getStatusIcon(assignment.status)}{' '}
-												{assignment.status.charAt(0).toUpperCase() + assignment.status.slice(1)}
+												{getStatusText(assignment.status)}
 											</StatusBadge>
 										</AssignmentHeader>
 										<AssignmentSubject>
@@ -335,7 +354,7 @@ const AssignmentsPage: React.FC = () => {
 													<FiCalendar />
 												</MetaIcon>
 												<MetaText>
-													<MetaLabel>Due Date</MetaLabel>
+													<MetaLabel>{t('parent.assignments.dueDate')}</MetaLabel>
 													<MetaValue>
 														{new Date(assignment.due_date).toLocaleDateString()}
 													</MetaValue>
@@ -346,8 +365,8 @@ const AssignmentsPage: React.FC = () => {
 													<FiUser />
 												</MetaIcon>
 												<MetaText>
-													<MetaLabel>Child</MetaLabel>
-													<MetaValue>{assignment.studentName || 'N/A'}</MetaValue>
+													<MetaLabel>{t('parent.assignments.child')}</MetaLabel>
+													<MetaValue>{assignment.studentName || t('common.notAvailable')}</MetaValue>
 												</MetaText>
 											</MetaItem>
 											{submission?.grade && (
@@ -356,7 +375,7 @@ const AssignmentsPage: React.FC = () => {
 														<FiCheck />
 													</MetaIcon>
 													<MetaText>
-														<MetaLabel>Ball</MetaLabel>
+														<MetaLabel>{t('parent.assignments.grade')}</MetaLabel>
 														<MetaValue>{submission.grade}</MetaValue>
 													</MetaText>
 												</MetaItem>
@@ -367,7 +386,7 @@ const AssignmentsPage: React.FC = () => {
 														<FiFileText />
 													</MetaIcon>
 													<MetaText>
-														<MetaLabel>Submitted</MetaLabel>
+														<MetaLabel>{t('parent.assignments.submitted')}</MetaLabel>
 														<MetaValue>
 															{new Date(submission.submittedat).toLocaleDateString()}
 														</MetaValue>
@@ -375,7 +394,7 @@ const AssignmentsPage: React.FC = () => {
 												</MetaItem>
 											)}
 											<ViewDetailsButton onClick={() => openModal(assignment)}>
-												View Details
+												{t('common.viewDetails')}
 											</ViewDetailsButton>
 										</AssignmentMeta>
 									</Col>
@@ -430,29 +449,28 @@ const AssignmentsPage: React.FC = () => {
 							<ModalStatusSection>
 								<StatusBadge $status={selectedAssignment.status as FilterType | 'overdue'}>
 									{getStatusIcon(selectedAssignment.status)}{' '}
-									{selectedAssignment.status.charAt(0).toUpperCase() +
-										selectedAssignment.status.slice(1)}
+									{getStatusText(selectedAssignment.status)}
 								</StatusBadge>
 							</ModalStatusSection>
 
 							<ModalDetailSection>
-								<ModalDetailSectionTitle>Description</ModalDetailSectionTitle>
+								<ModalDetailSectionTitle>{t('parent.assignments.modal.description')}</ModalDetailSectionTitle>
 								<ModalDetailContent>
-									{selectedAssignment.description || 'No description provided.'}
+									{selectedAssignment.description || t('parent.assignments.modal.noDescription')}
 								</ModalDetailContent>
 							</ModalDetailSection>
 
 							<ModalDetailSection>
-								<ModalDetailSectionTitle>Details</ModalDetailSectionTitle>
+								<ModalDetailSectionTitle>{t('parent.assignments.modal.details')}</ModalDetailSectionTitle>
 								<ModalDetailsGrid>
 									<MetaItem>
 										<MetaIcon>
 											<FiCalendar />
 										</MetaIcon>
 										<MetaText>
-											<MetaLabel>Due Date</MetaLabel>
+											<MetaLabel>{t('parent.assignments.dueDate')}</MetaLabel>
 											<MetaValue>
-												{new Date(selectedAssignment.due_date).toLocaleDateString()} at{' '}
+												{new Date(selectedAssignment.due_date).toLocaleDateString()} {t('parent.assignments.modal.at')}{' '}
 												{new Date(selectedAssignment.due_date).toLocaleTimeString([], {
 													hour: '2-digit',
 													minute: '2-digit',
@@ -465,8 +483,8 @@ const AssignmentsPage: React.FC = () => {
 											<FiUser />
 										</MetaIcon>
 										<MetaText>
-											<MetaLabel>Child</MetaLabel>
-											<MetaValue>{selectedAssignment.studentName || 'N/A'}</MetaValue>
+											<MetaLabel>{t('parent.assignments.child')}</MetaLabel>
+											<MetaValue>{selectedAssignment.studentName || t('common.notAvailable')}</MetaValue>
 										</MetaText>
 									</MetaItem>
 									{selectedSubmission?.grade && (
@@ -475,7 +493,7 @@ const AssignmentsPage: React.FC = () => {
 												<FiCheck />
 											</MetaIcon>
 											<MetaText>
-												<MetaLabel>Ball</MetaLabel>
+												<MetaLabel>{t('parent.assignments.grade')}</MetaLabel>
 												<MetaValue>{selectedSubmission.grade}</MetaValue>
 											</MetaText>
 										</MetaItem>
@@ -486,7 +504,7 @@ const AssignmentsPage: React.FC = () => {
 												<FiFileText />
 											</MetaIcon>
 											<MetaText>
-												<MetaLabel>Submitted</MetaLabel>
+												<MetaLabel>{t('parent.assignments.submitted')}</MetaLabel>
 												<MetaValue>
 													{new Date(selectedSubmission.submittedat).toLocaleDateString()}
 												</MetaValue>
@@ -500,7 +518,7 @@ const AssignmentsPage: React.FC = () => {
 								<ModalDetailSection>
 									<ModalDetailSectionTitle>
 										<FiFileText />
-										Assignment Materials
+										{t('parent.assignments.modal.assignmentMaterials')}
 									</ModalDetailSectionTitle>
 									{Array.isArray(selectedAssignment.file_url) ? (
 										<FilesList>
@@ -515,7 +533,7 @@ const AssignmentsPage: React.FC = () => {
 														target='_blank'
 														rel='noopener noreferrer'
 													>
-														View
+														{t('parent.assignments.modal.view')}
 													</FileActionButton>
 												</FileItem>
 											))}
@@ -525,13 +543,13 @@ const AssignmentsPage: React.FC = () => {
 											<FileIcon>
 												<FiFileText />
 											</FileIcon>
-											<FileName>Assignment Material</FileName>
+											<FileName>{t('parent.assignments.modal.assignmentMaterial')}</FileName>
 											<FileActionButton
 												href={selectedAssignment.file_url}
 												target='_blank'
 												rel='noopener noreferrer'
 											>
-												View
+												{t('parent.assignments.modal.view')}
 											</FileActionButton>
 										</FileItem>
 									)}
@@ -540,7 +558,7 @@ const AssignmentsPage: React.FC = () => {
 
 							{selectedSubmission?.feedback && (
 								<ModalDetailSection>
-									<ModalDetailSectionTitle>Feedback</ModalDetailSectionTitle>
+									<ModalDetailSectionTitle>{t('parent.assignments.modal.feedback')}</ModalDetailSectionTitle>
 									<ModalDetailContent>{selectedSubmission.feedback}</ModalDetailContent>
 								</ModalDetailSection>
 							)}
@@ -552,10 +570,10 @@ const AssignmentsPage: React.FC = () => {
 									onClick={() => window.open(selectedSubmission.fileurl, '_blank')}
 									variant='primary'
 								>
-									<FiFileText /> View Submission
+									<FiFileText /> {t('parent.assignments.modal.viewSubmission')}
 								</Button>
 							)}
-							<ModalSecondaryButton onClick={closeModal}>Close</ModalSecondaryButton>
+							<ModalSecondaryButton onClick={closeModal}>{t('common.close')}</ModalSecondaryButton>
 						</ModalFooter>
 					</ModalContent>
 				)}
