@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
 	FiAlertCircle,
 	FiCalendar,
@@ -128,6 +129,8 @@ interface RolePermissionJoin {
 }
 
 const AdminAssignments: React.FC = () => {
+	const { t } = useTranslation()
+	
 	// State variables
 	const [assignments, setAssignments] = useState<Assignment[]>([])
 	const [classes, setClasses] = useState<Class[]>([])
@@ -1622,8 +1625,8 @@ const AdminAssignments: React.FC = () => {
 		<PageContainer>
 			<Header>
 				<TitleSection>
-					<Title>Assignments</Title>
-					<Description>Manage all assignments across classes</Description>
+					<Title>{t('assignments.title')}</Title>
+					<Description>{t('assignments.description')}</Description>
 				</TitleSection>
 				<ActionSection>
 					<SearchContainer>
@@ -1632,7 +1635,7 @@ const AdminAssignments: React.FC = () => {
 						</SearchIcon>
 						<SearchInput
 							type='text'
-							placeholder='Search assignments...'
+							placeholder={t('assignments.searchPlaceholder')}
 							value={searchTerm}
 							onChange={handleSearchChange}
 						/>
@@ -1641,7 +1644,7 @@ const AdminAssignments: React.FC = () => {
 					{hasPermission('create_assignments') && (
 						<AddButton onClick={() => setShowModal(true)}>
 							<FiPlus size={20} />
-							<span>Add Assignment</span>
+							<span>{t('assignments.addAssignment')}</span>
 						</AddButton>
 					)}
 				</ActionSection>
@@ -1651,29 +1654,29 @@ const AdminAssignments: React.FC = () => {
 				{isLoadingPermissions || isLoading ? (
 					<LoadingContainer>
 						<LoadingSpinner />
-						<p>{isLoadingPermissions ? 'Checking permissions...' : 'Loading assignments...'}</p>
+						<p>{isLoadingPermissions ? t('assignments.checkingPermissions') : t('assignments.loadingAssignments')}</p>
 					</LoadingContainer>
 				) : !hasPermission('read_assignments') ? (
 					<NoPermissionMessage>
 						<FiAlertCircle size={48} />
-						<h3>Permission Denied</h3>
-						<p>You don't have permission to view assignments.</p>
+						<h3>{t('assignments.permissionDenied')}</h3>
+						<p>{t('assignments.noPermissionView')}</p>
 					</NoPermissionMessage>
 				) : filteredAssignments.length === 0 ? (
 					<EmptyState>
 						<EmptyStateIcon>
 							<FiClock size={40} />
 						</EmptyStateIcon>
-						<EmptyStateTitle>No Assignments Found</EmptyStateTitle>
+						<EmptyStateTitle>{t('assignments.noAssignmentsFound')}</EmptyStateTitle>
 						<EmptyStateDescription>
 							{searchTerm
-								? 'No assignments match your search criteria.'
-								: 'Start by adding a new assignment.'}
+								? t('assignments.noAssignmentsMatch')
+								: t('assignments.startByAdding')}
 						</EmptyStateDescription>
 						{!searchTerm && hasPermission('create_assignments') && (
 							<AddButton onClick={() => setShowModal(true)}>
 								<FiPlus size={20} />
-								<span>Add Assignment</span>
+								<span>{t('assignments.addAssignment')}</span>
 							</AddButton>
 						)}
 					</EmptyState>
@@ -1681,14 +1684,14 @@ const AdminAssignments: React.FC = () => {
 					<AssignmentsTable>
 						<TableHead>
 							<TableRow>
-								<TableHeader>Assignment</TableHeader>
-								<TableHeader>Course</TableHeader>
-								<TableHeader>Subject</TableHeader>
+								<TableHeader>{t('assignments.assignment')}</TableHeader>
+								<TableHeader>{t('assignments.course')}</TableHeader>
+								<TableHeader>{t('assignments.subject')}</TableHeader>
 								<TableHeader style={{ cursor: 'pointer' }}>
-									Due Date <FiChevronDown size={16} style={{ verticalAlign: 'middle' }} />
+									{t('assignments.dueDate')} <FiChevronDown size={16} style={{ verticalAlign: 'middle' }} />
 								</TableHeader>
-								<TableHeader>Creator Email</TableHeader>
-								<TableHeader>Actions</TableHeader>
+								<TableHeader>{t('assignments.creatorEmail')}</TableHeader>
+								<TableHeader>{t('assignments.actions')}</TableHeader>
 							</TableRow>
 						</TableHead>
 						<TableBody>
@@ -1711,7 +1714,7 @@ const AdminAssignments: React.FC = () => {
 																	: Array.isArray(assignment.classes)
 																	? assignment.classes[0]?.classname
 																	: '')) ||
-															'Unknown Class'}
+															t('assignments.unknownClass')}
 													</ClassInfo>
 												</div>
 											</AssignmentInfo>
@@ -1724,7 +1727,7 @@ const AdminAssignments: React.FC = () => {
 												isSubjectLoading={isLoadingSubjects}
 												isSubjectAvailable={!!assignment.subjects?.subjectname}
 											>
-												{assignment.subjects?.subjectname || 'No subject'}
+												{assignment.subjects?.subjectname || t('assignments.noSubject')}
 											</SubjectTag>
 										</TableCell>
 										<TableCell>
@@ -1740,14 +1743,14 @@ const AdminAssignments: React.FC = () => {
 											<ActionButtons>
 												{/* Only show Edit button if user has update permission */}
 												{hasPermission('update_assignments') && (
-													<ActionButton title='Edit' onClick={() => handleEditClick(assignment)}>
+													<ActionButton title={t('assignments.edit')} onClick={() => handleEditClick(assignment)}>
 														<FiEdit size={18} />
 													</ActionButton>
 												)}
 												{/* Only show Delete button if user has delete permission */}
 												{hasPermission('delete_assignments') && (
 													<ActionButton
-														title='Delete'
+														title={t('assignments.delete')}
 														variant='danger'
 														onClick={() => handleDeleteClick(assignment)}
 													>
@@ -1755,7 +1758,7 @@ const AdminAssignments: React.FC = () => {
 													</ActionButton>
 												)}
 												<ActionButton
-													title='View Uploads'
+													title={t('assignments.viewUploads')}
 													variant='secondary'
 													onClick={() => {
 														if (
@@ -1763,7 +1766,7 @@ const AdminAssignments: React.FC = () => {
 															!Array.isArray(assignment.file_url) ||
 															assignment.file_url.length === 0
 														) {
-															toast.info('No files uploaded for this assignment')
+															toast.info(t('assignments.noFilesUploaded'))
 															return
 														}
 														// Navigate to the assignment files page
@@ -1788,7 +1791,7 @@ const AdminAssignments: React.FC = () => {
 												{/* Only show Upload button if user has update permission */}
 												{hasPermission('update_assignments') && (
 													<ActionButton
-														title='Upload Files'
+														title={t('assignments.uploadFiles')}
 														variant='primary'
 														onClick={e => {
 															e.preventDefault()
@@ -1837,7 +1840,7 @@ const AdminAssignments: React.FC = () => {
 						exit={{ opacity: 0, y: 20 }}
 					>
 						<ModalHeader>
-							<ModalTitle>Add New Assignment</ModalTitle>
+							<ModalTitle>{t('assignments.addNewAssignment')}</ModalTitle>
 							<CloseButton onClick={() => setShowModal(false)}>
 								<FiX size={24} />
 							</CloseButton>
@@ -1845,33 +1848,33 @@ const AdminAssignments: React.FC = () => {
 						<ModalBody>
 							<Form onSubmit={handleSubmit}>
 								<FormGroup>
-									<Label htmlFor='title'>Title</Label>
+									<Label htmlFor='title'>{t('assignments.title')}</Label>
 									<Input
 										type='text'
 										id='title'
 										name='title'
 										value={formData.title}
 										onChange={handleFormChange}
-										placeholder='Enter assignment title'
+										placeholder={t('assignments.enterTitle')}
 									/>
 									{formErrors.title && <ErrorMessage>{formErrors.title}</ErrorMessage>}
 								</FormGroup>
 
 								<FormGroup>
-									<Label htmlFor='content'>Description</Label>
+									<Label htmlFor='content'>{t('assignments.description')}</Label>
 									<TextArea
 										id='content'
 										name='content'
 										value={formData.content}
 										onChange={handleFormChange}
-										placeholder='Enter assignment description'
+										placeholder={t('assignments.enterDescription')}
 										rows={3}
 									/>
 									{formErrors.content && <ErrorMessage>{formErrors.content}</ErrorMessage>}
 								</FormGroup>
 
 								<FormGroup>
-									<Label htmlFor='classid'>Class</Label>
+									<Label htmlFor='classid'>{t('assignments.class')}</Label>
 									<Select
 										id='classid'
 										name='classid'
@@ -1879,7 +1882,7 @@ const AdminAssignments: React.FC = () => {
 										onChange={handleFormChange}
 									>
 										<option value='' disabled defaultChecked>
-											Select a class
+											{t('assignments.selectClass')}
 										</option>
 										{classes.map(cls => (
 											<option key={cls.id} value={cls.id}>
@@ -1891,7 +1894,7 @@ const AdminAssignments: React.FC = () => {
 								</FormGroup>
 
 								<FormGroup>
-									<Label htmlFor='subject_id'>Subject</Label>
+									<Label htmlFor='subject_id'>{t('assignments.subject')}</Label>
 									<Select
 										id='subject_id'
 										name='subject_id'
@@ -1901,12 +1904,12 @@ const AdminAssignments: React.FC = () => {
 									>
 										<option value='' disabled defaultChecked>
 											{!formData.classid
-												? 'Select a class first'
+												? t('assignments.selectClassFirst')
 												: isLoadingSubjects
-												? 'Loading subjects...'
+												? t('assignments.loadingSubjects')
 												: !hasSubjectsForClass
-												? 'No subjects available for this class'
-												: 'Select a subject'}
+												? t('assignments.noSubjectsAvailable')
+												: t('assignments.selectSubject')}
 										</option>
 										{filteredSubjects.map(subject => (
 											<option key={subject.id} value={subject.id}>
@@ -1917,13 +1920,13 @@ const AdminAssignments: React.FC = () => {
 									{formErrors.subject_id && <ErrorMessage>{formErrors.subject_id}</ErrorMessage>}
 									{formData.classid && !isLoadingSubjects && !hasSubjectsForClass && (
 										<SubjectWarning>
-											This class has no subjects. Please assign subjects to this class first.
+											{t('assignments.classNoSubjects')}
 										</SubjectWarning>
 									)}
 								</FormGroup>
 
 								<FormGroup>
-									<Label htmlFor='assigned_date'>Due Date & Time</Label>
+									<Label htmlFor='assigned_date'>{t('assignments.dueDateAndTime')}</Label>
 									<Input
 										type='datetime-local'
 										id='assigned_date'
@@ -1937,7 +1940,7 @@ const AdminAssignments: React.FC = () => {
 								</FormGroup>
 
 								<FormGroup>
-									<Label htmlFor='assignment_file'>Assignment File (optional)</Label>
+									<Label htmlFor='assignment_file'>{t('assignments.assignmentFile')}</Label>
 									<FileUploadContainer
 										ref={dropAreaRef}
 										isDragging={isDragging}
@@ -1952,23 +1955,22 @@ const AdminAssignments: React.FC = () => {
 													<FiUploadCloud size={32} />
 												</UploadIcon>
 												<UploadText>
-													<strong>Click to upload</strong> or drag and drop
+													<strong>{t('assignments.clickToUpload')}</strong> {t('assignments.dragAndDrop')}
 												</UploadText>
-												<UploadHint>PDF, Word, or image files (up to 50MB total)</UploadHint>
+												<UploadHint>{t('assignments.fileHint')}</UploadHint>
 												<FileUploadButton
 													type='button'
 													onClick={() => newFileInputRef.current?.click()}
 													disabled={isUploading}
 												>
-													Choose Files
+													{t('assignments.chooseFiles')}
 												</FileUploadButton>
 											</>
 										) : (
 											<>
 												<FilesListHeader>
 													<span>
-														{newAssignmentFiles.length} file
-														{newAssignmentFiles.length !== 1 ? 's' : ''} selected
+														{newAssignmentFiles.length} {newAssignmentFiles.length === 1 ? t('assignments.fileSelected') : t('assignments.filesSelected')}
 													</span>
 													<AddMoreButton
 														onClick={e => {
@@ -1977,7 +1979,7 @@ const AdminAssignments: React.FC = () => {
 															newFileInputRef.current?.click()
 														}}
 													>
-														Add More
+														{t('assignments.addMore')}
 													</AddMoreButton>
 												</FilesListHeader>
 												<FilesList>
@@ -2017,7 +2019,7 @@ const AdminAssignments: React.FC = () => {
 
 								<ButtonGroup>
 									<CancelButton type='button' onClick={() => setShowModal(false)}>
-										Cancel
+										{t('assignments.cancel')}
 									</CancelButton>
 									<SubmitButton type='submit' disabled={isUploading}>
 										{isUploading ? (
@@ -2025,16 +2027,16 @@ const AdminAssignments: React.FC = () => {
 												<Spinner style={{ width: '14px', height: '14px', marginRight: '8px' }} />
 												{uploadProgress.total > 0 ? (
 													<span>
-														Uploading file {uploadProgress.current + 1}/{uploadProgress.total}...
+														{t('assignments.uploadingFile', { current: uploadProgress.current + 1, total: uploadProgress.total })}
 													</span>
 												) : (
-													<span>Uploading...</span>
+													<span>{t('assignments.uploading')}</span>
 												)}
 											</>
 										) : (
 											<>
 												<FiCheck size={18} />
-												<span>Add Assignment</span>
+												<span>{t('assignments.addAssignment')}</span>
 											</>
 										)}
 									</SubmitButton>
@@ -2054,7 +2056,7 @@ const AdminAssignments: React.FC = () => {
 						exit={{ opacity: 0, y: 20 }}
 					>
 						<ModalHeader>
-							<ModalTitle>Edit Assignment</ModalTitle>
+							<ModalTitle>{t('assignments.editAssignment')}</ModalTitle>
 							<CloseButton onClick={() => setShowEditModal(false)}>
 								<FiX size={24} />
 							</CloseButton>
@@ -2062,31 +2064,31 @@ const AdminAssignments: React.FC = () => {
 						<ModalBody>
 							<Form onSubmit={handleEditSubmit}>
 								<FormGroup>
-									<Label htmlFor='edit-title'>Title</Label>
+									<Label htmlFor='edit-title'>{t('assignments.title')}</Label>
 									<Input
 										type='text'
 										id='edit-title'
 										name='title'
 										value={editFormData.title}
 										onChange={handleEditFormChange}
-										placeholder='Enter assignment title'
+										placeholder={t('assignments.enterTitle')}
 									/>
 								</FormGroup>
 
 								<FormGroup>
-									<Label htmlFor='edit-content'>Description</Label>
+									<Label htmlFor='edit-content'>{t('assignments.description')}</Label>
 									<TextArea
 										id='edit-content'
 										name='content'
 										value={editFormData.content}
 										onChange={handleEditFormChange}
-										placeholder='Enter assignment description'
+										placeholder={t('assignments.enterDescription')}
 										rows={3}
 									/>
 								</FormGroup>
 
 								<FormGroup>
-									<Label htmlFor='edit-classid'>Class</Label>
+									<Label htmlFor='edit-classid'>{t('assignments.class')}</Label>
 									<Select
 										id='edit-classid'
 										name='classid'
@@ -2094,7 +2096,7 @@ const AdminAssignments: React.FC = () => {
 										onChange={handleEditFormChange}
 									>
 										<option value='' disabled defaultChecked>
-											Select a class
+											{t('assignments.selectClass')}
 										</option>
 										{classes.map(cls => (
 											<option key={cls.id} value={cls.id}>
@@ -2105,7 +2107,7 @@ const AdminAssignments: React.FC = () => {
 								</FormGroup>
 
 								<FormGroup>
-									<Label htmlFor='edit-subject_id'>Subject</Label>
+									<Label htmlFor='edit-subject_id'>{t('assignments.subject')}</Label>
 									<Select
 										id='edit-subject_id'
 										name='subject_id'
@@ -2115,12 +2117,12 @@ const AdminAssignments: React.FC = () => {
 									>
 										<option value='' disabled defaultChecked>
 											{!editFormData.classid
-												? 'Select a class first'
+												? t('assignments.selectClassFirst')
 												: isLoadingSubjects
-												? 'Loading subjects...'
+												? t('assignments.loadingSubjects')
 												: !hasSubjectsForClass
-												? 'No subjects available for this class'
-												: 'Select a subject'}
+												? t('assignments.noSubjectsAvailable')
+												: t('assignments.selectSubject')}
 										</option>
 										{filteredSubjects.map(subject => (
 											<option key={subject.id} value={subject.id}>
@@ -2130,13 +2132,13 @@ const AdminAssignments: React.FC = () => {
 									</Select>
 									{editFormData.classid && !isLoadingSubjects && !hasSubjectsForClass && (
 										<SubjectWarning>
-											This class has no subjects. Please assign subjects to this class first.
+											{t('assignments.classNoSubjects')}
 										</SubjectWarning>
 									)}
 								</FormGroup>
 
 								<FormGroup>
-									<Label htmlFor='edit-assigned_date'>Due Date & Time</Label>
+									<Label htmlFor='edit-assigned_date'>{t('assignments.dueDateAndTime')}</Label>
 									<Input
 										type='datetime-local'
 										id='edit-assigned_date'
@@ -2148,13 +2150,13 @@ const AdminAssignments: React.FC = () => {
 
 								{/* Edit Assignment Modal - Inside the modal body after existing form groups */}
 								<FormGroup>
-									<Label>Assignment Files</Label>
+									<Label>{t('assignments.assignmentFiles')}</Label>
 
 									{/* Display existing files */}
 									{existingFiles.length > 0 && (
 										<>
 											<FilesListHeader>
-												<span>Existing Files</span>
+												<span>{t('assignments.existingFiles')}</span>
 											</FilesListHeader>
 											<FilesList>
 												{existingFiles.map((file, index) => (
@@ -2162,7 +2164,7 @@ const AdminAssignments: React.FC = () => {
 														<FileTypeIcon>{getFileIconByType(file.name || 'unknown')}</FileTypeIcon>
 														<FileDetails>
 															<FileName>{file.name || getFileName(file.url)}</FileName>
-															<FileInfo>From previous upload</FileInfo>
+															<FileInfo>{t('assignments.fromPreviousUpload')}</FileInfo>
 														</FileDetails>
 														<RemoveFileButton
 															onClick={e => {
@@ -2170,7 +2172,7 @@ const AdminAssignments: React.FC = () => {
 																e.stopPropagation()
 																markFileForDeletion(file.url)
 															}}
-															title='Remove file'
+															title={t('common.remove')}
 														>
 															<FiX size={18} />
 														</RemoveFileButton>
@@ -2184,7 +2186,7 @@ const AdminAssignments: React.FC = () => {
 									{editAssignmentFiles.length > 0 && (
 										<>
 											<FilesListHeader>
-												<span>New Files to Upload</span>
+												<span>{t('assignments.newFilesToUpload')}</span>
 											</FilesListHeader>
 											<FilesList>
 												{editAssignmentFiles.map((file, index) => (
@@ -2200,7 +2202,7 @@ const AdminAssignments: React.FC = () => {
 																e.stopPropagation()
 																removeEditFile(index)
 															}}
-															title='Remove file'
+															title={t('common.remove')}
 														>
 															<FiX size={18} />
 														</RemoveFileButton>
@@ -2219,8 +2221,8 @@ const AdminAssignments: React.FC = () => {
 									>
 										<FiUploadCloud size={16} style={{ marginRight: '8px' }} />
 										{existingFiles.length > 0 || editAssignmentFiles.length > 0
-											? 'Add More Files'
-											: 'Add Files'}
+											? t('assignments.addMoreFiles')
+											: t('assignments.addFiles')}
 									</FileUploadButton>
 
 									<input
@@ -2235,7 +2237,7 @@ const AdminAssignments: React.FC = () => {
 
 								<ButtonGroup>
 									<CancelButton type='button' onClick={() => setShowEditModal(false)}>
-										Cancel
+										{t('assignments.cancel')}
 									</CancelButton>
 									<SubmitButton type='submit' disabled={isUploading}>
 										{isUploading ? (
@@ -2243,17 +2245,16 @@ const AdminAssignments: React.FC = () => {
 												<Spinner style={{ width: '14px', height: '14px', marginRight: '8px' }} />
 												{editUploadProgress.total > 0 ? (
 													<span>
-														Uploading file {editUploadProgress.current + 1}/
-														{editUploadProgress.total}...
+														{t('assignments.uploadingFile', { current: editUploadProgress.current + 1, total: editUploadProgress.total })}
 													</span>
 												) : (
-													<span>Saving...</span>
+													<span>{t('assignments.saving')}</span>
 												)}
 											</>
 										) : (
 											<>
 												<FiCheck size={18} />
-												<span>Save Changes</span>
+												<span>{t('assignments.saveChanges')}</span>
 											</>
 										)}
 									</SubmitButton>
@@ -2281,7 +2282,7 @@ const AdminAssignments: React.FC = () => {
 							<div>
 								<ModalTitle>{previewTitle}</ModalTitle>
 								<FileCounter>
-									File {currentFileIndex + 1} of {previewFiles.length}
+									{t('assignments.fileCounter', { current: currentFileIndex + 1, total: previewFiles.length })}
 								</FileCounter>
 							</div>
 							<PreviewControls>
