@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import React from 'react'
 import { Calendar, Loader, Search } from 'react-feather'
+import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 // Props interface
@@ -35,11 +36,13 @@ const JournalSection: React.FC<JournalSectionProps> = ({
 	searchQuery,
 	renderGradeCell,
 }) => {
+	const { t } = useTranslation()
+
 	if (loading) {
 		return (
 			<LoadingContainer>
 				<Loader size={32} />
-				<LoadingText>Loading journal data...</LoadingText>
+				<LoadingText>{t('grades.loadingJournalData')}</LoadingText>
 			</LoadingContainer>
 		)
 	}
@@ -47,7 +50,7 @@ const JournalSection: React.FC<JournalSectionProps> = ({
 	if (students.length === 0) {
 		return (
 			<EmptyStateContainer>
-				<EmptyStateTitle>No students found for this class</EmptyStateTitle>
+				<EmptyStateTitle>{t('grades.noStudentsFound')}</EmptyStateTitle>
 			</EmptyStateContainer>
 		)
 	}
@@ -55,10 +58,8 @@ const JournalSection: React.FC<JournalSectionProps> = ({
 	if (lessons.length === 0) {
 		return (
 			<EmptyStateContainer>
-				<EmptyStateTitle>No lessons found for this subject</EmptyStateTitle>
-				<EmptyStateSubtitle>
-					Please add lessons to this subject or select a different quarter
-				</EmptyStateSubtitle>
+				<EmptyStateTitle>{t('grades.noLessonsFound')}</EmptyStateTitle>
+				<EmptyStateSubtitle>{t('grades.noLessonsFoundQuarter')}</EmptyStateSubtitle>
 			</EmptyStateContainer>
 		)
 	}
@@ -78,13 +79,15 @@ const JournalSection: React.FC<JournalSectionProps> = ({
 			<JournalHeader>
 				<HeaderGroup>
 					<Calendar size={16} />
-					<HeaderLabel>{selectedQuarter?.name || 'Select Quarter'}</HeaderLabel>
+					<HeaderLabel>{selectedQuarter?.name || t('grades.selectQuarter')}</HeaderLabel>
 				</HeaderGroup>
 
 				{searchQuery && (
 					<HeaderGroup>
 						<Search size={16} />
-						<SearchLabel>Results for "{searchQuery}"</SearchLabel>
+						<SearchLabel>
+							{t('grades.resultsFor')} "{searchQuery}"
+						</SearchLabel>
 					</HeaderGroup>
 				)}
 			</JournalHeader>
@@ -94,7 +97,7 @@ const JournalSection: React.FC<JournalSectionProps> = ({
 					<JournalTable>
 						<TableHeader>
 							<HeaderRow>
-								<StudentNameHeader>Student</StudentNameHeader>
+								<StudentNameHeader>{t('grades.student')}</StudentNameHeader>
 								{lessons.map(lesson => (
 									<LessonHeader key={lesson.id}>
 										<LessonTitle>{lesson.title}</LessonTitle>
@@ -118,7 +121,7 @@ const JournalSection: React.FC<JournalSectionProps> = ({
 												<div className='flex justify-center'>
 													<EmptyGradeBadge
 														onClick={() => handleGradeChange(student.id, lesson.id, null)}
-														title='Click to add grade'
+														title={t('grades.journal.clickToAddGrade')}
 													>
 														<span>+</span>
 													</EmptyGradeBadge>

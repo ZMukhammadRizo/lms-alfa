@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { FiBookOpen, FiClipboard, FiLayers, FiUsers } from 'react-icons/fi'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
+import { useTranslation } from 'react-i18next'
 import useGradesStore from '../../../store/gradesStore'
 import ClassSelect from './ClassSelect'
 import ClassesList from './ClassesList' // New component for direct class list
@@ -18,6 +19,7 @@ interface Breadcrumb {
 }
 
 const GradesModule: React.FC = () => {
+	const { t } = useTranslation()
 	const location = useLocation()
 	const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([])
 	const gradesStore = useGradesStore()
@@ -29,7 +31,7 @@ const GradesModule: React.FC = () => {
 			const parts = path.split('/').filter(part => part)
 
 			const newBreadcrumbs: Breadcrumb[] = [
-				{ name: 'Grades', path: '/admin/grades', icon: <FiClipboard /> },
+				{ name: t('grades.title'), path: '/admin/grades', icon: <FiClipboard /> },
 			]
 
 			// Levels route
@@ -38,7 +40,7 @@ const GradesModule: React.FC = () => {
 
 				// Get the level name from store if available
 				const levelName =
-					getLevelName(gradeLevel) || `${gradeLevel}${getOrdinalSuffix(Number(gradeLevel))} Grade`
+					getLevelName(gradeLevel) || `${gradeLevel}${getOrdinalSuffix(Number(gradeLevel))} ${t('grades.grade')}`
 
 				newBreadcrumbs.push({
 					name: levelName,
@@ -52,7 +54,7 @@ const GradesModule: React.FC = () => {
 				const classId = parts[parts.indexOf('classes') + 1]
 
 				// Get class name from store if available
-				const className = (await getClassName(classId)) || `Class ${classId.toUpperCase()}`
+				const className = (await getClassName(classId)) || `${t('grades.class')} ${classId.toUpperCase()}`
 
 				newBreadcrumbs.push({
 					name: className,
@@ -67,7 +69,7 @@ const GradesModule: React.FC = () => {
 				const classId = parts[parts.indexOf('classes') + 1]
 
 				// Get class name from store if available
-				const className = (await getClassName(classId)) || `Class ${classId.toUpperCase()}`
+				const className = (await getClassName(classId)) || `${t('grades.class')} ${classId.toUpperCase()}`
 
 				newBreadcrumbs.push({
 					name: className,
@@ -179,7 +181,7 @@ const GradesModule: React.FC = () => {
 	const getSubjectName = (subjectId: string): string => {
 		// Use the store to get subject information
 		const subject = gradesStore.subjects.find(s => s.subjectId === subjectId)
-		return subject?.subjectName || `Subject ${subjectId}`
+		return subject?.subjectName || `${t('grades.subject')} ${subjectId}`
 	}
 
 	return (
