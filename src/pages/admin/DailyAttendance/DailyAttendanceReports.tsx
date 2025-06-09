@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Download, FileText } from 'react-feather'
-import styled from 'styled-components'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
+import styled from 'styled-components'
 import * as XLSX from 'xlsx'
-import supabase from '../../../config/supabaseClient'
-import PageHeader from '../../../components/common/PageHeader'
 import AttendancePercentageIndicator from '../../../components/common/AttendancePercentageIndicator'
+import PageHeader from '../../../components/common/PageHeader'
+import supabase from '../../../config/supabaseClient'
 
 interface ClassSelection {
 	levelId: string
@@ -43,6 +44,7 @@ interface ClassAttendanceData {
 }
 
 const DailyAttendanceReports: React.FC = () => {
+	const { t } = useTranslation()
 	const location = useLocation()
 	const navigate = useNavigate()
 	const [loading, setLoading] = useState(true)
@@ -50,8 +52,8 @@ const DailyAttendanceReports: React.FC = () => {
 	const [overallPercentage, setOverallPercentage] = useState(0)
 
 	// Get the selected classes and report type from location state
-	const selectedClasses = location.state?.selectedClasses as ClassSelection[] || []
-	const reportType = location.state?.reportType as 'monthly' | 'weekly' || 'monthly'
+	const selectedClasses = (location.state?.selectedClasses as ClassSelection[]) || []
+	const reportType = (location.state?.reportType as 'monthly' | 'weekly') || 'monthly'
 
 	useEffect(() => {
 		if (selectedClasses.length === 0) {
@@ -167,7 +169,7 @@ const DailyAttendanceReports: React.FC = () => {
 			}
 		} catch (error) {
 			console.error('Error fetching attendance data:', error)
-			toast.error('Failed to load attendance data')
+			toast.error(t('dailyAttendance.reports.exportError'))
 		} finally {
 			setLoading(false)
 		}
@@ -219,15 +221,15 @@ const DailyAttendanceReports: React.FC = () => {
 	const getStatusDisplay = (status: string) => {
 		switch (status) {
 			case 'present':
-				return <StatusDot $status='present' title='Present' />
+				return <StatusDot $status='present' title={t('dailyAttendance.status.present')} />
 			case 'late':
-				return <StatusDot $status='late' title='Late' />
+				return <StatusDot $status='late' title={t('dailyAttendance.status.late')} />
 			case 'excused':
-				return <StatusDot $status='excused' title='Excused' />
+				return <StatusDot $status='excused' title={t('dailyAttendance.status.excused')} />
 			case 'absent':
-				return <StatusDot $status='absent' title='Absent' />
+				return <StatusDot $status='absent' title={t('dailyAttendance.status.absent')} />
 			default:
-				return <StatusDot $status='absent' title='Absent' />
+				return <StatusDot $status='absent' title={t('dailyAttendance.status.absent')} />
 		}
 	}
 
@@ -241,31 +243,31 @@ const DailyAttendanceReports: React.FC = () => {
 			// Prepare data for export
 			const exportData = classData.students.map(studentData => {
 				const row: Record<string, any> = {
-					'Student Name': studentData.student.fullName,
+					[t('grades.student')]: studentData.student.fullName,
 				}
 
 				// Add attendance status for each date
 				classData.dates.forEach(date => {
 					const status = studentData.attendanceByDate[date] || 'absent'
-					row[formatDateHeader(date)] = status
+					row[formatDateHeader(date)] = t(`dailyAttendance.status.${status}`)
 				})
 
 				// Add attendance percentage
-				row['Attendance %'] = `${Math.round(studentData.percentage)}%`
+				row[t('attendance.title') + ' %'] = `${Math.round(studentData.percentage)}%`
 
 				return row
 			})
 
 			// Add a summary row
 			exportData.push({
-				'Student Name': 'Class Average',
-				'Attendance %': `${Math.round(classData.overallPercentage)}%`,
+				[t('grades.student')]: t('grades.class') + ' ' + t('attendance.avgAttendance'),
+				[t('attendance.title') + ' %']: `${Math.round(classData.overallPercentage)}%`,
 			})
 
 			// Create worksheet
 			const ws = XLSX.utils.json_to_sheet(exportData)
 			const wb = XLSX.utils.book_new()
-			XLSX.utils.book_append_sheet(wb, ws, 'Attendance')
+			XLSX.utils.book_append_sheet(wb, ws, t('attendance.title'))
 
 			// Generate filename
 			const filename = `${classData.levelName}_${classData.className}_${reportType}_attendance.xlsx`
@@ -273,10 +275,10 @@ const DailyAttendanceReports: React.FC = () => {
 			// Export to file
 			XLSX.writeFile(wb, filename)
 
-			toast.success(`Exported ${classData.className} attendance report`)
+			toast.success(t('dailyAttendance.reports.exportSuccess'))
 		} catch (error) {
 			console.error('Error exporting data:', error)
-			toast.error('Failed to export data')
+			toast.error(t('dailyAttendance.reports.exportError'))
 		}
 	}
 
@@ -289,25 +291,25 @@ const DailyAttendanceReports: React.FC = () => {
 			classesData.forEach(classData => {
 				const exportData = classData.students.map(studentData => {
 					const row: Record<string, any> = {
-						'Student Name': studentData.student.fullName,
+						[t('grades.student')]: studentData.student.fullName,
 					}
 
 					// Add attendance status for each date
 					classData.dates.forEach(date => {
 						const status = studentData.attendanceByDate[date] || 'absent'
-						row[formatDateHeader(date)] = status
+						row[formatDateHeader(date)] = t(`dailyAttendance.status.${status}`)
 					})
 
 					// Add attendance percentage
-					row['Attendance %'] = `${Math.round(studentData.percentage)}%`
+					row[t('attendance.title') + ' %'] = `${Math.round(studentData.percentage)}%`
 
 					return row
 				})
 
 				// Add a summary row
 				exportData.push({
-					'Student Name': 'Class Average',
-					'Attendance %': `${Math.round(classData.overallPercentage)}%`,
+					[t('grades.student')]: t('grades.class') + ' ' + t('attendance.avgAttendance'),
+					[t('attendance.title') + ' %']: `${Math.round(classData.overallPercentage)}%`,
 				})
 
 				// Create worksheet for this class
@@ -317,22 +319,22 @@ const DailyAttendanceReports: React.FC = () => {
 
 			// Add a summary worksheet
 			const summaryData = classesData.map(classData => ({
-				'Level': classData.levelName,
-				'Class': classData.className,
-				'Students': classData.students.length,
-				'Attendance %': `${Math.round(classData.overallPercentage)}%`,
+				[t('grades.grade')]: classData.levelName,
+				[t('grades.class')]: classData.className,
+				[t('grades.students')]: classData.students.length,
+				[t('attendance.title') + ' %']: `${Math.round(classData.overallPercentage)}%`,
 			}))
 
 			// Add overall average
 			summaryData.push({
-				'Level': '',
-				'Class': 'Overall Average',
-				'Students': classesData.reduce((sum, cls) => sum + cls.students.length, 0),
-				'Attendance %': `${Math.round(overallPercentage)}%`,
+				[t('grades.grade')]: '',
+				[t('grades.class')]: t('attendance.avgAttendance'),
+				[t('grades.students')]: classesData.reduce((sum, cls) => sum + cls.students.length, 0),
+				[t('attendance.title') + ' %']: `${Math.round(overallPercentage)}%`,
 			})
 
 			const summaryWs = XLSX.utils.json_to_sheet(summaryData)
-			XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary')
+			XLSX.utils.book_append_sheet(wb, summaryWs, t('common.summary'))
 
 			// Generate filename
 			const filename = `All_Classes_${reportType}_attendance.xlsx`
@@ -340,10 +342,10 @@ const DailyAttendanceReports: React.FC = () => {
 			// Export to file
 			XLSX.writeFile(wb, filename)
 
-			toast.success('Exported attendance report for all classes')
+			toast.success(t('dailyAttendance.reports.exportSuccess'))
 		} catch (error) {
 			console.error('Error exporting data:', error)
-			toast.error('Failed to export data')
+			toast.error(t('dailyAttendance.reports.exportError'))
 		}
 	}
 
@@ -351,24 +353,34 @@ const DailyAttendanceReports: React.FC = () => {
 		<Container>
 			<BackLink onClick={() => navigate('/admin/daily-attendance')}>
 				<ArrowLeft size={16} />
-				<span>Back to Daily Attendance</span>
+				<span>{t('dailyAttendance.backToLevels')}</span>
 			</BackLink>
 
 			<PageHeader
-				title={`${reportType === 'monthly' ? 'Monthly' : 'Weekly'} Attendance Report`}
-				subtitle={`Attendance report for ${selectedClasses.length} ${selectedClasses.length === 1 ? 'class' : 'classes'}`}
+				title={`${
+					reportType === 'monthly'
+						? t('dailyAttendance.reports.monthly')
+						: t('dailyAttendance.reports.weekly')
+				}`}
+				subtitle={`${t('attendance.attendanceReport')} ${t('common.for')} ${
+					selectedClasses.length
+				} ${
+					selectedClasses.length === 1
+						? t('grades.class').toLowerCase()
+						: t('grades.classes').toLowerCase()
+				}`}
 			/>
 
 			{loading ? (
 				<LoadingContainer>
 					<LoadingSpinner />
-					<p>Loading attendance data...</p>
+					<p>{t('common.loading')}</p>
 				</LoadingContainer>
 			) : (
 				<>
 					<ExportAllButton onClick={handleExportAll}>
 						<Download size={16} />
-						Export All Data
+						{t('dailyAttendance.exportAttendance')}
 					</ExportAllButton>
 
 					{classesData.map((classData, index) => (
@@ -380,12 +392,12 @@ const DailyAttendanceReports: React.FC = () => {
 								</ClassInfo>
 								<ClassActions>
 									<ClassAttendance>
-										<span>Overall Attendance:</span>
+										<span>{t('attendance.avgAttendance')}</span>
 										<AttendancePercentageIndicator percentage={classData.overallPercentage} />
 									</ClassAttendance>
 									<ExportButton onClick={() => handleExportClass(classData)}>
 										<FileText size={16} />
-										Export
+										{t('dailyAttendance.reports.export')}
 									</ExportButton>
 								</ClassActions>
 							</ClassHeader>
@@ -394,11 +406,11 @@ const DailyAttendanceReports: React.FC = () => {
 								<AttendanceTable>
 									<thead>
 										<tr>
-											<TableHeader>Student Name</TableHeader>
+											<TableHeader>{t('grades.student')}</TableHeader>
 											{classData.dates.map(date => (
 												<TableHeader key={date}>{formatDateHeader(date)}</TableHeader>
 											))}
-											<TableHeader>Attendance %</TableHeader>
+											<TableHeader>{t('attendance.title')} %</TableHeader>
 										</tr>
 									</thead>
 									<tbody>
@@ -422,21 +434,21 @@ const DailyAttendanceReports: React.FC = () => {
 					))}
 
 					<OverallSummary>
-						<SummaryTitle>Overall Attendance Summary</SummaryTitle>
+						<SummaryTitle>{t('attendance.overview')}</SummaryTitle>
 						<SummaryContent>
 							<SummaryItem>
-								<SummaryLabel>Classes:</SummaryLabel>
+								<SummaryLabel>{t('grades.classes')}:</SummaryLabel>
 								<SummaryValue>{classesData.length}</SummaryValue>
 							</SummaryItem>
 							<SummaryItem>
-								<SummaryLabel>Students:</SummaryLabel>
+								<SummaryLabel>{t('grades.students')}:</SummaryLabel>
 								<SummaryValue>
 									{classesData.reduce((sum, cls) => sum + cls.students.length, 0)}
 								</SummaryValue>
 							</SummaryItem>
 							<SummaryItem>
-								<SummaryLabel>Average Attendance:</SummaryLabel>
-								<AttendancePercentageIndicator percentage={overallPercentage} size="lg" />
+								<SummaryLabel>{t('attendance.avgAttendance')}:</SummaryLabel>
+								<AttendancePercentageIndicator percentage={overallPercentage} size='lg' />
 							</SummaryItem>
 						</SummaryContent>
 					</OverallSummary>
@@ -516,8 +528,12 @@ const LoadingSpinner = styled.div`
 	animation: spin 1s linear infinite;
 
 	@keyframes spin {
-		0% { transform: rotate(0deg); }
-		100% { transform: rotate(360deg); }
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
 	}
 `
 
