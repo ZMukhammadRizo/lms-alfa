@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import Modal from 'react-modal';
 import { toast } from 'react-toastify';
 import styled from 'styled-components';
 import { useTranslation } from 'react-i18next';
@@ -156,11 +155,6 @@ const Label = styled.label`
   color: #374151;
 `;
 
-const Required = styled.span`
-  color: #ef4444;
-  margin-left: 4px;
-`;
-
 const Select = styled.select`
   width: 100%;
   padding: 0.75rem;
@@ -283,15 +277,6 @@ interface AssignSubjectModalProps {
   onClose: () => void;
   onAssign: (grade: string, subjectIds: string[]) => Promise<boolean>;
 }
-
-const generateRandomColor = () => {
-  const letters = '0123456789ABCDEF';
-  let color = '#';
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-  return color;
-};
 
 interface SubjectType {
   id: string;
