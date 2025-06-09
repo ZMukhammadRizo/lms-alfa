@@ -1012,10 +1012,10 @@ const Users: React.FC = () => {
 					<PageDescription>Manage system users, roles and permissions</PageDescription>
 				</div>
 
-									<AddUserButton onClick={handleAddUser}>
-						<FiUserPlus />
+				<AddUserButton onClick={handleAddUser}>
+					<FiUserPlus />
 						<span>{t('userManagement.addNewUser')}</span>
-					</AddUserButton>
+				</AddUserButton>
 			</PageHeader>
 
 			{/* Role Tabs */}

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
 	FiCalendar,
 	FiCheck,
@@ -61,6 +62,7 @@ const ITEMS_PER_PAGE = 10
 
 const TeacherSubmissions = () => {
 	const { user } = useAuth()
+	const { t } = useTranslation()
 	const [allSubmissions, setAllSubmissions] = useState<Submission[]>([])
 	const [submissions, setSubmissions] = useState<Submission[]>([])
 	const [filteredSubmissions, setFilteredSubmissions] = useState<Submission[]>([])
@@ -176,7 +178,7 @@ const TeacherSubmissions = () => {
 			setClasses(data || [])
 		} catch (error) {
 			console.error('Error fetching classes:', error)
-			toast.error('Failed to load classes')
+			toast.error(t('submissions.failedToLoadClasses'))
 		}
 	}
 
@@ -193,7 +195,7 @@ const TeacherSubmissions = () => {
 			setQuarters(data || [])
 		} catch (error) {
 			console.error('Error fetching quarters:', error)
-			toast.error('Failed to load quarters')
+			toast.error(t('submissions.failedToLoadQuarters'))
 		}
 	}
 
@@ -289,7 +291,7 @@ const TeacherSubmissions = () => {
 			setIsLoading(false)
 		} catch (error) {
 			console.error('Error fetching submissions:', error)
-			toast.error('Failed to load submissions')
+			toast.error(t('submissions.failedToLoadSubmissions'))
 			setIsLoading(false)
 		}
 	}
@@ -368,10 +370,10 @@ const TeacherSubmissions = () => {
 				)
 			)
 
-			toast.success('Feedback saved successfully!')
+			toast.success(t('submissions.gradeAndFeedbackSaved'))
 		} catch (error) {
 			console.error('Error saving feedback:', error)
-			toast.error('Failed to save feedback')
+			toast.error(t('submissions.failedToSaveGradeFeedback'))
 		}
 	}
 
@@ -405,7 +407,7 @@ const TeacherSubmissions = () => {
 			document.body.removeChild(link)
 		} catch (error) {
 			console.error('Error downloading file:', error)
-			toast.error('Failed to download file')
+			toast.error(t('submissions.failedToDownloadFile'))
 		}
 	}
 
@@ -451,9 +453,9 @@ const TeacherSubmissions = () => {
 			<Header>
 				<HeaderContent>
 					<div>
-						<PageTitle>Student Submissions</PageTitle>
+						<PageTitle>{t('submissions.studentSubmissions')}</PageTitle>
 						<PageDescription>
-							Review and grade assignments submitted by your students
+							{t('submissions.teacherDescription')}
 						</PageDescription>
 					</div>
 				</HeaderContent>
@@ -463,7 +465,7 @@ const TeacherSubmissions = () => {
 						<SearchIcon />
 						<SearchInput
 							type='text'
-							placeholder='Search by student name...'
+							placeholder={t('submissions.searchByStudentName')}
 							value={searchTerm}
 							onChange={handleSearchChange}
 						/>
@@ -473,8 +475,8 @@ const TeacherSubmissions = () => {
 						<FilterButton onClick={() => setShowClassDropdown(!showClassDropdown)}>
 							<FiFilter />
 							{selectedClass
-								? `Class: ${classes.find(c => c.id === selectedClass)?.classname || 'Selected'}`
-								: 'Select Class'}
+								? `${t('submissions.class')}: ${classes.find(c => c.id === selectedClass)?.classname || t('common.selected')}`
+								: t('submissions.selectClass')}
 							<FiChevronDown />
 						</FilterButton>
 						{showClassDropdown && (
@@ -486,7 +488,7 @@ const TeacherSubmissions = () => {
 									}}
 									$isActive={selectedClass === null}
 								>
-									All Classes
+									{t('submissions.allClasses')}
 								</DropdownItem>
 								{classes.map(classItem => (
 									<DropdownItem
@@ -508,8 +510,8 @@ const TeacherSubmissions = () => {
 						<FilterButton onClick={() => setShowQuarterDropdown(!showQuarterDropdown)}>
 							<FiCalendar />
 							{selectedQuarter
-								? `Quarter: ${quarters.find(q => q.id === selectedQuarter)?.name || 'Selected'}`
-								: 'Select Quarter'}
+								? `${t('submissions.quarter')}: ${quarters.find(q => q.id === selectedQuarter)?.name || t('common.selected')}`
+								: t('submissions.selectQuarter')}
 							<FiChevronDown />
 						</FilterButton>
 						{showQuarterDropdown && (
@@ -521,7 +523,7 @@ const TeacherSubmissions = () => {
 									}}
 									$isActive={selectedQuarter === null}
 								>
-									All Quarters
+									{t('submissions.allQuarters')}
 								</DropdownItem>
 								{quarters.map(quarter => (
 									<DropdownItem
@@ -544,14 +546,14 @@ const TeacherSubmissions = () => {
 			<ContentContainer>
 				{isLoading ? (
 					<LoadingContainer>
-						<LoadingText>Loading submissions...</LoadingText>
+						<LoadingText>{t('submissions.loadingSubmissions')}</LoadingText>
 					</LoadingContainer>
 				) : filteredSubmissions.length === 0 ? (
 					<EmptyState>
 						<EmptyStateText>
 							{allSubmissions.length === 0
-								? 'No submissions found for your assignments.'
-								: 'No submissions match your filter criteria.'}
+								? t('submissions.noSubmissionsForAssignments')
+								: t('submissions.noSubmissionsMatchFilter')}
 						</EmptyStateText>
 					</EmptyState>
 				) : (
@@ -574,11 +576,11 @@ const TeacherSubmissions = () => {
 											</InfoItem>
 											<InfoItem>
 												<FiCalendar />
-												<InfoText>{submission.assignment.quarter?.name || 'No Quarter'}</InfoText>
+												<InfoText>{submission.assignment.quarter?.name || t('submissions.noQuarter')}</InfoText>
 											</InfoItem>
 											<InfoItem>
 												<FiCalendar />
-												<InfoText>Submitted: {formatDate(submission.submittedat)}</InfoText>
+												<InfoText>{t('submissions.submittedColon')} {formatDate(submission.submittedat)}</InfoText>
 											</InfoItem>
 										</CardInfo>
 										<CardActions>
@@ -589,7 +591,7 @@ const TeacherSubmissions = () => {
 															<a href={url} target='_blank' rel='noopener noreferrer'>
 																<FiExternalLink size={14} />
 																<span>
-																	View File {submission.fileurl.length > 1 ? `${index + 1}` : ''}
+																	{t('submissions.viewFile')} {submission.fileurl.length > 1 ? `${index + 1}` : ''}
 																</span>
 															</a>
 															<DownloadButton
@@ -607,18 +609,18 @@ const TeacherSubmissions = () => {
 										</CardActions>
 										<FeedbackSection>
 											{submission.grade ? (
-												<GradeBadge>Grade: {submission.grade}/10</GradeBadge>
+												<GradeBadge>{t('submissions.grade')}: {submission.grade}/10</GradeBadge>
 											) : (
-												<PendingBadge>Not Graded</PendingBadge>
+												<PendingBadge>{t('submissions.notGraded')}</PendingBadge>
 											)}
 											{submission.status && (
 												<StatusBadge $status={submission.status}>
-													{submission.status === 'accepted' ? 'Accepted' : 'Rejected'}
+													{submission.status === 'accepted' ? t('submissions.accepted') : t('submissions.rejected')}
 												</StatusBadge>
 											)}
 											{submission.feedback && (
 												<FeedbackIndicator>
-													<FiMessageSquare /> Feedback provided
+													<FiMessageSquare /> {t('submissions.feedbackProvided')}
 												</FeedbackIndicator>
 											)}
 										</FeedbackSection>
@@ -630,7 +632,7 @@ const TeacherSubmissions = () => {
 						{hasMore && (
 							<LoadMoreContainer>
 								<LoadMoreButton onClick={loadMore}>
-									Load More <FiChevronRight />
+									{t('submissions.loadMore')} <FiChevronRight />
 								</LoadMoreButton>
 							</LoadMoreContainer>
 						)}
@@ -650,30 +652,30 @@ const TeacherSubmissions = () => {
 						<DetailContent>
 							<SubmissionDetails>
 								<DetailItem>
-									<DetailLabel>Student:</DetailLabel>
+									<DetailLabel>{t('submissions.student')}:</DetailLabel>
 									<DetailValue>{selectedSubmission.student.fullName}</DetailValue>
 								</DetailItem>
 								<DetailItem>
-									<DetailLabel>Class:</DetailLabel>
+									<DetailLabel>{t('submissions.class')}:</DetailLabel>
 									<DetailValue>{selectedSubmission.assignment.class.classname}</DetailValue>
 								</DetailItem>
 								<DetailItem>
-									<DetailLabel>Quarter:</DetailLabel>
+									<DetailLabel>{t('submissions.quarter')}:</DetailLabel>
 									<DetailValue>
-										{selectedSubmission.assignment.quarter?.name || 'No Quarter'}
+										{selectedSubmission.assignment.quarter?.name || t('submissions.noQuarter')}
 									</DetailValue>
 								</DetailItem>
 								<DetailItem>
-									<DetailLabel>Submitted On:</DetailLabel>
+									<DetailLabel>{t('submissions.submitted')} {t('common.on')}:</DetailLabel>
 									<DetailValue>{formatDate(selectedSubmission.submittedat)}</DetailValue>
 								</DetailItem>
 								<DetailItem>
-									<DetailLabel>File:</DetailLabel>
+									<DetailLabel>{t('common.file')}:</DetailLabel>
 									<DetailValue>
 										{selectedSubmission.fileurl && selectedSubmission.fileurl.length > 0 ? (
 											<FileContainer>
 												<FileListTitle>
-													Submitted Files{' '}
+													{t('submissions.submittedFiles')}{' '}
 													{selectedSubmission.fileurl.length > 1
 														? `(${selectedSubmission.fileurl.length})`
 														: ''}
@@ -684,7 +686,7 @@ const TeacherSubmissions = () => {
 														<a href={url} target='_blank' rel='noopener noreferrer'>
 															<FiFileText size={16} />
 															<span>
-																View File{' '}
+																{t('submissions.viewFile')}{' '}
 																{selectedSubmission.fileurl.length > 1 ? `${index + 1}` : ''}
 															</span>
 														</a>
@@ -695,65 +697,65 @@ const TeacherSubmissions = () => {
 												))}
 											</FileContainer>
 										) : (
-											<NoFileMessage>No file submitted</NoFileMessage>
+											<NoFileMessage>{t('common.noFileSubmitted')}</NoFileMessage>
 										)}
 									</DetailValue>
 								</DetailItem>
 							</SubmissionDetails>
 
 							<GradeFeedbackSection>
-								<SectionTitle>Grade & Feedback</SectionTitle>
+								<SectionTitle>{t('submissions.grade')} & {t('submissions.feedback')}</SectionTitle>
 
 								<StatusSelection>
-									<StatusLabel>Submission Status:</StatusLabel>
+									<StatusLabel>{t('submissions.status')}:</StatusLabel>
 									<StatusOptions>
 										<StatusOption
 											$isActive={submissionStatus === null}
 											onClick={() => setSubmissionStatus(null)}
 										>
-											Pending Review
+											{t('common.pendingReview')}
 										</StatusOption>
 										<StatusOption
 											$isActive={submissionStatus === 'accepted'}
 											$status='accepted'
 											onClick={() => setSubmissionStatus('accepted')}
 										>
-											Accept
+											{t('submissions.accept')}
 										</StatusOption>
 										<StatusOption
 											$isActive={submissionStatus === 'rejected'}
 											$status='rejected'
 											onClick={() => setSubmissionStatus('rejected')}
 										>
-											Reject
+											{t('submissions.reject')}
 										</StatusOption>
 									</StatusOptions>
 								</StatusSelection>
 
 								<GradeInput>
-									<GradeLabel>Grade (1-10):</GradeLabel>
+									<GradeLabel>{t('submissions.gradeRange')}:</GradeLabel>
 									<GradeNumberInput
 										type='number'
 										min='1'
 										max='10'
 										value={gradeInput}
 										onChange={handleGradeChange}
-										placeholder='Enter grade (1-10)'
+										placeholder={t('submissions.gradeOneTo10')}
 									/>
 								</GradeInput>
 
 								<FeedbackInput>
-									<FeedbackLabel>Feedback:</FeedbackLabel>
+									<FeedbackLabel>{t('submissions.feedback')}:</FeedbackLabel>
 									<FeedbackTextarea
 										value={feedbackInput}
 										onChange={e => setFeedbackInput(e.target.value)}
-										placeholder='Provide feedback to the student...'
+										placeholder={t('submissions.provideFeedback')}
 										rows={4}
 									/>
 								</FeedbackInput>
 
 								<SaveButton onClick={handleSaveGradeFeedback}>
-									<FiCheck /> Save Grade & Feedback
+									<FiCheck /> {t('submissions.saveFeedback')}
 								</SaveButton>
 							</GradeFeedbackSection>
 						</DetailContent>

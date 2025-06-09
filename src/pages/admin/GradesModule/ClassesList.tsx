@@ -1,12 +1,13 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FiAward, FiBookOpen, FiChevronRight, FiSearch, FiUsers } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import { getClassStudentCount } from '../../../api/grades'
 import { PageTitle } from '../../../components/common'
 import { Badge, Card, Container, Input } from '../../../components/ui'
 import { useAuth } from '../../../contexts/AuthContext'
-import { getClassStudentCount } from '../../../api/grades'
 import useGradesStore from '../../../store/gradesStore'
 
 // Define interface for the teacher's classes with actual student count
@@ -21,6 +22,7 @@ interface TeacherClassInfo {
 }
 
 const ClassesList: React.FC = () => {
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const [searchTerm, setSearchTerm] = useState('')
 	const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -38,37 +40,37 @@ const ClassesList: React.FC = () => {
 
 	// Effect for fetching initial data (levels and classes)
 	useEffect(() => {
-		console.log("ClassesList: Initial data fetch effect triggered."); // Add log
+		console.log('ClassesList: Initial data fetch effect triggered.') // Add log
 		const fetchInitialData = async () => {
-			setLoadingData(true);
-			setError(null);
+			setLoadingData(true)
+			setError(null)
 			try {
-				const promises = [];
+				const promises = []
 				// Fetch levels - let the store decide if it needs to run
-				console.log("ClassesList: Calling fetchTeacherLevels.");
-				promises.push(fetchTeacherLevels());
-				
+				console.log('ClassesList: Calling fetchTeacherLevels.')
+				promises.push(fetchTeacherLevels())
+
 				// Fetch classes - let the store decide if it needs to run
-				console.log("ClassesList: Calling fetchTeacherClasses.");
-				promises.push(fetchTeacherClasses());
-				
-				await Promise.all(promises);
-				console.log("ClassesList: Initial data fetch promises resolved.");
+				console.log('ClassesList: Calling fetchTeacherClasses.')
+				promises.push(fetchTeacherClasses())
+
+				await Promise.all(promises)
+				console.log('ClassesList: Initial data fetch promises resolved.')
 			} catch (err) {
-				console.error('ClassesList: Error fetching initial data:', err);
-				setError('Failed to load initial data. Please try again later.');
-				setLoadingData(false); // Set loading false on error here
+				console.error('ClassesList: Error fetching initial data:', err)
+				setError(t('errors.loadingFailed'))
+				setLoadingData(false) // Set loading false on error here
 			}
 			// setLoadingData(false) is handled by the second effect after processing
-		};
-		fetchInitialData();
+		}
+		fetchInitialData()
 
 		// Add cleanup function
 		return () => {
-			console.log("ClassesList: Initial data fetch effect CLEANUP.");
-		};
+			console.log('ClassesList: Initial data fetch effect CLEANUP.')
+		}
 		// Only depend on the stable fetch actions themselves. Runs once on mount (twice in StrictMode).
-	}, [fetchTeacherLevels, fetchTeacherClasses]);
+	}, [fetchTeacherLevels, fetchTeacherClasses, t])
 
 	useEffect(() => {
 		const processClasses = async () => {
@@ -81,25 +83,28 @@ const ClassesList: React.FC = () => {
 			if (classesFromStore.length > 0) {
 				if (loadingData !== false || error === null) setLoadingData(true)
 				try {
-				const updatedClasses = await Promise.all(
-						classesFromStore.map(async (classItem) => {
-						try {
-							const actualCount = await getClassStudentCount(classItem.classId)
-							return {
-								...classItem,
-								actualStudentCount: actualCount,
-							}
-						} catch (countError) {
-							console.error(`Error fetching student count for class ${classItem.classId}:`, countError)
+					const updatedClasses = await Promise.all(
+						classesFromStore.map(async classItem => {
+							try {
+								const actualCount = await getClassStudentCount(classItem.classId)
+								return {
+									...classItem,
+									actualStudentCount: actualCount,
+								}
+							} catch (countError) {
+								console.error(
+									`Error fetching student count for class ${classItem.classId}:`,
+									countError
+								)
 								return { ...classItem, actualStudentCount: classItem.studentCount }
-						}
-					})
-				)
-				setClassesWithCounts(updatedClasses)
-			} catch (err) {
+							}
+						})
+					)
+					setClassesWithCounts(updatedClasses)
+				} catch (err) {
 					console.error('Error processing class counts:', err)
-					setError('Failed to process class student counts.')
-			} finally {
+					setError(t('errors.loadingFailed'))
+				} finally {
 					setLoadingData(false)
 				}
 			} else if (!isLoadingClasses) {
@@ -108,7 +113,7 @@ const ClassesList: React.FC = () => {
 		}
 
 		processClasses()
-	}, [classesFromStore, isLoadingClasses])
+	}, [classesFromStore, isLoadingClasses, t])
 
 	// Filter classes based on search term
 	const filteredClasses = classesWithCounts.filter(
@@ -141,7 +146,7 @@ const ClassesList: React.FC = () => {
 	if (loadingData) {
 		return (
 			<PageContainer>
-				<LoadingMessage>Loading your classes...</LoadingMessage>
+				<LoadingMessage>{t('grades.loadingClasses')}</LoadingMessage>
 			</PageContainer>
 		)
 	}
@@ -156,7 +161,7 @@ const ClassesList: React.FC = () => {
 
 	// Group classes by grade level for better organization
 	const classGroups = filteredClasses.reduce((groups, classItem) => {
-		const level = classItem.levelName || 'Unknown Level'
+		const level = classItem.levelName || t('grades.unknownLevel')
 		if (!groups[level]) {
 			groups[level] = []
 		}
@@ -169,14 +174,14 @@ const ClassesList: React.FC = () => {
 			<PageHeaderWrapper>
 				<PageHeader>
 					<HeaderContent>
-						<PageTitle>Classes List</PageTitle>
-						<SubTitle>View classes and manage student grades</SubTitle>
+						<PageTitle>{t('grades.myClasses')}</PageTitle>
+						<SubTitle>{t('grades.directClassNavigation')}</SubTitle>
 					</HeaderContent>
 					<HeaderRight>
 						<SearchWrapper>
 							<StyledInput
 								prefix={<FiSearch />}
-								placeholder='Search classes or levels...'
+								placeholder={t('grades.searchClasses')}
 								value={searchTerm}
 								onChange={e => setSearchTerm(e.target.value)}
 							/>
@@ -206,7 +211,11 @@ const ClassesList: React.FC = () => {
 											<FiUsers />
 										</ClassIcon>
 										<ClassName>{classItem.classname}</ClassName>
-										{classItem.levelName && <LevelBadge>{classItem.levelName}th Grade</LevelBadge>}
+										{classItem.levelName && (
+											<LevelBadge>
+												{classItem.levelName}th {t('grades.grade')}
+											</LevelBadge>
+										)}
 									</CardHeader>
 									<CardContent>
 										<MetricRow>
@@ -215,8 +224,12 @@ const ClassesList: React.FC = () => {
 													<FiUsers />
 												</MetricIcon>
 												<MetricContent>
-													<MetricValue>{classItem.actualStudentCount !== undefined ? classItem.actualStudentCount : classItem.studentCount}</MetricValue>
-													<MetricLabel>Students</MetricLabel>
+													<MetricValue>
+														{classItem.actualStudentCount !== undefined
+															? classItem.actualStudentCount
+															: classItem.studentCount}
+													</MetricValue>
+													<MetricLabel>{t('grades.students')}</MetricLabel>
 												</MetricContent>
 											</Metric>
 											<Metric>
@@ -225,13 +238,13 @@ const ClassesList: React.FC = () => {
 												</MetricIcon>
 												<MetricContent>
 													<MetricValue>{classItem.subjectCount}</MetricValue>
-													<MetricLabel>Subjects</MetricLabel>
+													<MetricLabel>{t('grades.subjects')}</MetricLabel>
 												</MetricContent>
 											</Metric>
 										</MetricRow>
 										<CardArrow $isHovered={hoveredCard === classItem.classId}>
 											<FiChevronRight />
-											<span>View Grades</span>
+											<span>{t('grades.viewJournal')}</span>
 										</CardArrow>
 									</CardContent>
 								</ClassCard>
@@ -245,9 +258,14 @@ const ClassesList: React.FC = () => {
 									<LevelIcon>
 										<FiAward />
 									</LevelIcon>
-									<LevelName>{levelName === 'Unknown Level' ? levelName : `${levelName}th Grade`}</LevelName>
+									<LevelName>
+										{levelName === t('grades.unknownLevel')
+											? levelName
+											: `${levelName}th ${t('grades.grade')}`}
+									</LevelName>
 									<LevelClassCount>
-										{levelClasses.length} {levelClasses.length === 1 ? 'class' : 'classes'}
+										{levelClasses.length}{' '}
+										{levelClasses.length === 1 ? t('grades.class') : t('grades.classes')}
 									</LevelClassCount>
 								</LevelHeader>
 								<ClassGrid
@@ -280,8 +298,12 @@ const ClassesList: React.FC = () => {
 															<FiUsers />
 														</MetricIcon>
 														<MetricContent>
-															<MetricValue>{classItem.actualStudentCount !== undefined ? classItem.actualStudentCount : classItem.studentCount}</MetricValue>
-															<MetricLabel>Students</MetricLabel>
+															<MetricValue>
+																{classItem.actualStudentCount !== undefined
+																	? classItem.actualStudentCount
+																	: classItem.studentCount}
+															</MetricValue>
+															<MetricLabel>{t('grades.students')}</MetricLabel>
 														</MetricContent>
 													</Metric>
 													<Metric>
@@ -290,13 +312,13 @@ const ClassesList: React.FC = () => {
 														</MetricIcon>
 														<MetricContent>
 															<MetricValue>{classItem.subjectCount}</MetricValue>
-															<MetricLabel>Subjects</MetricLabel>
+															<MetricLabel>{t('grades.subjects')}</MetricLabel>
 														</MetricContent>
 													</Metric>
 												</MetricRow>
 												<CardArrow $isHovered={hoveredCard === classItem.classId}>
 													<FiChevronRight />
-													<span>View Grades</span>
+													<span>{t('grades.viewJournal')}</span>
 												</CardArrow>
 											</CardContent>
 										</ClassCard>
@@ -306,11 +328,15 @@ const ClassesList: React.FC = () => {
 						))
 					)
 				) : (
-					<NoResults>
-						{searchTerm
-							? `No classes found matching "${searchTerm}"`
-							: 'No classes assigned or found.'}
-					</NoResults>
+					<EmptyState>
+						<EmptyStateIcon>
+							<FiUsers size={48} />
+						</EmptyStateIcon>
+						<EmptyStateTitle>{t('grades.noClassesFound')}</EmptyStateTitle>
+						<EmptyStateMessage>
+							{searchTerm ? t('grades.noClassesFound') : t('grades.noClassesFound')}
+						</EmptyStateMessage>
+					</EmptyState>
 				)}
 			</ContentContainer>
 		</PageContainer>
@@ -583,6 +609,30 @@ const ErrorMessage = styled.div`
 	padding: 48px 0;
 	color: ${props => props.theme.colors.danger[500]};
 	font-size: 1.1rem;
+`
+
+const EmptyState = styled.div`
+	text-align: center;
+	padding: 48px 0;
+	color: ${props => props.theme.colors.text.secondary};
+	font-size: 1.1rem;
+`
+
+const EmptyStateIcon = styled.div`
+	margin-bottom: 16px;
+`
+
+const EmptyStateTitle = styled.h3`
+	margin-bottom: 8px;
+	font-size: 1.4rem;
+	font-weight: 600;
+	color: ${props => props.theme.colors.text.primary};
+`
+
+const EmptyStateMessage = styled.p`
+	margin: 0;
+	font-size: 1.1rem;
+	font-weight: 300;
 `
 
 export default ClassesList

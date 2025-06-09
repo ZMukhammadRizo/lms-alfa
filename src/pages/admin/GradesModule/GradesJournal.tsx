@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Loader, Save, X } from 'react-feather'
+import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -248,6 +249,7 @@ const convertDataForJournalTable = (
 }
 
 const GradesJournal: React.FC = () => {
+	const { t } = useTranslation()
 	const { gradeId, classId, subjectId } = useParams<{
 		gradeId: string
 		classId: string
@@ -843,15 +845,15 @@ const GradesJournal: React.FC = () => {
 	// Get letter grade from numeric grade
 	const getLetterGrade = (grade: number | null): string => {
 		if (grade === null) return '-'
-		if (grade >= 9) return 'A+'
-		if (grade >= 8) return 'A'
-		if (grade >= 7) return 'B+'
-		if (grade >= 6) return 'B'
-		if (grade >= 5) return 'C+'
-		if (grade >= 4) return 'C'
-		if (grade >= 3) return 'D'
-		if (grade >= 2) return 'E'
-		return 'F'
+		if (grade >= 9) return t('grades.letterGrades.a') + '+'
+		if (grade >= 8) return t('grades.letterGrades.a')
+		if (grade >= 7) return t('grades.letterGrades.b') + '+'
+		if (grade >= 6) return t('grades.letterGrades.b')
+		if (grade >= 5) return t('grades.letterGrades.c') + '+'
+		if (grade >= 4) return t('grades.letterGrades.c')
+		if (grade >= 3) return t('grades.letterGrades.d')
+		if (grade >= 2) return t('grades.letterGrades.d')
+		return t('grades.letterGrades.f')
 	}
 
 	// Get badge color based on grade
@@ -915,11 +917,16 @@ const GradesJournal: React.FC = () => {
 						$type='save'
 						onClick={() => handleSaveGrade(studentId, lessonId, editGradeValue)}
 						disabled={isSaving}
-						title='Save grade'
+						title={t('common.save')}
 					>
 						<Save size={16} />
 					</EditButton>
-					<EditButton $type='cancel' onClick={handleCancelEdit} disabled={isSaving} title='Cancel'>
+					<EditButton
+						$type='cancel'
+						onClick={handleCancelEdit}
+						disabled={isSaving}
+						title={t('common.cancel')}
+					>
 						<X size={16} />
 					</EditButton>
 				</GradeEditInputWrapper>
@@ -932,7 +939,7 @@ const GradesJournal: React.FC = () => {
 					<GradeBadge
 						$color={getGradeBadgeColor(currentGrade)}
 						onClick={() => handleEditGrade(studentId, lessonId)}
-						title={`Score: ${currentGrade}/10. Click to edit.`}
+						title={`${t('grades.grade')}: ${currentGrade}/10. ${t('common.clickToEdit')}`}
 					>
 						{getLetterGrade(currentGrade)}
 						<GradeIndicator>{currentGrade}</GradeIndicator>
@@ -946,7 +953,7 @@ const GradesJournal: React.FC = () => {
 			<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} layout>
 				<EmptyGradeBadge
 					onClick={() => handleAddGrade(studentId, lessonId)}
-					title='Click to add grade'
+					title={t('grades.journal.clickToAddGrade')}
 				>
 					<span>+</span>
 				</EmptyGradeBadge>

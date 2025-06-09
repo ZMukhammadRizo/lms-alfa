@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FiArrowLeft, FiLoader, FiPlus, FiX } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -30,6 +31,7 @@ interface FilterReportModalProps {
 }
 
 const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }) => {
+	const { t } = useTranslation()
 	const [levels, setLevels] = useState<Level[]>([])
 	const [classes, setClasses] = useState<Record<string, Class[]>>({})
 	const [selectedClasses, setSelectedClasses] = useState<ClassSelection[]>([
@@ -56,7 +58,7 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 			setLevels(data || [])
 		} catch (error) {
 			console.error('Error fetching levels:', error)
-			toast.error('Failed to load levels')
+			toast.error(t('errors.loadingFailed'))
 		} finally {
 			setLoadingLevels(false)
 		}
@@ -75,7 +77,7 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 			setClasses(prev => ({ ...prev, [levelId]: data || [] }))
 		} catch (error) {
 			console.error('Error fetching classes:', error)
-			toast.error('Failed to load classes')
+			toast.error(t('errors.loadingFailed'))
 		} finally {
 			setLoadingClasses(prev => ({ ...prev, [levelId]: false }))
 		}
@@ -178,7 +180,9 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 						>
 							<ModalHeader>
 								<HeaderTitle>
-									{step === 1 ? 'Select multiple classes to report' : 'Select report type'}
+									{step === 1
+										? t('dailyAttendance.filterModal.selectClasses')
+										: t('dailyAttendance.filterModal.selectReportType')}
 								</HeaderTitle>
 								<CloseButton onClick={onClose}>
 									<FiX size={20} />
@@ -192,13 +196,13 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 											<ClassSelectionRow key={index}>
 												<SelectionLabel>
 													{index === 0
-														? 'Select 1st class'
-														: `Select ${index + 1}${getSuffix(index + 1)} class`}
+														? t('dailyAttendance.filterModal.selectClass')
+														: `${t('dailyAttendance.filterModal.selectClass')} ${index + 1}`}
 												</SelectionLabel>
 												<SelectionControls>
 													<DropdownWrapper>
 														<Dropdown
-															placeholder='Select level'
+															placeholder={t('dailyAttendance.filterModal.selectLevel')}
 															options={levels.map(level => ({
 																value: level.id,
 																label: level.name,
@@ -209,7 +213,7 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 													</DropdownWrapper>
 													<DropdownWrapper>
 														<Dropdown
-															placeholder='Select class'
+															placeholder={t('dailyAttendance.filterModal.selectClass')}
 															options={(classes[selection.levelId] || []).map(cls => ({
 																value: cls.id,
 																label: cls.classname,
@@ -239,24 +243,54 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 												disabled={!canAddClass || isDuplicateSelection()}
 											>
 												<FiPlus size={16} />
-												Add a class
+												{t('dailyAttendance.filterModal.addClass')}
 											</AddClassButton>
 
 											<GenerateButton
 												onClick={handleGenerateReports}
 												disabled={!isAnyClassSelected || isDuplicateSelection()}
 											>
-												Generate reports
+												{t('dailyAttendance.filterModal.next')}
 											</GenerateButton>
 										</ButtonsContainer>
 
 										{isDuplicateSelection() && (
 											<ErrorMessage>You cannot select the same class multiple times</ErrorMessage>
 										)}
+
+										{selectedClasses.some(s => s.classId) && (
+											<SelectedClassesSection>
+												<SectionTitle>
+													{t('dailyAttendance.filterModal.selectedClasses')}
+												</SectionTitle>
+												{selectedClasses.filter(s => s.classId).length === 0 ? (
+													<NoClassesMessage>
+														{t('dailyAttendance.filterModal.noClassesSelected')}
+													</NoClassesMessage>
+												) : (
+													<ClassesList>
+														{selectedClasses
+															.filter(s => s.levelId && s.classId)
+															.map((s, index) => (
+																<ClassItem key={index}>
+																	<ClassInfo>
+																		{s.levelName} - {s.className}
+																	</ClassInfo>
+																	<RemoveClassButton onClick={() => handleRemoveClass(index)}>
+																		{t('dailyAttendance.filterModal.remove')}
+																	</RemoveClassButton>
+																</ClassItem>
+															))}
+													</ClassesList>
+												)}
+											</SelectedClassesSection>
+										)}
 									</>
 								) : (
 									<ReportTypeSelection>
-										<ReportTypeTitle>Select report type</ReportTypeTitle>
+										<ReportTypeTitle>
+											{t('dailyAttendance.filterModal.selectReportType')}
+										</ReportTypeTitle>
 										<RadioGroup>
 											<RadioOption>
 												<RadioInput
@@ -268,7 +302,7 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 												/>
 												<RadioLabel htmlFor='monthly'>
 													<RadioButton />
-													Monthly
+													{t('dailyAttendance.filterModal.monthly')}
 												</RadioLabel>
 											</RadioOption>
 											<RadioOption>
@@ -281,7 +315,7 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 												/>
 												<RadioLabel htmlFor='weekly'>
 													<RadioButton />
-													Weekly
+													{t('dailyAttendance.filterModal.weekly')}
 												</RadioLabel>
 											</RadioOption>
 										</RadioGroup>
@@ -289,10 +323,11 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 										<ActionButtonsContainer>
 											<BackButton onClick={handleBackToClassSelection}>
 												<FiArrowLeft size={16} />
-												Back
+												{t('dailyAttendance.filterModal.back')}
 											</BackButton>
+
 											<ProceedButton onClick={handleProceed} disabled={!reportType}>
-												Proceed
+												{t('dailyAttendance.filterModal.proceed')}
 											</ProceedButton>
 										</ActionButtonsContainer>
 									</ReportTypeSelection>
@@ -513,17 +548,18 @@ const ReportTypeSelection = styled.div`
 	padding: 20px 0;
 `
 
-const ReportTypeTitle = styled.h4`
-	font-size: 1.2rem;
+const ReportTypeTitle = styled.h3`
+	font-size: 1.1rem;
 	font-weight: 500;
-	margin-bottom: 32px;
-	color: #111827;
+	margin-bottom: 24px;
+	color: ${props => props.theme.colors.text.primary};
 `
 
 const RadioGroup = styled.div`
 	display: flex;
-	gap: 40px;
-	margin-bottom: 40px;
+	flex-direction: column;
+	gap: 16px;
+	margin-bottom: 32px;
 `
 
 const RadioOption = styled.div`
@@ -534,60 +570,52 @@ const RadioOption = styled.div`
 const RadioInput = styled.input`
 	position: absolute;
 	opacity: 0;
-	width: 0;
-	height: 0;
-`
-
-const RadioLabel = styled.label`
-	display: flex;
-	align-items: center;
-	font-size: 1.1rem;
-	color: #4b5563;
 	cursor: pointer;
-
-	${RadioInput}:checked + & {
-		color: #111827;
-		font-weight: 500;
-	}
+	height: 0;
+	width: 0;
 `
 
 const RadioButton = styled.span`
 	position: relative;
 	display: inline-block;
-	width: 22px;
-	height: 22px;
-	margin-right: 10px;
+	width: 20px;
+	height: 20px;
+	margin-right: 12px;
 	border-radius: 50%;
-	border: 2px solid #d1d5db;
-	transition: all 0.2s;
+	border: 2px solid ${props => props.theme.colors.primary.main};
+	background-color: transparent;
 
 	&::after {
 		content: '';
 		position: absolute;
 		display: none;
-		top: 4px;
-		left: 4px;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
 		width: 10px;
 		height: 10px;
 		border-radius: 50%;
-		background-color: #0ea5e9;
-		transition: all 0.2s;
+		background-color: ${props => props.theme.colors.primary.main};
 	}
+`
 
-	${RadioInput}:checked + ${RadioLabel} & {
-		border-color: #0ea5e9;
+const RadioLabel = styled.label`
+	display: flex;
+	align-items: center;
+	font-size: 1rem;
+	color: ${props => props.theme.colors.text.primary};
+	cursor: pointer;
+	user-select: none;
 
-		&::after {
-			display: block;
-		}
+	${RadioInput}:checked + & ${RadioButton}::after {
+		display: block;
 	}
 `
 
 const ActionButtonsContainer = styled.div`
 	display: flex;
-	gap: 16px;
-	justify-content: center;
-	width: 100%;
+	justify-content: space-between;
+	margin-top: auto;
 `
 
 const BackButton = styled.button`
@@ -629,6 +657,55 @@ const ProceedButton = styled.button`
 		opacity: 0.6;
 		cursor: not-allowed;
 	}
+`
+
+const SelectedClassesSection = styled.div`
+	margin-top: 20px;
+	padding: 20px;
+	border: 1px solid #e5e7eb;
+	border-radius: 8px;
+`
+
+const SectionTitle = styled.h5`
+	font-size: 1.2rem;
+	font-weight: 500;
+	margin-bottom: 16px;
+	color: #111827;
+`
+
+const NoClassesMessage = styled.p`
+	color: #6b7280;
+	font-size: 0.9rem;
+	text-align: center;
+`
+
+const ClassesList = styled.ul`
+	list-style: none;
+	padding: 0;
+	margin: 0;
+`
+
+const ClassItem = styled.li`
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 0;
+`
+
+const ClassInfo = styled.span`
+	font-size: 1rem;
+	font-weight: 500;
+	color: #4b5563;
+`
+
+const RemoveClassButton = styled.button`
+	background: none;
+	border: none;
+	color: #6b7280;
+	cursor: pointer;
+	font-size: 0.9rem;
+	font-weight: 500;
+	padding: 0;
 `
 
 export default FilterReportModal

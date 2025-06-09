@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 import { ArrowLeft, Calendar, FileText, Grid, List, Search } from 'react-feather'
+import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
@@ -42,6 +43,7 @@ type ViewMode = 'grid' | 'table'
 type ExportPeriod = 'weekly' | 'monthly' | null
 
 const AdminDailyAttendanceClass: React.FC = () => {
+	const { t } = useTranslation()
 	const { levelId, classId } = useParams<{ levelId: string; classId: string }>()
 	const [students, setStudents] = useState<Student[]>([])
 	const [filteredStudents, setFilteredStudents] = useState<Student[]>([])
@@ -155,7 +157,7 @@ const AdminDailyAttendanceClass: React.FC = () => {
 			setStudents(students)
 		} catch (error) {
 			console.error('Error fetching class and students:', error)
-			toast.error('Failed to load students')
+			toast.error(t('errors.loadingFailed'))
 		} finally {
 			setLoading(false)
 		}
@@ -339,7 +341,7 @@ const AdminDailyAttendanceClass: React.FC = () => {
 						</StudentInfo>
 						<ActionButton onClick={() => handleStudentClick(student)}>
 							<Calendar size={16} />
-							<span>Attendance</span>
+							<span>{t('dailyAttendance.viewAttendance')}</span>
 						</ActionButton>
 					</StudentCard>
 				))}
@@ -352,9 +354,9 @@ const AdminDailyAttendanceClass: React.FC = () => {
 			<StudentTable>
 				<thead>
 					<tr>
-						<TableHeader>Student</TableHeader>
-						<TableHeader>Email</TableHeader>
-						<TableHeader>Actions</TableHeader>
+						<TableHeader>{t('userProfile.fullName')}</TableHeader>
+						<TableHeader>{t('userProfile.email')}</TableHeader>
+						<TableHeader>{t('common.actions')}</TableHeader>
 					</tr>
 				</thead>
 				<tbody>
@@ -370,7 +372,7 @@ const AdminDailyAttendanceClass: React.FC = () => {
 							<TableCell>
 								<TableActionButton onClick={() => handleStudentClick(student)}>
 									<Calendar size={16} />
-									<span>Attendance</span>
+									<span>{t('dailyAttendance.viewAttendance')}</span>
 								</TableActionButton>
 							</TableCell>
 						</TableRow>
@@ -384,41 +386,47 @@ const AdminDailyAttendanceClass: React.FC = () => {
 		<Container>
 			<BackLink to={`/admin/daily-attendance/${levelId}`}>
 				<ArrowLeft size={16} />
-				<span>Back to Classes</span>
+				<span>{t('dailyAttendance.backToClasses')}</span>
 			</BackLink>
 
 			<PageHeader
-				title={classData ? `${classData.classname} - Daily Attendance` : 'Daily Attendance'}
-				subtitle={level ? `${level.name} - Manage student attendance` : 'Manage student attendance'}
+				title={
+					classData && level
+						? `${level.name} - ${classData.classname} - ${t('dailyAttendance.title')}`
+						: t('dailyAttendance.title')
+				}
+				subtitle={t('dailyAttendance.studentList')}
 			/>
 
 			{loading ? (
 				<LoadingContainer>
 					<LoadingSpinner />
-					<p>Loading students...</p>
+					<p>{t('dailyAttendance.loadingStudents')}</p>
 				</LoadingContainer>
 			) : students.length === 0 ? (
 				<EmptyState>
-					<h3>No students found</h3>
-					<p>There are no students enrolled in this class.</p>
+					<h3>{t('dailyAttendance.noStudentsFound')}</h3>
+					<p>{t('dailyAttendance.noStudentsEnrolled')}</p>
 				</EmptyState>
 			) : (
 				<TableWrapper>
 					<SearchContainer>
 						<LeftSection>
-							<StudentCount>{students.length} Students</StudentCount>
+							<StudentCount>
+								{students.length} {t('dailyAttendance.students')}
+							</StudentCount>
 							<ViewToggle>
 								<ViewToggleButton
 									isActive={viewMode === 'grid'}
 									onClick={() => setViewMode('grid')}
-									aria-label='Grid view'
+									aria-label={t('common.gridView')}
 								>
 									<Grid size={18} />
 								</ViewToggleButton>
 								<ViewToggleButton
 									isActive={viewMode === 'table'}
 									onClick={() => setViewMode('table')}
-									aria-label='Table view'
+									aria-label={t('common.tableView')}
 								>
 									<List size={18} />
 								</ViewToggleButton>
@@ -427,7 +435,7 @@ const AdminDailyAttendanceClass: React.FC = () => {
 						<ActionContainer>
 							<ExportButton onClick={handleExportClick}>
 								<FileText size={16} />
-								<span>Export Attendance</span>
+								<span>{t('dailyAttendance.exportAttendance')}</span>
 							</ExportButton>
 							<SearchInputWrapper>
 								<SearchIcon>
@@ -435,7 +443,7 @@ const AdminDailyAttendanceClass: React.FC = () => {
 								</SearchIcon>
 								<SearchInput
 									type='text'
-									placeholder='Search students...'
+									placeholder={t('dailyAttendance.searchStudents')}
 									value={searchQuery}
 									onChange={handleSearchChange}
 								/>
@@ -445,8 +453,8 @@ const AdminDailyAttendanceClass: React.FC = () => {
 
 					{filteredStudents.length === 0 ? (
 						<EmptyState>
-							<h3>No matching students</h3>
-							<p>No students match your search criteria.</p>
+							<h3>{t('dailyAttendance.noMatchingStudents')}</h3>
+							<p>{t('dailyAttendance.noStudentsMatchSearch')}</p>
 						</EmptyState>
 					) : viewMode === 'grid' ? (
 						renderGridView()
@@ -466,7 +474,9 @@ const AdminDailyAttendanceClass: React.FC = () => {
 						quarterId={currentQuarter || undefined}
 					/>
 				)}
+			</AnimatePresence>
 
+			<AnimatePresence>
 				{isExportModalOpen && (
 					<ExportModal
 						isOpen={isExportModalOpen}
@@ -833,6 +843,7 @@ interface ExportModalProps {
 }
 
 const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onExport, loading }) => {
+	const { t } = useTranslation()
 	const [selectedPeriod, setSelectedPeriod] = useState<ExportPeriod>(null)
 
 	const handlePeriodSelect = (period: ExportPeriod) => {
@@ -861,14 +872,14 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onExport, lo
 				onClick={e => e.stopPropagation()}
 			>
 				<ModalHeader>
-					<h3>Export Attendance Data</h3>
+					<h3>{t('dailyAttendance.exportAttendance')}</h3>
 					<CloseButton onClick={onClose}>
 						<ArrowLeft size={20} />
 					</CloseButton>
 				</ModalHeader>
 
 				<ModalBody>
-					<p>Select the period for which you want to export attendance data:</p>
+					<p>{t('dailyAttendance.reports.selectPeriod')}</p>
 
 					<RadioGroup>
 						<RadioOption>
@@ -881,7 +892,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onExport, lo
 							/>
 							<RadioLabel htmlFor='weekly'>
 								<RadioButton />
-								Weekly (Current Week)
+								{t('dailyAttendance.reports.weekly')}
 							</RadioLabel>
 						</RadioOption>
 						<RadioOption>
@@ -894,7 +905,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onExport, lo
 							/>
 							<RadioLabel htmlFor='monthly'>
 								<RadioButton />
-								Monthly (Current Month)
+								{t('dailyAttendance.reports.monthly')}
 							</RadioLabel>
 						</RadioOption>
 					</RadioGroup>
@@ -902,10 +913,10 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onExport, lo
 
 				<ModalFooter>
 					<CancelButton onClick={onClose} disabled={loading}>
-						Cancel
+						{t('common.cancel')}
 					</CancelButton>
 					<ExportActionButton onClick={handleExport} disabled={!selectedPeriod || loading}>
-						{loading ? 'Exporting...' : 'Export'}
+						{loading ? t('dailyAttendance.reports.exporting') : t('dailyAttendance.reports.export')}
 					</ExportActionButton>
 				</ModalFooter>
 			</ModalContent>
@@ -1091,5 +1102,74 @@ const ExportActionButton = styled.button`
 		cursor: not-allowed;
 	}
 `
+
+const ControlsContainer = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20px;
+`
+
+const LeftControls = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 16px;
+`
+
+const RightControls = styled.div`
+	display: flex;
+	gap: 16px;
+	align-items: center;
+`
+
+const ViewToggleContainer = styled.div`
+	display: flex;
+	background-color: #f1f5f9;
+	border-radius: 8px;
+	padding: 2px;
+`
+
+const ViewAttendanceButton = styled.button`
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background-color: #0ea5e9;
+	color: #fff;
+	border: none;
+	border-radius: 8px;
+	padding: 8px 16px;
+	cursor: pointer;
+	transition: all 0.2s;
+	font-weight: 500;
+
+	&:hover {
+		background-color: #0ea5e9;
+		transform: translateY(-2px);
+	}
+
+	&:active {
+		transform: translateY(0);
+	}
+`
+
+const TableContainer = styled.div`
+	margin-top: 24px;
+`
+
+const Table = styled.table`
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	background-color: white;
+	border-radius: 12px;
+	overflow: hidden;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`
+
+const TableHead = styled.thead`
+	background-color: #f8fafc;
+`
+
+const TableBody = styled.tbody``
 
 export default AdminDailyAttendanceClass

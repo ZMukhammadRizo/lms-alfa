@@ -13,6 +13,7 @@ import {
 	Typography,
 } from '@mui/material'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface GradeDialogProps {
 	open: boolean
@@ -31,6 +32,7 @@ const GradeDialog: React.FC<GradeDialogProps> = ({
 	studentName,
 	lessonDate,
 }) => {
+	const { t } = useTranslation()
 	const [inputType, setInputType] = useState<'grade' | 'status'>('grade')
 	const [gradeValue, setGradeValue] = useState<string>('')
 	const [statusValue, setStatusValue] = useState<string>('A')
@@ -88,21 +90,25 @@ const GradeDialog: React.FC<GradeDialogProps> = ({
 	return (
 		<Dialog open={open} onClose={onClose} maxWidth='xs' fullWidth>
 			<DialogTitle>
-				Enter Grade
+				{t('grades.journal.enterGrade')}
 				<Typography variant='subtitle2' color='textSecondary'>
 					{studentName} - {lessonDate}
 				</Typography>
 			</DialogTitle>
 			<DialogContent>
 				<FormControl component='fieldset' margin='normal'>
-					<FormLabel component='legend'>Entry Type</FormLabel>
+					<FormLabel component='legend'>{t('grades.journal.entryType')}</FormLabel>
 					<RadioGroup
 						row
 						value={inputType}
 						onChange={e => setInputType(e.target.value as 'grade' | 'status')}
 					>
-						<FormControlLabel value='grade' control={<Radio />} label='Grade' />
-						<FormControlLabel value='status' control={<Radio />} label='Status' />
+						<FormControlLabel value='grade' control={<Radio />} label={t('grades.journal.grade')} />
+						<FormControlLabel
+							value='status'
+							control={<Radio />}
+							label={t('grades.journal.status')}
+						/>
 					</RadioGroup>
 				</FormControl>
 
@@ -110,7 +116,7 @@ const GradeDialog: React.FC<GradeDialogProps> = ({
 					<TextField
 						autoFocus
 						margin='dense'
-						label='Grade (1-5)'
+						label={t('grades.journal.gradeRange')}
 						type='number'
 						fullWidth
 						variant='outlined'
@@ -120,25 +126,29 @@ const GradeDialog: React.FC<GradeDialogProps> = ({
 					/>
 				) : (
 					<FormControl component='fieldset' margin='normal' fullWidth>
-						<FormLabel component='legend'>Status</FormLabel>
+						<FormLabel component='legend'>{t('grades.journal.status')}</FormLabel>
 						<RadioGroup value={statusValue} onChange={e => setStatusValue(e.target.value)}>
-							<FormControlLabel value='A' control={<Radio />} label='Absent (A)' />
-							<FormControlLabel value='E' control={<Radio />} label='Excused (E)' />
-							<FormControlLabel value='L' control={<Radio />} label='Late (L)' />
-							<FormControlLabel value='I' control={<Radio />} label='Incomplete (I)' />
+							<FormControlLabel value='A' control={<Radio />} label={t('grades.journal.absent')} />
+							<FormControlLabel value='E' control={<Radio />} label={t('grades.journal.excused')} />
+							<FormControlLabel value='L' control={<Radio />} label={t('grades.journal.late')} />
+							<FormControlLabel
+								value='I'
+								control={<Radio />}
+								label={t('grades.journal.incomplete')}
+							/>
 						</RadioGroup>
 					</FormControl>
 				)}
 			</DialogContent>
 			<DialogActions>
 				<Button onClick={handleClear} color='secondary'>
-					Clear
+					{t('grades.journal.clear')}
 				</Button>
 				<Button onClick={onClose} color='primary'>
-					Cancel
+					{t('grades.journal.cancel')}
 				</Button>
 				<Button onClick={handleSave} color='primary' variant='contained'>
-					Save
+					{t('grades.journal.save')}
 				</Button>
 			</DialogActions>
 		</Dialog>

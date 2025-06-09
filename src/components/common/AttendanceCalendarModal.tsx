@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, Clock, FileText, X, X as XIcon } from 'react-feather'
+import { Check, ChevronLeft, ChevronRight, Clock, FileText, X as XIcon } from 'react-feather'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
 import supabase from '../../config/supabaseClient'
@@ -37,6 +38,7 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 	teacherId,
 	quarterId,
 }) => {
+	const { t } = useTranslation()
 	const [currentMonth, setCurrentMonth] = useState(new Date())
 	const [attendanceData, setAttendanceData] = useState<DailyAttendance[]>([])
 	const [loading, setLoading] = useState(false)
@@ -459,7 +461,43 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 
 	// Get formatted month name for display
 	const getFormattedMonthName = () => {
-		return currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+		const monthNames = [
+			t('calendar.january'),
+			t('calendar.february'),
+			t('calendar.march'),
+			t('calendar.april'),
+			t('calendar.may'),
+			t('calendar.june'),
+			t('calendar.july'),
+			t('calendar.august'),
+			t('calendar.september'),
+			t('calendar.october'),
+			t('calendar.november'),
+			t('calendar.december'),
+		]
+		return `${monthNames[currentMonth.getMonth()]} ${currentMonth.getFullYear()}`
+	}
+
+	const renderCalendarHeader = () => {
+		const dayNames = [
+			t('calendar.monday'),
+			t('calendar.tuesday'),
+			t('calendar.wednesday'),
+			t('calendar.thursday'),
+			t('calendar.friday'),
+			t('calendar.saturday'),
+			t('calendar.sunday'),
+		]
+
+		return (
+			<CalendarHeader>
+				{dayNames.map((day, index) => (
+					<DayName key={index} isWeekend={index >= 5}>
+						{day.substring(0, 3)}
+					</DayName>
+				))}
+			</CalendarHeader>
+		)
 	}
 
 	if (!isOpen) return null
@@ -482,17 +520,19 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 						<StudentAvatar>{student.fullName.charAt(0)}</StudentAvatar>
 						<div>
 							<h2>{student.fullName}</h2>
-							<p>Daily Attendance Record</p>
+							<p>{t('attendance.title')}</p>
 						</div>
 					</StudentInfo>
 					<CloseButton onClick={onClose}>
-						<X size={24} />
+						<XIcon size={24} />
 					</CloseButton>
 				</ModalHeader>
 
 				<AttendanceStatsContainer>
 					<AttendanceStatItem>
-						<StatLabel>{getFormattedMonthName()} Attendance:</StatLabel>
+						<StatLabel>
+							{getFormattedMonthName()} {t('attendance.monthlyAttendance')}:
+						</StatLabel>
 						{attendanceStats.isLoading ? (
 							<LoadingSpinner size='small' />
 						) : (
@@ -500,7 +540,7 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 						)}
 					</AttendanceStatItem>
 					<AttendanceStatItem>
-						<StatLabel>Overall Attendance:</StatLabel>
+						<StatLabel>{t('attendance.overallAttendance')}:</StatLabel>
 						{attendanceStats.isLoading ? (
 							<LoadingSpinner size='small' />
 						) : (
@@ -514,29 +554,27 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 						<MonthNavButton onClick={handlePreviousMonth}>
 							<ChevronLeft size={20} />
 						</MonthNavButton>
-						<MonthYearDisplay>
-							{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-						</MonthYearDisplay>
+						<MonthYearDisplay>{getFormattedMonthName()}</MonthYearDisplay>
 						<MonthNavButton onClick={handleNextMonth}>
 							<ChevronRight size={20} />
 						</MonthNavButton>
 					</CalendarHeader>
 
 					<WeekdayHeader>
-						<Weekday>Mon</Weekday>
-						<Weekday>Tue</Weekday>
-						<Weekday>Wed</Weekday>
-						<Weekday>Thu</Weekday>
-						<Weekday>Fri</Weekday>
-						<Weekday>Sat</Weekday>
-						<Weekday>Sun</Weekday>
+						<Weekday>{t('calendar.monday').substring(0, 3)}</Weekday>
+						<Weekday>{t('calendar.tuesday').substring(0, 3)}</Weekday>
+						<Weekday>{t('calendar.wednesday').substring(0, 3)}</Weekday>
+						<Weekday>{t('calendar.thursday').substring(0, 3)}</Weekday>
+						<Weekday>{t('calendar.friday').substring(0, 3)}</Weekday>
+						<Weekday>{t('calendar.saturday').substring(0, 3)}</Weekday>
+						<Weekday>{t('calendar.sunday').substring(0, 3)}</Weekday>
 					</WeekdayHeader>
 
 					<CalendarGrid>
 						{loading ? (
 							<LoadingContainer>
 								<LoadingSpinner size='large' />
-								<p>Loading attendance data...</p>
+								<p>{t('attendance.loadingAttendance')}</p>
 							</LoadingContainer>
 						) : (
 							renderCalendarDays()
@@ -547,26 +585,24 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 				<LegendContainer>
 					<LegendItem>
 						<LegendColor status='present' />
-						<span>Present</span>
+						<span>{t('attendance.present')}</span>
 					</LegendItem>
 					<LegendItem>
 						<LegendColor status='late' />
-						<span>Late</span>
+						<span>{t('attendance.late')}</span>
 					</LegendItem>
 					<LegendItem>
 						<LegendColor status='excused' />
-						<span>Excused</span>
+						<span>{t('attendance.excused')}</span>
 					</LegendItem>
 					<LegendItem>
 						<LegendColor status='absent' />
-						<span>Absent</span>
+						<span>{t('attendance.absent')}</span>
 					</LegendItem>
 				</LegendContainer>
 
 				<ModalFooter>
-					<HelpText>
-						Click on any day to mark attendance. Weekends and future weeks are disabled.
-					</HelpText>
+					<HelpText>{t('dailyAttendance.clickDayInstruction')}</HelpText>
 				</ModalFooter>
 			</ModalContent>
 		</ModalOverlay>
@@ -675,10 +711,10 @@ const CalendarContainer = styled.div`
 `
 
 const CalendarHeader = styled.div`
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 8px 0;
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 8px;
+	margin-bottom: 8px;
 `
 
 const MonthNavButton = styled.button`
