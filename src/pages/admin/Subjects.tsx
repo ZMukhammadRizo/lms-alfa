@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { FiBook, FiEdit2, FiPlusCircle, FiX, FiChevronRight, FiChevronLeft, FiPlay, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import supabase, { supabaseAdmin } from '../../config/supabaseClient';
 import { toast } from 'react-toastify';
 import AssignSubjectModal from '../../components/AssignSubjectModal';
@@ -847,6 +848,8 @@ const loadLessons = async (
 };
 
 const Subjects: React.FC = () => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
   const [levels, setLevels] = useState<Level[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -865,7 +868,6 @@ const Subjects: React.FC = () => {
     videourl: ''
   });
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const navigate = useNavigate();
 
   // Form state
   const [formData, setFormData] = useState<Omit<Subject, 'id'>>({
@@ -1757,18 +1759,18 @@ const Subjects: React.FC = () => {
     >
       <PageHeader>
         <div>
-          <PageTitle>Subject Management</PageTitle> 
-          <PageDescription>Manage courses, subjects and academic content</PageDescription>
+          <PageTitle>{t('subjectManagement.title')}</PageTitle> 
+          <PageDescription>{t('subjectManagement.description')}</PageDescription>
         </div>
 
         <ActionButtonsContainer>
           <AssignSubjectButton onClick={handleOpenAssignModal}>
             <FiBook />
-            <span>Assign to Grade</span>
+            <span>{t('subjectManagement.assignToGrade')}</span>
           </AssignSubjectButton>
         <AddSubjectButton onClick={handleAddSubject}>
           <FiPlusCircle />
-          <span>Add New Subject</span>
+          <span>{t('subjectManagement.addNewSubject')}</span>
         </AddSubjectButton>
         </ActionButtonsContainer>
       </PageHeader>
@@ -1776,7 +1778,7 @@ const Subjects: React.FC = () => {
       {/* Class level buttons */}
       <ClassButtonsContainer>
         {loading && !levels.length ? (
-          <LoadingIndicator>Loading class levels...</LoadingIndicator>
+          <LoadingIndicator>{t('subjectManagement.loadingLevels')}</LoadingIndicator>
         ) : levels && levels.length > 0 ? (
           levels.map((level) => (
             <ClassButton
@@ -1784,7 +1786,7 @@ const Subjects: React.FC = () => {
               $isActive={selectedLevel === level.name}
               onClick={() => handleLevelSelect(level.name)}
             >
-              {level.name} класс
+              {level.name} {t('subjectManagement.class')}
             </ClassButton>
           ))
         ) : (
@@ -1795,7 +1797,7 @@ const Subjects: React.FC = () => {
               $isActive={selectedLevel === String(level)}
               onClick={() => handleLevelSelect(String(level))}
             >
-              {level} класс
+              {level} {t('subjectManagement.class')}
             </ClassButton>
           ))
         )}
@@ -1813,11 +1815,11 @@ const Subjects: React.FC = () => {
         // Show lessons for the selected subject
         <LessonsContainer>
           <LessonsHeader>
-            <LessonsTitle>Lessons for {selectedSubject.subjectname}</LessonsTitle>
+            <LessonsTitle>{t('subjectManagement.lessonsFor', { subjectName: selectedSubject.subjectname })}</LessonsTitle>
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
               <BackButton onClick={handleBackToSubjects}>
                 <FiChevronLeft />
-                Back to Subjects
+                {t('subjectManagement.backToSubjects')}
               </BackButton>
             </div>
           </LessonsHeader>
@@ -1825,23 +1827,23 @@ const Subjects: React.FC = () => {
           {/* Add Lesson Button */}
           <AddLessonButton onClick={handleAddLesson}>
             <FiPlus />
-            <span>Add Lesson</span>
+            <span>{t('subjectManagement.addLesson')}</span>
           </AddLessonButton>
 
           {loading ? (
-            <LoadingIndicator>Loading lessons...</LoadingIndicator>
+            <LoadingIndicator>{t('subjectManagement.loadingLessons')}</LoadingIndicator>
           ) : filteredLessons.length > 0 ? (
             <LessonsList>
               {filteredLessons.map(lesson => (
                 <LessonItem key={lesson.id}>
                   <LessonDate>
-                    {lesson.uploadedat ? formatDate(lesson.uploadedat) : 'No date available'}
+                    {lesson.uploadedat ? formatDate(lesson.uploadedat) : t('subjectManagement.noDateAvailable')}
                   </LessonDate>
                   <LessonTitle>
-                    {lesson.lessonname || 'Untitled Lesson'}
+                    {lesson.lessonname || t('subjectManagement.untitledLesson')}
                   </LessonTitle>
                   <LessonDescription>
-                    {lesson.description || 'No description available'}
+                    {lesson.description || t('subjectManagement.noDescriptionAvailable')}
                   </LessonDescription>
                   <LessonActionsContainer>
                     <WatchButton
@@ -1852,19 +1854,19 @@ const Subjects: React.FC = () => {
                       $hasVideo={!!lesson.videourl}
                     >
                       <FiPlay />
-                      {lesson.videourl ? 'Watch Video' : 'Upload Video'}
+                      {lesson.videourl ? t('subjectManagement.watchVideo') : t('subjectManagement.uploadVideo')}
                     </WatchButton>
                     <EditButton
                       onClick={(e) => handleEditLesson(lesson, e)}
                     >
                     <FiEdit2 />
-                      Edit
+                      {t('subjectManagement.edit')}
                     </EditButton>
                     <DeleteButton
                       onClick={(e) => handleShowDeleteConfirmation(lesson.id, e)}
                     >
                     <FiTrash2 />
-                      Delete
+                      {t('subjectManagement.delete')}
                     </DeleteButton>
                   </LessonActionsContainer>
                 </LessonItem>
@@ -1872,9 +1874,9 @@ const Subjects: React.FC = () => {
             </LessonsList>
           ) : (
             <NoSubjectsMessage>
-              No lessons found for {selectedSubject.subjectname}.
+              {t('subjectManagement.noLessonsFound', { subjectName: selectedSubject.subjectname })}
               <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#666' }}>
-                Click "Add Lesson" to create your first lesson.
+                {t('subjectManagement.clickAddLesson')}
               </div>
             </NoSubjectsMessage>
           )}
@@ -1884,7 +1886,7 @@ const Subjects: React.FC = () => {
         <>
           {/* Subjects list */}
           {loading && selectedLevel ? (
-            <LoadingIndicator>Loading subjects...</LoadingIndicator>
+            <LoadingIndicator>{t('subjectManagement.loadingSubjects')}</LoadingIndicator>
           ) : selectedLevel ? (
             // Show subjects only if a class is selected
             filteredSubjects.length > 0 ? (
@@ -1896,11 +1898,11 @@ const Subjects: React.FC = () => {
                     style={{ cursor: 'pointer' }}
                   >
                     <SubjectName>{subject.subjectname}</SubjectName>
-                    <SubjectCode>Code: {subject.code}</SubjectCode>
+                    <SubjectCode>{t('subjectManagement.code')}: {subject.code}</SubjectCode>
                     <SubjectDescription>{subject.description}</SubjectDescription>
                     <SubjectFooter>
                       <SubjectStatus $active={subject.status === 'active'}>
-                        {subject.status === 'active' ? 'Active' : 'Inactive'}
+                        {subject.status === 'active' ? t('subjectManagement.active') : t('subjectManagement.inactive')}
                       </SubjectStatus>
                       <SubjectActions>
                       <EditButton
@@ -1926,13 +1928,13 @@ const Subjects: React.FC = () => {
               </SubjectsList>
             ) : (
               <NoSubjectsMessage>
-                No subjects found for Class {selectedLevel}. Click "Add New Subject" to create one.
+                {t('subjectManagement.noSubjectsFound', { level: selectedLevel })}
               </NoSubjectsMessage>
             )
           ) : (
             // Show choose subject message when no class is selected
             <ChooseSubjectMessage>
-              Choose the subject by clicking on a class button above
+              {t('subjectManagement.chooseSubject')}
             </ChooseSubjectMessage>
               )}
             </>
@@ -1950,7 +1952,7 @@ const Subjects: React.FC = () => {
           >
             <ModalHeader>
               <ModalTitle>
-                {currentSubject ? 'Edit Subject' : 'Add New Subject'}
+                {currentSubject ? t('subjectManagement.editSubject') : t('subjectManagement.addNewSubject')}
               </ModalTitle>
               <CloseButton onClick={() => setIsModalOpen(false)}>
                 <FiX size={20} />
@@ -1959,42 +1961,42 @@ const Subjects: React.FC = () => {
 
             <form onSubmit={handleSubmit}>
               <FormGroup>
-                <FormLabel htmlFor="subjectname">Subject Name</FormLabel>
+                <FormLabel htmlFor="subjectname">{t('subjectManagement.subjectName')}</FormLabel>
                 <FormInput
                   id="subjectname"
                   name="subjectname"
                   value={formData.subjectname}
                   onChange={handleInputChange}
-                  placeholder="Enter subject name"
+                  placeholder={t('subjectManagement.enterSubjectName')}
                   required
                 />
               </FormGroup>
 
               <FormGroup>
-                <FormLabel htmlFor="code">Code</FormLabel>
+                <FormLabel htmlFor="code">{t('subjectManagement.code')}</FormLabel>
                 <FormInput
                   id="code"
                   name="code"
                   value={formData.code}
                   onChange={handleInputChange}
-                  placeholder="Format: XXX01 for Class 1, XXX02 for Class 2, etc."
+                  placeholder={t('subjectManagement.enterCode')}
                   required
                 />
               </FormGroup>
 
               <FormGroup>
-                <FormLabel htmlFor="description">Description</FormLabel>
+                <FormLabel htmlFor="description">{t('subjectManagement.description')}</FormLabel>
                 <FormTextarea
                   id="description"
                   name="description"
                   value={formData.description}
                   onChange={handleInputChange}
-                  placeholder="Enter subject description"
+                  placeholder={t('subjectManagement.enterDescription')}
                 />
               </FormGroup>
 
               <FormGroup>
-                <FormLabel htmlFor="status">Status</FormLabel>
+                <FormLabel htmlFor="status">{t('subjectManagement.status')}</FormLabel>
                 <FormSelect
                   id="status"
                   name="status"
@@ -2002,17 +2004,17 @@ const Subjects: React.FC = () => {
                   onChange={handleInputChange}
                   required
                 >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="active">{t('subjectManagement.active')}</option>
+                  <option value="inactive">{t('subjectManagement.inactive')}</option>
                 </FormSelect>
               </FormGroup>
 
               <FormButtonContainer>
                 <CancelButton type="button" onClick={() => setIsModalOpen(false)}>
-                  Cancel
+                  {t('subjectManagement.cancel')}
                 </CancelButton>
                 <FormButton type="submit" disabled={loading}>
-                  {currentSubject ? 'Update Subject' : 'Add Subject'}
+                  {currentSubject ? t('subjectManagement.updateSubject') : t('subjectManagement.addSubject')}
                 </FormButton>
               </FormButtonContainer>
             </form>
@@ -2032,7 +2034,7 @@ const Subjects: React.FC = () => {
           >
             <ModalHeader>
               <ModalTitle>
-                Add New Lesson
+                {t('subjectManagement.addNewLesson')}
               </ModalTitle>
               <CloseButton onClick={() => setIsLessonModalOpen(false)}>
                 <FiX size={20} />
@@ -2041,46 +2043,46 @@ const Subjects: React.FC = () => {
 
             <form onSubmit={handleLessonSubmit}>
               <FormGroup>
-                <FormLabel htmlFor="lessonname">Lesson Name</FormLabel>
+                <FormLabel htmlFor="lessonname">{t('subjectManagement.lessonName')}</FormLabel>
                 <FormInput
                   id="lessonname"
                   name="lessonname"
                   value={lessonFormData.lessonname}
                   onChange={handleLessonInputChange}
-                  placeholder="Enter lesson name"
+                  placeholder={t('subjectManagement.enterLessonName')}
                   required
                 />
               </FormGroup>
 
               <FormGroup>
-                <FormLabel htmlFor="description">Description</FormLabel>
+                <FormLabel htmlFor="description">{t('subjectManagement.description')}</FormLabel>
                 <FormTextarea
                   id="description"
                   name="description"
                   value={lessonFormData.description}
                   onChange={handleLessonInputChange}
-                  placeholder="Enter lesson description"
+                  placeholder={t('subjectManagement.enterLessonDescription')}
                   required
                 />
               </FormGroup>
 
               <FormGroup>
-                <FormLabel htmlFor="videourl">Video URL (optional)</FormLabel>
+                <FormLabel htmlFor="videourl">{t('subjectManagement.videoUrlOptional')}</FormLabel>
                 <FormInput
                   id="videourl"
                   name="videourl"
                   value={lessonFormData.videourl}
                   onChange={handleLessonInputChange}
-                  placeholder="Enter video URL (YouTube, Vimeo, etc.)"
+                  placeholder={t('subjectManagement.enterVideoUrl')}
                 />
               </FormGroup>
 
               <FormButtonContainer>
                 <CancelButton type="button" onClick={() => setIsLessonModalOpen(false)}>
-                  Cancel
+                  {t('subjectManagement.cancel')}
                 </CancelButton>
                 <FormButton type="submit" disabled={loading}>
-                  Add Lesson
+                  {t('subjectManagement.addLesson')}
                 </FormButton>
               </FormButtonContainer>
             </form>
@@ -2100,7 +2102,7 @@ const Subjects: React.FC = () => {
           >
             <ModalHeader>
               <ModalTitle>
-                Edit Lesson
+                {t('subjectManagement.editLesson')}
               </ModalTitle>
               <CloseButton onClick={() => setIsLessonEditModalOpen(false)}>
                 <FiX size={20} />
@@ -2109,46 +2111,46 @@ const Subjects: React.FC = () => {
 
             <form onSubmit={handleLessonEditSubmit}>
               <FormGroup>
-                <FormLabel htmlFor="edit-lessonname">Lesson Name</FormLabel>
+                <FormLabel htmlFor="edit-lessonname">{t('subjectManagement.lessonName')}</FormLabel>
                 <FormInput
                   id="edit-lessonname"
                   name="lessonname"
                   value={lessonFormData.lessonname}
                   onChange={handleLessonInputChange}
-                  placeholder="Enter lesson name"
+                  placeholder={t('subjectManagement.enterLessonName')}
                   required
                 />
               </FormGroup>
 
               <FormGroup>
-                <FormLabel htmlFor="edit-description">Description</FormLabel>
+                <FormLabel htmlFor="edit-description">{t('subjectManagement.description')}</FormLabel>
                 <FormTextarea
                   id="edit-description"
                   name="description"
                   value={lessonFormData.description}
                   onChange={handleLessonInputChange}
-                  placeholder="Enter lesson description"
+                  placeholder={t('subjectManagement.enterLessonDescription')}
                   required
                 />
               </FormGroup>
 
               <FormGroup>
-                <FormLabel htmlFor="edit-videourl">Video URL</FormLabel>
+                <FormLabel htmlFor="edit-videourl">{t('subjectManagement.videoUrl')}</FormLabel>
                 <FormInput
                   id="edit-videourl"
                   name="videourl"
                   value={lessonFormData.videourl}
                   onChange={handleLessonInputChange}
-                  placeholder="Enter video URL (YouTube, Vimeo, etc.)"
+                  placeholder={t('subjectManagement.enterVideoUrl')}
                 />
               </FormGroup>
 
               <FormButtonContainer>
                 <CancelButton type="button" onClick={() => setIsLessonEditModalOpen(false)}>
-                  Cancel
+                  {t('subjectManagement.cancel')}
                 </CancelButton>
                 <FormButton type="submit" disabled={loading}>
-                  Update Lesson
+                  {t('subjectManagement.updateLesson')}
                 </FormButton>
               </FormButtonContainer>
             </form>
@@ -2169,7 +2171,7 @@ const Subjects: React.FC = () => {
           >
             <ModalHeader>
               <ModalTitle>
-                Confirm Deletion
+                {t('subjectManagement.confirmDeletion')}
               </ModalTitle>
               <CloseButton onClick={() => setShowDeleteConfirmation(false)}>
                 <FiX size={20} />
@@ -2178,12 +2180,12 @@ const Subjects: React.FC = () => {
 
             <div style={{ padding: '1rem', textAlign: 'center' }}>
               <p style={{ marginBottom: '1.5rem' }}>
-                Are you sure you want to delete this lesson? This action cannot be undone.
+                {t('subjectManagement.deleteLessonConfirm')}
               </p>
 
               <FormButtonContainer>
                 <CancelButton type="button" onClick={() => setShowDeleteConfirmation(false)}>
-                  Cancel
+                  {t('subjectManagement.cancel')}
                 </CancelButton>
                 <DeleteButton
                   onClick={handleDeleteLesson}
@@ -2191,7 +2193,7 @@ const Subjects: React.FC = () => {
                   disabled={loading}
                 >
                   <FiTrash2 />
-                  Yes, Delete
+                  {t('subjectManagement.yesDelete')}
                 </DeleteButton>
               </FormButtonContainer>
             </div>
@@ -2211,7 +2213,7 @@ const Subjects: React.FC = () => {
           >
             <ModalHeader>
               <ModalTitle>
-                Add Video URL
+                {t('subjectManagement.addVideoUrl')}
               </ModalTitle>
               <CloseButton onClick={() => setShowVideoModal(false)}>
                 <FiX size={20} />
@@ -2223,26 +2225,26 @@ const Subjects: React.FC = () => {
               handleSaveVideoUrl();
             }}>
               <FormGroup>
-                <FormLabel htmlFor="videourl">Video URL</FormLabel>
+                <FormLabel htmlFor="videourl">{t('subjectManagement.videoUrl')}</FormLabel>
                 <FormInput
                   id="videourl"
                   name="videourl"
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
-                  placeholder="Enter YouTube or Vimeo URL"
+                  placeholder={t('subjectManagement.enterYouTubeUrl')}
                   required
                 />
                 <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.5rem' }}>
-                  Supported formats: YouTube, Vimeo, or direct embed URLs
+                  {t('subjectManagement.supportedFormats')}
                 </div>
               </FormGroup>
 
               <FormButtonContainer>
                 <CancelButton type="button" onClick={() => setShowVideoModal(false)}>
-                  Cancel
+                  {t('subjectManagement.cancel')}
                 </CancelButton>
                 <FormButton type="submit" disabled={loading || !videoUrl.trim()}>
-                  Save Video URL
+                  {t('subjectManagement.saveVideoUrl')}
                 </FormButton>
               </FormButtonContainer>
             </form>
@@ -2266,16 +2268,16 @@ const Subjects: React.FC = () => {
             style={{ maxWidth: '450px' }}
           >
             <ModalHeader>
-              <ModalTitle>Confirm Subject Deletion</ModalTitle>
+              <ModalTitle>{t('subjectManagement.confirmSubjectDeletion')}</ModalTitle>
               <CloseButton onClick={() => setShowDeleteSubjectModal(false)}>
                 <FiX size={20} />
               </CloseButton>
             </ModalHeader>
             <div style={{ padding: '1rem 0.5rem' }}>
               <p style={{ marginBottom: '1.5rem', lineHeight: '1.6' }}>
-                Are you sure you want to delete this subject?
+                {t('subjectManagement.deleteSubjectConfirm')}
                 <br />
-                <strong>This action cannot be undone.</strong> It may also affect related lessons and class assignments.
+                <strong>{t('subjectManagement.deleteSubjectWarning')}</strong>
               </p>
               <FormButtonContainer>
                 <CancelButton
@@ -2285,7 +2287,7 @@ const Subjects: React.FC = () => {
                     setSubjectToDelete(null);
                   }}
                 >
-                  Cancel
+                  {t('subjectManagement.cancel')}
                 </CancelButton>
                 <DeleteButton
                   onClick={confirmDeleteSubject}
@@ -2293,7 +2295,7 @@ const Subjects: React.FC = () => {
                   disabled={loading} // Disable if loading state is active
                 >
                   <FiTrash2 />
-                  Yes, Delete Subject
+                  {t('subjectManagement.yesDeleteSubject')}
                 </DeleteButton>
               </FormButtonContainer>
             </div>

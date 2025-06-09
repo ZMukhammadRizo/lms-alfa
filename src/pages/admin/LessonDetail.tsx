@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { FiArrowLeft, FiEdit, FiSave, FiX, FiUpload, FiFile, FiTrash, FiPaperclip, FiDownload } from 'react-icons/fi';
 import supabase, { supabaseAdmin } from '../../config/supabaseClient';
 
@@ -604,6 +605,7 @@ const LessonDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   
   // State variables
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -1006,9 +1008,9 @@ const LessonDetail: React.FC = () => {
       <Header>
         <BackButton onClick={() => navigate(-1)}>
           <FiArrowLeft />
-          Back to Lessons
+          {t('lessonDetail.backToLessons')}
         </BackButton>
-        {lesson && <Title>{editMode ? 'Edit Lesson' : lesson.lessonname}</Title>}
+        {lesson && <Title>{editMode ? t('lessonDetail.editLesson') : lesson.lessonname}</Title>}
       </Header>
       
       {error && (
@@ -1028,7 +1030,7 @@ const LessonDetail: React.FC = () => {
       )}
       
       {loading ? (
-        <LoadingContainer>Loading lesson...</LoadingContainer>
+        <LoadingContainer>{t('lessonDetail.loadingLesson')}</LoadingContainer>
       ) : lesson ? (
         <ContentContainer>
           <VideoSection>
@@ -1036,10 +1038,10 @@ const LessonDetail: React.FC = () => {
               {editMode || !lesson.videourl ? (
                 <NoVideoContainer>
                   {editMode ? (
-                    <div>Edit the video URL below to update the video</div>
+                    <div>{t('lessonDetail.editVideoUrl')}</div>
                   ) : (
                     <>
-                      <div>No video available for this lesson</div>
+                      <div>{t('lessonDetail.noVideoAvailable')}</div>
                       <EditButton onClick={() => setEditMode(true)}>
                         <FiEdit />
                       </EditButton>
@@ -1062,81 +1064,81 @@ const LessonDetail: React.FC = () => {
           <InfoSection>
             {editMode ? (
               <form onSubmit={handleSubmit}>
-                <SectionTitle>Edit Lesson Details</SectionTitle>
+                <SectionTitle>{t('lessonDetail.editLessonDetails')}</SectionTitle>
                 
                 <FormGroup>
-                  <FormLabel htmlFor="lessonname">Lesson Name</FormLabel>
+                  <FormLabel htmlFor="lessonname">{t('lessonDetail.lessonName')}</FormLabel>
                   <FormInput
                     id="lessonname"
                     name="lessonname"
                     value={formData.lessonname}
                     onChange={handleInputChange}
-                    placeholder="Enter lesson name"
+                    placeholder={t('lessonDetail.enterLessonName')}
                     required
                   />
                 </FormGroup>
                 
                 <FormGroup>
-                  <FormLabel htmlFor="description">Description</FormLabel>
+                  <FormLabel htmlFor="description">{t('lessonDetail.description')}</FormLabel>
                   <FormTextarea
                     id="description"
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    placeholder="Enter lesson description"
+                    placeholder={t('lessonDetail.enterDescription')}
                     required
                   />
                 </FormGroup>
                 
                 <FormGroup>
-                  <FormLabel htmlFor="videourl">Video URL</FormLabel>
+                  <FormLabel htmlFor="videourl">{t('lessonDetail.videoUrl')}</FormLabel>
                   <FormInput
                     id="videourl"
                     name="videourl"
                     value={formData.videourl}
                     onChange={handleInputChange}
-                    placeholder="Enter video URL (YouTube, Vimeo, etc.)"
+                    placeholder={t('lessonDetail.enterVideoUrl')}
                   />
                 </FormGroup>
                 
                 <ButtonContainer>
                   <CancelButton type="button" onClick={handleCancel}>
                     <FiX />
-                    Cancel
+                    {t('lessonDetail.cancel')}
                   </CancelButton>
                   <SaveButton type="submit" disabled={loading}>
                     <FiSave />
-                    Save Changes
+                    {t('lessonDetail.saveChanges')}
                   </SaveButton>
                 </ButtonContainer>
               </form>
             ) : (
               <>
                 <InfoSectionHeader>
-                  <SectionTitle>Lesson Details</SectionTitle>
+                  <SectionTitle>{t('lessonDetail.lessonDetails')}</SectionTitle>
                   <EditButton onClick={() => setEditMode(true)}>
                     <FiEdit />
                   </EditButton>
                 </InfoSectionHeader>
                 
                 <DescriptionText>
-                  {lesson.description || 'No description available'}
+                  {lesson.description || t('lessonDetail.noDescriptionAvailable')}
                 </DescriptionText>
                 
                 {lesson.videourl && (
                   <VideoUrlContainer>
-                    <VideoUrlLabel>Video URL</VideoUrlLabel>
+                    <VideoUrlLabel>{t('lessonDetail.videoUrl')}</VideoUrlLabel>
                     <VideoUrl>{lesson.videourl}</VideoUrl>
                   </VideoUrlContainer>
                 )}
                 
                 <MetadataContainer>
                   <MetadataItem>
-                    <MetadataLabel>Uploaded:</MetadataLabel>
+                    <MetadataLabel>{t('lessonDetail.uploaded')}</MetadataLabel>
                     <MetadataValue>{formatDate(lesson.uploadedat)}</MetadataValue>
                   </MetadataItem>
                   <MetadataItem>
-                    <MetadataLabel>Lesson ID:</MetadataLabel>
+                    <MetadataLabel>{t('lessonDetail.lessonId')}</MetadataLabel>
                     <MetadataValue>{lesson.id}</MetadataValue>
                   </MetadataItem>
                 </MetadataContainer>
@@ -1145,12 +1147,12 @@ const LessonDetail: React.FC = () => {
           </InfoSection>
         </ContentContainer>
       ) : (
-        <div>Lesson not found</div>
+        <div>{t('lessonDetail.lessonNotFound')}</div>
       )}
       
       {!loading && lesson && (
         <FileUploadSection>
-          <SectionTitle>Additional Materials</SectionTitle>
+          <SectionTitle>{t('lessonDetail.additionalMaterials')}</SectionTitle>
           <SectionDivider />
           
           {/* File upload controls */}
@@ -1163,14 +1165,14 @@ const LessonDetail: React.FC = () => {
               ref={fileInputRef}
               accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif"
             />
-            <FileInputLabel htmlFor="file-upload" title="Upload files (PDF, DOCX, images, etc.)">
+            <FileInputLabel htmlFor="file-upload" title={t('lessonDetail.uploadFiles')}>
               <FiUpload /> 
-              Upload Files
+              {t('lessonDetail.uploadFiles')}
             </FileInputLabel>
             
             {isUploading && (
               <UploadingIndicator>
-                <span>Uploading... {Math.round(uploadProgress)}%</span>
+                <span>{t('lessonDetail.uploading')} {Math.round(uploadProgress)}%</span>
                 <UploadProgressBar $progress={uploadProgress} />
               </UploadingIndicator>
             )}
@@ -1191,14 +1193,14 @@ const LessonDetail: React.FC = () => {
                     </FileDetails>
                     <FileActions>
                       <ActionButton 
-                        title="Download file"
+                        title={t('lessonDetail.downloadFile')}
                         onClick={() => handleDownloadFile(file.url, file.name)}
                       >
                         <FiDownload />
                       </ActionButton>
                       <ActionButton 
                         className="delete"
-                        title="Delete file"
+                        title={t('lessonDetail.deleteFile')}
                         onClick={() => handleDeleteFile(index)}
                       >
                         <FiTrash />
@@ -1210,9 +1212,9 @@ const LessonDetail: React.FC = () => {
             ) : (
               <EmptyFilesMessage>
                 <FiPaperclip />
-                <div>No additional files uploaded yet</div>
+                <div>{t('lessonDetail.noFilesUploaded')}</div>
                 <div style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
-                  Upload PDF documents, images, or other materials related to this lesson
+                  {t('lessonDetail.uploadMaterials')}
                 </div>
                 {lesson.fileurls && (
                   <div style={{ fontSize: '0.75rem', marginTop: '1rem', color: '#999' }}>

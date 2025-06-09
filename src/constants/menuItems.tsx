@@ -27,7 +27,20 @@ export interface MenuItem {
 	requiredPermission?: string
 }
 
-// Admin menu items
+// Function to get translated admin menu items
+export const getAdminMenu = (t: (key: string) => string): MenuItem[] => [
+	{ path: '/admin/dashboard', icon: <FiHome />, label: t('navigation.dashboard') },
+	{ path: '/admin/users', icon: <FiUsers />, label: t('navigation.userManagement') },
+	{ path: '/admin/subjects', icon: <FiBook />, label: t('navigation.subjects') },
+	{ path: '/admin/classes', icon: <FiLayers />, label: t('navigation.classes') },
+	{ path: '/admin/assignments', icon: <FiFileText />, label: t('navigation.assignments') },
+	{ path: '/admin/submissions', icon: <FiClipboard />, label: t('navigation.submissions') },
+	{ path: '/admin/grades', icon: <FiClipboard />, label: t('navigation.grades') },
+	{ path: '/admin/daily-attendance', icon: <FiCheckSquare />, label: t('navigation.dailyAttendance') },
+	{ path: '/admin/timetables', icon: <FiCalendar />, label: t('navigation.timetables') },
+]
+
+// Admin menu items (kept for backward compatibility)
 export const adminMenu: MenuItem[] = [
 	{ path: '/admin/dashboard', icon: <FiHome />, label: 'Dashboard' },
 	{ path: '/admin/users', icon: <FiUsers />, label: 'User Management' },
@@ -71,7 +84,8 @@ export const teacherMenu: MenuItem[] = [
 // Module leader specific menu items
 export const getModuleLeaderMenu = (
 	parentRole: string | null,
-	fallbackRole: string
+	fallbackRole: string,
+	t?: (key: string) => string
 ): MenuItem[] => [
 	{
 		path: `/${
@@ -82,7 +96,7 @@ export const getModuleLeaderMenu = (
 				: 'teacher'
 		}/subjects`,
 		icon: <FiBookOpen />,
-		label: 'Manage Subjects',
+		label: t ? t('navigation.manageSubjects') : 'Manage Subjects',
 	},
 ]
 
@@ -113,7 +127,7 @@ export const parentMenu: MenuItem[] = [
 ]
 
 // Function to get manager menu dynamically based on parent role
-export const getManagerMenu = (parentRole: string | null, fallbackRole: string): MenuItem[] => [
+export const getManagerMenu = (parentRole: string | null, fallbackRole: string, t?: (key: string) => string): MenuItem[] => [
 	{
 		path: `/${
 			parentRole && parentRole !== 'Unknown'
@@ -123,14 +137,14 @@ export const getManagerMenu = (parentRole: string | null, fallbackRole: string):
 				: 'admin'
 		}/roles`,
 		icon: <FiShield />,
-		label: 'Role Management',
+		label: t ? t('navigation.roleManagement') : 'Role Management',
 	},
 ]
 
 // System menu items - common across roles
-export const getSystemMenu = (rolePath: string): MenuItem[] => [
-	{ path: `/${rolePath}/profile`, icon: <FiUser />, label: 'Profile' },
-	{ path: `/${rolePath}/settings`, icon: <FiSettings />, label: 'Settings' },
+export const getSystemMenu = (rolePath: string, t?: (key: string) => string): MenuItem[] => [
+	{ path: `/${rolePath}/profile`, icon: <FiUser />, label: t ? t('navigation.profile') : 'Profile' },
+	{ path: `/${rolePath}/settings`, icon: <FiSettings />, label: t ? t('navigation.settings') : 'Settings' },
 ]
 
 // Map menu item paths to required permissions

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import styled from 'styled-components'
 import { Link, useLocation } from 'react-router-dom'
 import { FiBell } from 'react-icons/fi'
+import { useTranslation } from 'react-i18next'
 import { useAnnouncements } from '../../stores/useAnnouncementStore'
 
 interface AnnouncementBellProps {
@@ -10,6 +11,7 @@ interface AnnouncementBellProps {
 
 const AnnouncementBell: React.FC<AnnouncementBellProps> = ({ className }) => {
 	const [isOpen, setIsOpen] = useState(false)
+	const { t } = useTranslation()
 	const { announcements, unreadCount, markAsRead, markAllAsRead, fetchAnnouncements } =
 		useAnnouncements()
 	const dropdownRef = useRef<HTMLDivElement>(null)
@@ -98,9 +100,9 @@ const AnnouncementBell: React.FC<AnnouncementBellProps> = ({ className }) => {
 			{isOpen && (
 				<DropdownContainer ref={dropdownRef}>
 					<DropdownHeader>
-						<HeaderTitle>Announcements</HeaderTitle>
+						<HeaderTitle>{t('announcements.title')}</HeaderTitle>
 						{unreadCount > 0 && (
-							<MarkAllRead onClick={handleMarkAllRead}>Mark all as read</MarkAllRead>
+							<MarkAllRead onClick={handleMarkAllRead}>{t('announcements.markAllRead')}</MarkAllRead>
 						)}
 					</DropdownHeader>
 
@@ -116,7 +118,7 @@ const AnnouncementBell: React.FC<AnnouncementBellProps> = ({ className }) => {
 									<AnnouncementContent>
 										<AnnouncementTitle>
 											{announcement.title}
-											{announcement.important && <ImportantTag>Important</ImportantTag>}
+											{announcement.important && <ImportantTag>{t('announcements.important')}</ImportantTag>}
 										</AnnouncementTitle>
 
 										<AnnouncementTextContent>{announcement.content}</AnnouncementTextContent>
@@ -135,7 +137,7 @@ const AnnouncementBell: React.FC<AnnouncementBellProps> = ({ className }) => {
 								</AnnouncementItem>
 							))
 						) : (
-							<EmptyState>No announcements to display</EmptyState>
+							<EmptyState>{t('announcements.noAnnouncements')}</EmptyState>
 						)}
 					</AnnouncementList>
 
@@ -144,7 +146,7 @@ const AnnouncementBell: React.FC<AnnouncementBellProps> = ({ className }) => {
 						to={`/${location.pathname.split('/')[1]}/announcements`}
 						onClick={navigateToAllAnnouncements}
 					>
-						View all announcements
+						{t('announcements.viewAll')}
 					</ViewAllButton>
 				</DropdownContainer>
 			)}

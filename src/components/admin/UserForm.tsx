@@ -14,6 +14,7 @@ import {
 } from 'react-icons/fi'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
+import { useTranslation } from 'react-i18next'
 import supabase, { supabaseAdmin } from '../../config/supabaseClient'
 import { canCreateUserWithRole } from '../../utils/permissions'
 
@@ -53,6 +54,7 @@ const UserForm: React.FC<UserFormProps> = ({
 	currentUserRole = '',
 	currentUserPermissions = [],
 }) => {
+	const { t } = useTranslation()
 	// Form state
 	const [formData, setFormData] = useState<Partial<User>>({
 		firstName: '',
@@ -678,7 +680,7 @@ const UserForm: React.FC<UserFormProps> = ({
 						<div>
 							<ModalTitle>{formTitle}</ModalTitle>
 							<ModalSubtitle>
-								{initialData?.id ? 'Update user information' : 'Create a new user account'}
+								{initialData?.id ? t('userForm.updateUserInfo') : t('userForm.createNewUser')}
 							</ModalSubtitle>
 						</div>
 					</ModalTitleContainer>
@@ -706,19 +708,19 @@ const UserForm: React.FC<UserFormProps> = ({
 					)}
 
 					<FormSection>
-						<SectionTitle>Personal Information</SectionTitle>
+						<SectionTitle>{t('userForm.personalInformation')}</SectionTitle>
 						<FormGrid>
 							<FormGroup>
 								<FormLabel htmlFor='firstName'>
 									<FiUser />
-									<span>First Name</span>
+									<span>{t('userForm.firstName')}</span>
 								</FormLabel>
 								<FormInput
 									id='firstName'
 									name='firstName'
 									value={formData.firstName || ''}
 									onChange={handleChange}
-									placeholder='Enter first name'
+									placeholder={t('userForm.enterFirstName')}
 									$hasError={!!errors.firstName}
 								/>
 								{errors.firstName && <ErrorMessage>{errors.firstName}</ErrorMessage>}
@@ -727,14 +729,14 @@ const UserForm: React.FC<UserFormProps> = ({
 							<FormGroup>
 								<FormLabel htmlFor='lastName'>
 									<FiUser />
-									<span>Last Name</span>
+									<span>{t('userForm.lastName')}</span>
 								</FormLabel>
 								<FormInput
 									id='lastName'
 									name='lastName'
 									value={formData.lastName || ''}
 									onChange={handleChange}
-									placeholder='Enter last name'
+									placeholder={t('userForm.enterLastName')}
 									$hasError={!!errors.lastName}
 								/>
 								{errors.lastName && <ErrorMessage>{errors.lastName}</ErrorMessage>}
@@ -743,7 +745,7 @@ const UserForm: React.FC<UserFormProps> = ({
 							<FormGroup>
 								<FormLabel htmlFor='email'>
 									<FiMail />
-									<span>Email Address</span>
+									<span>{t('userForm.emailAddress')}</span>
 								</FormLabel>
 								<FormInput
 									id='email'
@@ -757,7 +759,7 @@ const UserForm: React.FC<UserFormProps> = ({
 										}
 										handleChange(e)
 									}}
-									placeholder='Enter email address'
+									placeholder={t('userForm.enterEmail')}
 									$hasError={!!errors.email || errors.submit?.includes('Email address')}
 								/>
 								{errors.email && (
@@ -776,7 +778,7 @@ const UserForm: React.FC<UserFormProps> = ({
 							<FormGroup>
 								<FormLabel htmlFor='birthday'>
 									<FiCalendar />
-									<span>Date of Birth</span>
+									<span>{t('userForm.dateOfBirth')}</span>
 								</FormLabel>
 								<FormInput
 									id='birthday'
@@ -792,7 +794,7 @@ const UserForm: React.FC<UserFormProps> = ({
 							<FormGroup>
 								<FormLabel htmlFor='role'>
 									<FiShield />
-									<span>Role</span>
+									<span>{t('userForm.role')}</span>
 								</FormLabel>
 								<FormSelect
 									id='role'
@@ -802,10 +804,10 @@ const UserForm: React.FC<UserFormProps> = ({
 									$hasError={!!errors.role}
 									disabled={isLoadingRoles}
 								>
-									<option value=''>Select a role</option>
+									<option value=''>{t('userForm.selectRole')}</option>
 									{isLoadingRoles ? (
 										<option value='' disabled>
-											Loading roles...
+											{t('userForm.loadingRoles')}
 										</option>
 									) : (
 										availableRoles
@@ -817,7 +819,7 @@ const UserForm: React.FC<UserFormProps> = ({
 													disabled={!canCreateUserWithSpecificRole(role.name)}
 												>
 													{role.name}{' '}
-													{!canCreateUserWithSpecificRole(role.name) && '(No Permission)'}
+													{!canCreateUserWithSpecificRole(role.name) && t('userForm.noPermission')}
 												</option>
 											))
 									)}
@@ -829,87 +831,39 @@ const UserForm: React.FC<UserFormProps> = ({
 
 					{!initialData?.id && (
 						<FormSection>
-							<SectionTitle>Security</SectionTitle>
+							<SectionTitle>{t('userForm.security')}</SectionTitle>
 							<FormGrid>
 								<FormNote>
-									New users will be created with the default password: <strong>12345678</strong>
+									{t('userForm.defaultPassword')} <strong>12345678</strong>
 								</FormNote>
 							</FormGrid>
 						</FormSection>
 					)}
 
 					<FormSection>
-						<SectionTitle>Account Status</SectionTitle>
+						<SectionTitle>{t('userForm.accountStatus')}</SectionTitle>
 						<FormGrid>
 							<FormGroup>
 								<FormLabel htmlFor='status'>
-									<FiCalendar />
-									<span>Status</span>
+									<FiCheck />
+									<span>{t('userForm.status')}</span>
 								</FormLabel>
-								<StatusOptions>
+								<StatusToggleGroup>
 									<StatusOption
-										$isActive={formData.status === 'active'}
-										$status='active'
-										onClick={() => {
-											setFormData(prev => ({ ...prev, status: 'active' }))
-											// Manually trigger any validation
-											if (errors.status) {
-												setErrors(prev => {
-													const newErrors = { ...prev }
-													delete newErrors.status
-													return newErrors
-												})
-											}
-										}}
+										$active={formData.status === 'active'}
+										onClick={() => setFormData(prev => ({ ...prev, status: 'active' }))}
 									>
-										<StatusRadio
-											id='statusActive'
-											name='status'
-											value='active'
-											checked={formData.status === 'active'}
-											onChange={handleChange}
-											aria-labelledby='statusActiveLabelText'
-										/>
-										<StatusCheck $isActive={formData.status === 'active'}>
-											<FiCheck />
-										</StatusCheck>
-										<StatusLabel htmlFor='statusActive' id='statusActiveLabelText'>
-											Active
-										</StatusLabel>
+										<StatusIndicator $active={formData.status === 'active'} />
+										<span>{t('userForm.active')}</span>
 									</StatusOption>
-
 									<StatusOption
-										$isActive={formData.status === 'inactive'}
-										$status='inactive'
-										onClick={() => {
-											setFormData(prev => ({ ...prev, status: 'inactive' }))
-											// Manually trigger any validation
-											if (errors.status) {
-												setErrors(prev => {
-													const newErrors = { ...prev }
-													delete newErrors.status
-													return newErrors
-												})
-											}
-										}}
+										$active={formData.status === 'inactive'}
+										onClick={() => setFormData(prev => ({ ...prev, status: 'inactive' }))}
 									>
-										<StatusRadio
-											id='statusInactive'
-											name='status'
-											value='inactive'
-											checked={formData.status === 'inactive'}
-											onChange={handleChange}
-											aria-labelledby='statusInactiveLabelText'
-										/>
-										<StatusCheck $isActive={formData.status === 'inactive'}>
-											<FiCheck />
-										</StatusCheck>
-										<StatusLabel htmlFor='statusInactive' id='statusInactiveLabelText'>
-											Inactive
-										</StatusLabel>
+										<StatusIndicator $active={formData.status === 'inactive'} />
+										<span>{t('userForm.inactive')}</span>
 									</StatusOption>
-								</StatusOptions>
-								{errors.status && <ErrorMessage>{errors.status}</ErrorMessage>}
+								</StatusToggleGroup>
 							</FormGroup>
 						</FormGrid>
 					</FormSection>
@@ -995,10 +949,10 @@ const UserForm: React.FC<UserFormProps> = ({
 
 					<ButtonGroup>
 						<CancelButton type='button' onClick={onClose}>
-							Cancel
+							{t('userForm.cancel')}
 						</CancelButton>
 						<SubmitButton type='submit' disabled={isSubmitting}>
-							{isSubmitting ? 'Saving...' : initialData?.id ? 'Update User' : 'Create User'}
+							{isSubmitting ? t('userForm.saving') : initialData?.id ? t('userForm.updateUser') : t('userForm.createUser')}
 						</SubmitButton>
 					</ButtonGroup>
 				</form>
@@ -1244,8 +1198,7 @@ const StatusOptions = styled.div`
 `
 
 interface StatusOptionProps {
-	$isActive: boolean
-	$status: 'active' | 'inactive'
+	$active: boolean
 }
 
 const StatusOption = styled.div<StatusOptionProps>`
@@ -1256,18 +1209,14 @@ const StatusOption = styled.div<StatusOptionProps>`
 	border-radius: ${props => props.theme.borderRadius.md};
 	border: 2px solid
 		${props =>
-			props.$isActive
-				? props.$status === 'active'
-					? props.theme.colors.success[500]
-					: props.theme.colors.warning[500]
+			props.$active
+				? props.theme.colors.success[500]
 				: props.theme.colors.neutral[300]};
 	background-color: ${props =>
-		props.$isActive
-			? props.$status === 'active'
-				? props.theme.colors.success[50]
-				: props.theme.colors.warning[50]
+		props.$active
+			? props.theme.colors.success[50]
 			: 'transparent'};
-	box-shadow: ${props => (props.$isActive ? '0 2px 4px rgba(0, 0, 0, 0.05)' : 'none')};
+	box-shadow: ${props => (props.$active ? '0 2px 4px rgba(0, 0, 0, 0.05)' : 'none')};
 	cursor: pointer;
 	transition: all 0.2s ease;
 	flex: 1;
@@ -1277,18 +1226,14 @@ const StatusOption = styled.div<StatusOptionProps>`
 
 	&:hover {
 		background-color: ${props => {
-			if (props.$isActive) {
-				return props.$status === 'active'
-					? props.theme.colors.success[100]
-					: props.theme.colors.warning[100]
+			if (props.$active) {
+				return props.theme.colors.success[100]
 			}
 			return props.theme.colors.background.tertiary
 		}};
 		border-color: ${props => {
-			if (props.$isActive) {
-				return props.$status === 'active'
-					? props.theme.colors.success[600]
-					: props.theme.colors.warning[600]
+			if (props.$active) {
+				return props.theme.colors.success[600]
 			}
 			return props.theme.colors.primary[200]
 		}};
@@ -1314,11 +1259,11 @@ const StatusRadio = styled.input.attrs({ type: 'radio' })`
 	padding: 0;
 `
 
-interface StatusCheckProps {
-	$isActive: boolean
+interface StatusIndicatorProps {
+	$active: boolean
 }
 
-const StatusCheck = styled.div<StatusCheckProps>`
+const StatusIndicator = styled.div<StatusIndicatorProps>`
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1327,14 +1272,14 @@ const StatusCheck = styled.div<StatusCheckProps>`
 	border-radius: ${props => props.theme.borderRadius.full};
 	border: 2px solid
 		${props =>
-			props.$isActive ? props.theme.colors.primary[500] : props.theme.colors.text.tertiary};
+			props.$active ? props.theme.colors.primary[500] : props.theme.colors.text.tertiary};
 	color: white;
-	background-color: ${props => (props.$isActive ? props.theme.colors.primary[500] : 'transparent')};
+	background-color: ${props => (props.$active ? props.theme.colors.primary[500] : 'transparent')};
 	transition: all ${props => props.theme.transition.fast};
 	flex-shrink: 0;
 
 	svg {
-		opacity: ${props => (props.$isActive ? 1 : 0)};
+		opacity: ${props => (props.$active ? 1 : 0)};
 		font-size: 14px;
 		transition: all ${props => props.theme.transition.fast};
 	}
@@ -1349,6 +1294,16 @@ const StatusLabel = styled.label`
 
 	&:hover {
 		color: ${props => props.theme.colors.primary[600]};
+	}
+`
+
+const StatusToggleGroup = styled.div`
+	display: flex;
+	gap: ${props => props.theme.spacing[3]};
+	margin-top: ${props => props.theme.spacing[2]};
+
+	@media (max-width: ${props => props.theme.breakpoints.md}) {
+		flex-direction: column;
 	}
 `
 

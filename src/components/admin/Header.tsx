@@ -3,13 +3,16 @@ import { FiChevronDown, FiPlus, FiSettings, FiUser } from 'react-icons/fi'
 import styled from 'styled-components'
 // import { useThemeContext } from '../../App';
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../contexts/AuthContext'
 import { getUserRole } from '../../utils/authUtils'
 import AnnouncementBell from '../common/AnnouncementBell'
 import LogoutButton from '../common/LogoutButton'
+import LanguageSelector from './LanguageSelector'
 
 const Header: React.FC = () => {
 	// const { isDarkMode } = useThemeContext();
+	const { t } = useTranslation()
 	const { user } = useAuth()
 	const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
 	const userMenuRef = useRef<HTMLDivElement>(null)
@@ -80,9 +83,11 @@ const Header: React.FC = () => {
 				{currentLayout === 'admin' && (
 					<CreateAnnouncementButton onClick={handleNewAnnouncement}>
 						<FiPlus />
-						<ButtonText>New Announcement</ButtonText>
+						<ButtonText>{t('userMenu.newAnnouncement')}</ButtonText>
 					</CreateAnnouncementButton>
 				)}
+
+				<LanguageSelector />
 
 				<UserMenuContainer ref={userMenuRef}>
 					<UserAvatar onClick={toggleUserMenu}>
@@ -117,7 +122,7 @@ const Header: React.FC = () => {
 								<MenuItemIcon>
 									<FiUser />
 								</MenuItemIcon>
-								<span>My Profile</span>
+								<span>{t('userMenu.myProfile')}</span>
 							</UserMenuItem>
 
 							<UserMenuItem
@@ -128,12 +133,12 @@ const Header: React.FC = () => {
 								<MenuItemIcon>
 									<FiSettings />
 								</MenuItemIcon>
-								<span>Settings</span>
+								<span>{t('userMenu.settings')}</span>
 							</UserMenuItem>
 
 							<UserMenuDivider />
 
-							<MenuLogoutButton variant='secondary' size='medium' text='Log out' />
+							<MenuLogoutButton variant='secondary' size='medium' text={t('userMenu.logout')} />
 						</UserMenu>
 					)}
 				</UserMenuContainer>

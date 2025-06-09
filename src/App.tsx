@@ -3,6 +3,7 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-d
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { DefaultTheme, ThemeProvider } from 'styled-components'
+import './i18n' // Initialize i18n
 import ProtectedRoute from './components/common/ProtectedRoute'
 import RoleMiddleware from './components/common/RoleMiddleware'
 import { AnnouncementProvider } from './contexts/AnnouncementContext'

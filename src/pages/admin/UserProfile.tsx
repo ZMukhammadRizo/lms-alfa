@@ -20,6 +20,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
+import { useTranslation } from 'react-i18next'
 import UserForm from '../../components/admin/UserForm'
 import supabase, { supabaseAdmin } from '../../config/supabaseClient'
 import { User as UserType } from '../../types/User'
@@ -117,6 +118,8 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
 	title = 'Attendance History',
 	formatDateFn,
 }) => {
+	const { t } = useTranslation()
+	
 	if (!isOpen) return null
 
 	return (
@@ -128,7 +131,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
 				</ModalHeader>
 				<ModalBody>
 					{attendance.length === 0 ? (
-						<ModalEmptyState>No attendance records found.</ModalEmptyState>
+						<ModalEmptyState>{t('userProfile.attendanceNotFound')}</ModalEmptyState>
 					) : (
 						<ModalAttendanceList>
 							{attendance.map(record => (
@@ -141,12 +144,12 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
 									</AttendanceHistoryInfo>
 									<AttendanceHistoryStatus $status={record.status}>
 										{record.status === 'present'
-											? 'Present'
+											? t('userProfile.present')
 											: record.status === 'absent'
-											? 'Absent'
+											? t('userProfile.absent')
 											: record.status === 'late'
-											? 'Late'
-											: 'Excused'}
+											? t('userProfile.late')
+											: t('userProfile.excused')}
 									</AttendanceHistoryStatus>
 								</AttendanceHistoryItem>
 							))}
@@ -154,7 +157,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
 					)}
 				</ModalBody>
 				<ModalFooter>
-					<Button onClick={onClose}>Close</Button>
+					<Button onClick={onClose}>{t('common.close')}</Button>
 				</ModalFooter>
 			</ModalContent>
 		</ModalOverlay>
@@ -254,6 +257,7 @@ const ModalEmptyState = styled.div`
 const UserProfile: React.FC = () => {
 	const { userId } = useParams<{ userId: string }>()
 	const navigate = useNavigate()
+	const { t } = useTranslation()
 	const [user, setUser] = useState<User | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [children, setChildren] = useState<User[]>([])
@@ -430,12 +434,12 @@ const UserProfile: React.FC = () => {
 					// Format the data for our component
 					const assignments = data.map(item => ({
 						class: {
-							id: item.classes?.id || item.class_id,
-							classname: item.classes?.classname || 'Unknown Class',
+							id: (item.classes as any)?.id || item.class_id,
+							classname: (item.classes as any)?.classname || 'Unknown Class',
 						},
 						subject: {
-							id: item.subjects?.id || item.subject_id,
-							name: item.subjects?.subjectname || 'Unknown Subject',
+							id: (item.subjects as any)?.id || item.subject_id,
+							name: (item.subjects as any)?.subjectname || 'Unknown Subject',
 						},
 					}))
 					setTeacherAssignments(assignments)
@@ -468,7 +472,7 @@ const UserProfile: React.FC = () => {
 					console.log('Class data:', classData)
 					setStudentClass({
 						id: classData.classid || 'unknown',
-						classname: classData.classes?.classname || 'Unknown Class',
+						classname: (classData.classes as any)?.classname || 'Unknown Class',
 					})
 				}
 			} catch (err) {
@@ -811,7 +815,7 @@ const UserProfile: React.FC = () => {
 			<ModalOverlay>
 				<ModalContent>
 					<ModalHeader>
-						<ModalTitle>Reset Password</ModalTitle>
+						<ModalTitle>{t('userProfile.resetPasswordAction')}</ModalTitle>
 						<ModalCloseButton onClick={handleCancelResetPassword}>×</ModalCloseButton>
 					</ModalHeader>
 					<ModalBody>
@@ -835,20 +839,18 @@ const UserProfile: React.FC = () => {
 							</div>
 							<div>
 								<h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: 600 }}>
-									Reset Password to Default
+									{t('userProfile.resetPasswordAction')}
 								</h4>
 								<p style={{ margin: '0', color: '#4b5563' }}>
-									Are you sure you want to reset the password for{' '}
-									<strong>{`${user.firstName} ${user.lastName}`}</strong> to the default value{' '}
-									<strong>12345678</strong>?
+									{t('userProfile.resetPasswordConfirm')}
 								</p>
 							</div>
 						</div>
 					</ModalBody>
 					<ModalFooter>
-						<CancelButton onClick={handleCancelResetPassword}>Cancel</CancelButton>
+						<CancelButton onClick={handleCancelResetPassword}>{t('common.cancel')}</CancelButton>
 						<ResetButton onClick={handleConfirmResetPassword} disabled={isResettingPassword}>
-							{isResettingPassword ? 'Resetting...' : 'Reset Password'}
+							{isResettingPassword ? t('userProfile.resetting') : t('userProfile.resetPasswordAction')}
 						</ResetButton>
 					</ModalFooter>
 				</ModalContent>
@@ -859,7 +861,7 @@ const UserProfile: React.FC = () => {
 	if (loading) {
 		return (
 			<PageContainer>
-				<LoadingState>Loading user details...</LoadingState>
+				<LoadingState>{t('userProfile.loadingUserProfile')}</LoadingState>
 			</PageContainer>
 		)
 	}
@@ -867,10 +869,10 @@ const UserProfile: React.FC = () => {
 	if (!user) {
 		return (
 			<PageContainer>
-				<ErrorState>User not found</ErrorState>
+				<ErrorState>{t('profile.userNotFound')}</ErrorState>
 				<BackButton onClick={() => navigate('/admin/users')}>
 					<FiArrowLeft />
-					<span>Back to Users</span>
+					<span>{t('userProfile.backToUsers')}</span>
 				</BackButton>
 			</PageContainer>
 		)
@@ -886,20 +888,20 @@ const UserProfile: React.FC = () => {
 			<HeaderSection>
 				<BackButton onClick={() => navigate('/admin/users')}>
 					<FiArrowLeft />
-					<span>Back to Users</span>
+					<span>{t('userProfile.backToUsers')}</span>
 				</BackButton>
 				<HeaderRight>
 					<EditButton onClick={handleEditUser}>
 						<FiEdit2 />
-						<span>Edit</span>
+						<span>{t('userProfile.edit')}</span>
 					</EditButton>
 					<ResetPasswordButton onClick={handleResetPassword}>
 						<FiKey />
-						<span>Reset Password</span>
+						<span>{t('userProfile.resetPassword')}</span>
 					</ResetPasswordButton>
 					<DeleteButton onClick={handleDeleteUser}>
 						<FiTrash2 />
-						<span>Delete</span>
+						<span>{t('userProfile.delete')}</span>
 					</DeleteButton>
 				</HeaderRight>
 			</HeaderSection>
@@ -918,7 +920,7 @@ const UserProfile: React.FC = () => {
 						<UserRole>
 							<RoleBadge $role={user.role}>{user.role}</RoleBadge>
 							<StatusIndicator $status={user.status}>
-								{user.status === 'active' ? 'Active' : 'Inactive'}
+								{user.status === 'active' ? t('userForm.active') : t('userForm.inactive')}
 							</StatusIndicator>
 						</UserRole>
 					</UserInfo>
@@ -926,12 +928,12 @@ const UserProfile: React.FC = () => {
 
 				<ProfileContent>
 					<DetailSection>
-						<SectionTitle>User Information</SectionTitle>
+						<SectionTitle>{t('userProfile.userInformation')}</SectionTitle>
 						<DetailGrid>
 							<DetailItem>
 								<DetailLabel>
 									<FiUser />
-									<span>Full Name</span>
+									<span>{t('userProfile.fullName')}</span>
 								</DetailLabel>
 								<DetailValue>{`${user.firstName} ${user.lastName}`}</DetailValue>
 							</DetailItem>
@@ -939,7 +941,7 @@ const UserProfile: React.FC = () => {
 							<DetailItem>
 								<DetailLabel>
 									<FiMail />
-									<span>Email</span>
+									<span>{t('userProfile.email')}</span>
 								</DetailLabel>
 								<DetailValue>{user.email}</DetailValue>
 							</DetailItem>
@@ -947,7 +949,7 @@ const UserProfile: React.FC = () => {
 							<DetailItem>
 								<DetailLabel>
 									<FiCalendar />
-									<span>Created On</span>
+									<span>{t('userProfile.createdOn')}</span>
 								</DetailLabel>
 								<DetailValue>{formatDate(user.createdAt)}</DetailValue>
 							</DetailItem>
@@ -955,7 +957,7 @@ const UserProfile: React.FC = () => {
 							<DetailItem>
 								<DetailLabel>
 									<FiClock />
-									<span>Last Login</span>
+									<span>{t('userProfile.lastLogin')}</span>
 								</DetailLabel>
 								<DetailValue>{formatDate(user.lastLogin)}</DetailValue>
 							</DetailItem>
@@ -963,7 +965,7 @@ const UserProfile: React.FC = () => {
 							<DetailItem>
 								<DetailLabel>
 									<FiCalendar />
-									<span>Date of Birth</span>
+									<span>{t('userProfile.dateOfBirth')}</span>
 								</DetailLabel>
 								<DetailValue>
 									{user.birthday
@@ -972,7 +974,7 @@ const UserProfile: React.FC = () => {
 												month: 'long',
 												day: 'numeric',
 										  })
-										: 'Not set'}
+										: t('profile.notSet')}
 								</DetailValue>
 							</DetailItem>
 						</DetailGrid>
@@ -980,7 +982,7 @@ const UserProfile: React.FC = () => {
 
 					{user.role === 'Parent' && children.length > 0 && (
 						<DetailSection>
-							<SectionTitle>Children</SectionTitle>
+							<SectionTitle>{t('userProfile.children')}</SectionTitle>
 							<ChildrenList>
 								{children.map(child => (
 									<ChildItem key={child.id}>
@@ -1000,11 +1002,11 @@ const UserProfile: React.FC = () => {
 
 					{user.role === 'Student' && user.parent_id && (
 						<DetailSection>
-							<SectionTitle>Parent Information</SectionTitle>
+							<SectionTitle>{t('userProfile.parentInformation')}</SectionTitle>
 							<DetailItem>
 								<DetailLabel>
 									<FiUsers />
-									<span>Parent</span>
+									<span>{t('userProfile.parent')}</span>
 								</DetailLabel>
 								<DetailValue>
 									{parentInfo ? (
@@ -1012,7 +1014,7 @@ const UserProfile: React.FC = () => {
 											{`${parentInfo.firstName} ${parentInfo.lastName}`}
 										</ParentLink>
 									) : (
-										`Loading parent information...`
+										t('userProfile.loadingParentInfo')
 									)}
 								</DetailValue>
 							</DetailItem>
@@ -1022,14 +1024,14 @@ const UserProfile: React.FC = () => {
 					{/* Teacher class and subject assignments */}
 					{user.role === 'Teacher' && teacherAssignments.length > 0 && (
 						<DetailSection>
-							<SectionTitle>Class & Subject Assignments</SectionTitle>
+							<SectionTitle>{t('userProfile.classSubjectAssignments')}</SectionTitle>
 							<AssignmentsList>
 								{teacherAssignments.map((assignment, index) => (
 									<AssignmentItem key={index}>
 										<AssignmentHeader>
 											<AssignmentBadge>
 												<FiLayers />
-												<span>Class {assignment.class.classname}</span>
+												<span>{t('userProfile.class')} {assignment.class.classname}</span>
 											</AssignmentBadge>
 											<AssignmentBadge>
 												<FiBook />
@@ -1045,11 +1047,11 @@ const UserProfile: React.FC = () => {
 					{/* Student class information */}
 					{user.role === 'Student' && studentClass && (
 						<DetailSection>
-							<SectionTitle>Class Information</SectionTitle>
+							<SectionTitle>{t('userProfile.classInformation')}</SectionTitle>
 							<DetailItem>
 								<DetailLabel>
 									<FiLayers />
-									<span>Class</span>
+									<span>{t('userProfile.class')}</span>
 								</DetailLabel>
 								<DetailValue>{studentClass.classname}</DetailValue>
 							</DetailItem>
@@ -1059,15 +1061,15 @@ const UserProfile: React.FC = () => {
 					{/* Student grades overview */}
 					{user.role === 'Student' && studentGrades.length > 0 && (
 						<DetailSection>
-							<SectionTitle>Recent Grades</SectionTitle>
+							<SectionTitle>{t('userProfile.recentGrades')}</SectionTitle>
 							<GradesTable>
 								<thead>
 									<tr>
-										<GradeTableHeader>Subject</GradeTableHeader>
-										<GradeTableHeader>Lesson</GradeTableHeader>
-										<GradeTableHeader>Grade</GradeTableHeader>
-										<GradeTableHeader>Quarter</GradeTableHeader>
-										<GradeTableHeader>Date</GradeTableHeader>
+										<GradeTableHeader>{t('userProfile.subject')}</GradeTableHeader>
+										<GradeTableHeader>{t('userProfile.lesson')}</GradeTableHeader>
+										<GradeTableHeader>{t('userProfile.grade')}</GradeTableHeader>
+										<GradeTableHeader>{t('userProfile.quarter')}</GradeTableHeader>
+										<GradeTableHeader>{t('userProfile.date')}</GradeTableHeader>
 									</tr>
 								</thead>
 								<tbody>
@@ -1084,7 +1086,7 @@ const UserProfile: React.FC = () => {
 									))}
 								</tbody>
 							</GradesTable>
-							<InfoText>Click on a grade to view details and teacher comments</InfoText>
+							<InfoText>{t('userProfile.clickGradeDetails')}</InfoText>
 						</DetailSection>
 					)}
 
@@ -1092,9 +1094,9 @@ const UserProfile: React.FC = () => {
 					{user.role === 'Student' && studentAttendance.length > 0 && (
 						<DetailSection>
 							<SectionTitleWithAction>
-								<SectionTitle>Recent Attendance</SectionTitle>
+								<SectionTitle>{t('userProfile.recentAttendance')}</SectionTitle>
 								<ViewAllButton onClick={() => setIsAttendanceModalOpen(true)}>
-									View All <FiArrowRight />
+									{t('common.viewAll')} <FiArrowRight />
 								</ViewAllButton>
 							</SectionTitleWithAction>
 							<AttendanceOverview>
@@ -1103,25 +1105,25 @@ const UserProfile: React.FC = () => {
 										<AttendanceCount>
 											{allAttendance.filter(a => a.status === 'present').length}
 										</AttendanceCount>
-										<AttendanceLabel>Present</AttendanceLabel>
+										<AttendanceLabel>{t('userProfile.present')}</AttendanceLabel>
 									</AttendanceItem>
 									<AttendanceItem $status='absent'>
 										<AttendanceCount>
 											{allAttendance.filter(a => a.status === 'absent').length}
 										</AttendanceCount>
-										<AttendanceLabel>Absent</AttendanceLabel>
+										<AttendanceLabel>{t('userProfile.absent')}</AttendanceLabel>
 									</AttendanceItem>
 									<AttendanceItem $status='late'>
 										<AttendanceCount>
 											{allAttendance.filter(a => a.status === 'late').length}
 										</AttendanceCount>
-										<AttendanceLabel>Late</AttendanceLabel>
+										<AttendanceLabel>{t('userProfile.late')}</AttendanceLabel>
 									</AttendanceItem>
 									<AttendanceItem $status='excused'>
 										<AttendanceCount>
 											{allAttendance.filter(a => a.status === 'excused').length}
 										</AttendanceCount>
-										<AttendanceLabel>Excused</AttendanceLabel>
+										<AttendanceLabel>{t('userProfile.excused')}</AttendanceLabel>
 									</AttendanceItem>
 								</AttendanceSummary>
 								<AttendanceHistoryList>
@@ -1135,12 +1137,12 @@ const UserProfile: React.FC = () => {
 											</AttendanceHistoryInfo>
 											<AttendanceHistoryStatus $status={record.status}>
 												{record.status === 'present'
-													? 'Present'
+													? t('userProfile.present')
 													: record.status === 'absent'
-													? 'Absent'
+													? t('userProfile.absent')
 													: record.status === 'late'
-													? 'Late'
-													: 'Excused'}
+													? t('userProfile.late')
+													: t('userProfile.excused')}
 											</AttendanceHistoryStatus>
 										</AttendanceHistoryItem>
 									))}
@@ -1152,7 +1154,7 @@ const UserProfile: React.FC = () => {
 					{/* Student assignments overview */}
 					{user.role === 'Student' && studentAssignments.length > 0 && (
 						<DetailSection>
-							<SectionTitle>Assignments</SectionTitle>
+							<SectionTitle>{t('userProfile.assignments')}</SectionTitle>
 							<AssignmentsList>
 								{studentAssignments.map(assignment => (
 									<AssignmentItem key={assignment.id}>
@@ -1160,10 +1162,10 @@ const UserProfile: React.FC = () => {
 											<AssignmentTitle>{assignment.title}</AssignmentTitle>
 											<AssignmentStatusBadge $status={assignment.status}>
 												{assignment.status === 'completed'
-													? 'Completed'
+													? t('userProfile.completed')
 													: assignment.status === 'pending'
-													? 'Pending'
-													: 'Overdue'}
+													? t('userProfile.pending')
+													: t('userProfile.overdue')}
 											</AssignmentStatusBadge>
 										</AssignmentHeader>
 										<AssignmentDetails>
@@ -1173,7 +1175,7 @@ const UserProfile: React.FC = () => {
 											</AssignmentDetail>
 											<AssignmentDetail>
 												<FiCalendar />
-												<span>Due: {formatDate(assignment.dueDate)}</span>
+												<span>{t('userProfile.due')}: {formatDate(assignment.dueDate)}</span>
 											</AssignmentDetail>
 											{assignment.quarter && (
 												<AssignmentDetail>
@@ -1184,7 +1186,7 @@ const UserProfile: React.FC = () => {
 											{assignment.grade !== undefined && (
 												<AssignmentDetail>
 													<FiCheckSquare />
-													<span>Grade: {assignment.grade}</span>
+													<span>{t('userProfile.gradeLabel')}: {assignment.grade}</span>
 												</AssignmentDetail>
 											)}
 										</AssignmentDetails>
