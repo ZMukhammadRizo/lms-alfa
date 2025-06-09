@@ -293,19 +293,18 @@ export async function getStudentGrades(studentId: string): Promise<SubjectGrade[
 		console.log('📝 Found class subjects:', classSubjectsData.length);
 		
 		// Get class details including teacherid
-		const { data: fetchedClassesData, error: fetchedClassesError } = await supabase
+		const { data: classesData, error: classesError } = await supabase
 			.from('classes')
 			.select('id, classname, teacherid') // Fetch teacherid here
 			.in('id', classIds);
 			
-		if (fetchedClassesError || !fetchedClassesData) {
-			console.error('❌ Error fetching class details:', fetchedClassesError);
+		if (classesError || !classesData) {
+			console.error('❌ Error fetching class details:', classesError);
 			toast.error('Error fetching class details. Using mock data instead.');
 			return getMockGrades();
 		}
 		
-		// Continue with original logic
-		// ... rest of function remains the same
+		console.log('🏫 Found classes:', classesData.length);
 
 		// --- Fetch Teacher Information --- 
 		// Extract unique teacher IDs from fetchedClassesData

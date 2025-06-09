@@ -290,26 +290,26 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 										<RadioGroup>
 											<RadioOption>
 												<RadioLabel htmlFor='monthly'>
-													<RadioInput
-														type='radio'
-														id='monthly'
-														name='reportType'
-														checked={reportType === 'monthly'}
-														onChange={() => handleReportTypeSelect('monthly')}
-													/>
+												<RadioInput
+													type='radio'
+													id='monthly'
+													name='reportType'
+													checked={reportType === 'monthly'}
+													onChange={() => handleReportTypeSelect('monthly')}
+												/>
 													<RadioButton />
 													{t('dailyAttendance.filterModal.monthly')}
 												</RadioLabel>
 											</RadioOption>
 											<RadioOption>
 												<RadioLabel htmlFor='weekly'>
-													<RadioInput
-														type='radio'
-														id='weekly'
-														name='reportType'
-														checked={reportType === 'weekly'}
-														onChange={() => handleReportTypeSelect('weekly')}
-													/>
+												<RadioInput
+													type='radio'
+													id='weekly'
+													name='reportType'
+													checked={reportType === 'weekly'}
+													onChange={() => handleReportTypeSelect('weekly')}
+												/>
 													<RadioButton />
 													{t('dailyAttendance.filterModal.weekly')}
 												</RadioLabel>

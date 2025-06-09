@@ -10,6 +10,7 @@ import {
 	FiUpload,
 	FiX,
 } from 'react-icons/fi'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
@@ -35,9 +36,10 @@ interface SubmissionData {
 }
 
 const SingleAssignment: React.FC = () => {
+	const { t } = useTranslation()
 	const { assignmentId } = useParams<{ assignmentId: string }>()
 	const navigate = useNavigate()
-	const { user } = useAuth()
+	const { user } = useAuth()	
 
 	const [assignment, setAssignment] = useState<ExtendedAssignment | null>(null)
 	const [loading, setLoading] = useState(true)
@@ -49,7 +51,7 @@ const SingleAssignment: React.FC = () => {
 	// Fetch assignment data
 	const fetchAssignmentData = async () => {
 		if (!assignmentId) {
-			toast.error('Missing assignment ID')
+			toast.error(t('student.assignments.errors.missingAssignmentId', { defaultValue: 'Missing assignment ID' }))
 			navigate('/student/assignments')
 			return
 		}
@@ -77,7 +79,7 @@ const SingleAssignment: React.FC = () => {
 			if (assignmentError) throw assignmentError
 
 			if (!assignmentData) {
-				toast.error('Assignment not found')
+				toast.error(t('student.assignments.errors.assignmentNotFound', { defaultValue: 'Assignment not found' }))
 				navigate('/student/assignments')
 				return
 			}
@@ -558,7 +560,7 @@ const SingleAssignment: React.FC = () => {
 		return (
 			<LoadingContainer>
 				<LoadingSpinner />
-				<p>Loading assignment details...</p>
+				<p>{t('loadingAssignmentDetails')}</p>
 			</LoadingContainer>
 		)
 	}
@@ -567,10 +569,10 @@ const SingleAssignment: React.FC = () => {
 		return (
 			<Container>
 				<ErrorMessage>
-					<h2>Assignment not found</h2>
-					<p>The assignment you're looking for doesn't exist or you don't have access to it.</p>
+					<h2>{t('assignmentNotFound')}</h2>
+					<p>{t('assignmentNotFoundDescription')}</p>
 					<BackButton onClick={() => navigate('/student/assignments')}>
-						Back to Assignments
+						{t('backToAssignments')}
 					</BackButton>
 				</ErrorMessage>
 			</Container>
@@ -580,9 +582,9 @@ const SingleAssignment: React.FC = () => {
 	return (
 		<Container>
 			<PageHeader>
-				<PageTitle>Assignment Details</PageTitle>
+				<PageTitle>{t('assignmentDetails')}</PageTitle>
 				<BackButton onClick={() => navigate('/student/assignments')}>
-					Back to Assignments
+					{t('backToAssignments')}
 				</BackButton>
 			</PageHeader>
 
@@ -603,21 +605,21 @@ const SingleAssignment: React.FC = () => {
 				</AssignmentHeader>
 
 				<Section>
-					<SectionTitle>Description</SectionTitle>
+					<SectionTitle>{t('description')}</SectionTitle>
 					<Description>{assignment.description}</Description>
 				</Section>
 
 				<Section>
-					<SectionTitle>Due Dates</SectionTitle>
+					<SectionTitle>{t('dueDates')}</SectionTitle>
 					<DueDateInfo>
 						<DateItem>
 							<FiCalendar size={16} />
-							<span>Assigned: {formatDate(assignment.created_at)}</span>
+							<span>{t('assigned')}: {formatDate(assignment.created_at)}</span>
 						</DateItem>
 						<DateItem>
 							<FiClock size={16} />
 							<span>
-								Due: {formatDate(assignment.due_date)} at {formatTime(assignment.due_date)}
+								{t('due')}: {formatDate(assignment.due_date)} at {formatTime(assignment.due_date)}
 							</span>
 						</DateItem>
 					</DueDateInfo>
@@ -628,13 +630,13 @@ const SingleAssignment: React.FC = () => {
 				Array.isArray(assignment.file_url) &&
 				assignment.file_url.length > 0 ? (
 					<Section>
-						<SectionTitle>Assignment Materials</SectionTitle>
+						<SectionTitle>{t('assignmentMaterials')}</SectionTitle>
 						{assignment.file_url.map((file, index) => (
 							<MaterialItem key={index}>
 								<MaterialIcon>{getFileIcon(file.url)}</MaterialIcon>
 								<MaterialInfo>
 									<MaterialName>{file.name}</MaterialName>
-									<MaterialMeta>Assignment material from your teacher</MaterialMeta>
+									<MaterialMeta>{t('assignmentMaterialFromTeacher')}</MaterialMeta>
 								</MaterialInfo>
 								<MaterialActions>
 									<ActionButton
@@ -644,7 +646,7 @@ const SingleAssignment: React.FC = () => {
 											}
 										}}
 									>
-										View
+										{t('view')}
 									</ActionButton>
 									<ActionButton
 										onClick={() => {
@@ -660,7 +662,7 @@ const SingleAssignment: React.FC = () => {
 										}}
 									>
 										<FiDownload size={16} />
-										<span>Download</span>
+										<span>{t('download')}</span>
 									</ActionButton>
 								</MaterialActions>
 							</MaterialItem>
@@ -669,12 +671,12 @@ const SingleAssignment: React.FC = () => {
 				) : assignment && assignment.file_url && typeof assignment.file_url === 'string' ? (
 					// Legacy support for old string format
 					<Section>
-						<SectionTitle>Assignment Materials</SectionTitle>
+						<SectionTitle>{t('assignmentMaterials')}</SectionTitle>
 						<MaterialItem>
 							<MaterialIcon>{getFileIcon(assignment.file_url as string)}</MaterialIcon>
 							<MaterialInfo>
 								<MaterialName>{getFileName(assignment.file_url as string)}</MaterialName>
-								<MaterialMeta>Assignment material from your teacher</MaterialMeta>
+								<MaterialMeta>{t('assignmentMaterialFromTeacher')}</MaterialMeta>
 							</MaterialInfo>
 							<MaterialActions>
 								<ActionButton
@@ -684,7 +686,7 @@ const SingleAssignment: React.FC = () => {
 										}
 									}}
 								>
-									View
+									{t('view')}
 								</ActionButton>
 								<ActionButton
 									onClick={() => {
@@ -700,7 +702,7 @@ const SingleAssignment: React.FC = () => {
 									}}
 								>
 									<FiDownload size={16} />
-									<span>Download</span>
+									<span>{t('download')}</span>
 								</ActionButton>
 							</MaterialActions>
 						</MaterialItem>
@@ -708,7 +710,7 @@ const SingleAssignment: React.FC = () => {
 				) : null}
 
 				<Section>
-					<SectionTitle>Your Submission</SectionTitle>
+					<SectionTitle>{t('yourSubmission')}</SectionTitle>
 
 					{existingSubmission ? (
 						<ExistingSubmission>
@@ -719,7 +721,7 @@ const SingleAssignment: React.FC = () => {
 										color={existingSubmission.status === 'rejected' ? '#dc2626' : '#4caf50'}
 									/>
 									<span>
-										Submitted on {formatDate(existingSubmission.submittedat)} at{' '}
+										{t('submittedOn')} {formatDate(existingSubmission.submittedat)} at{' '}
 										{formatTime(existingSubmission.submittedat)}
 									</span>
 								</div>
@@ -735,15 +737,15 @@ const SingleAssignment: React.FC = () => {
 												<FileName>{getFileName(url)}</FileName>
 												<FileInfo>
 													{existingSubmission.status === 'rejected'
-														? 'Your submission was rejected. Please submit a new version.'
+														? t('submissionRejectedDescription')
 														: existingSubmission.status === 'accepted'
-														? 'Your submission was accepted.'
-														: 'Your submission is under review.'}
+														? t('submissionAcceptedDescription')
+														: t('submissionUnderReviewDescription')}
 												</FileInfo>
 											</FileDetails>
 											<DownloadButton onClick={() => downloadSubmission(url)}>
 												<FiDownload size={16} />
-												<span>Download</span>
+												<span>{t('download')}</span>
 											</DownloadButton>
 										</ExistingFilePreview>
 									))}
@@ -756,14 +758,14 @@ const SingleAssignment: React.FC = () => {
 								<GradeFeedbackContainer>
 									{existingSubmission.grade !== undefined && existingSubmission.grade !== null && (
 										<GradeContainer>
-											<GradeLabel>Grade:</GradeLabel>
+											<GradeLabel>{t('grade')}:</GradeLabel>
 											<GradeValue>{existingSubmission.grade}/10</GradeValue>
 										</GradeContainer>
 									)}
 
 									{existingSubmission.feedback && (
 										<FeedbackContainer>
-											<FeedbackLabel>Teacher Feedback:</FeedbackLabel>
+											<FeedbackLabel>{t('teacherFeedback')}:</FeedbackLabel>
 											<FeedbackContent>{existingSubmission.feedback}</FeedbackContent>
 										</FeedbackContainer>
 									)}
@@ -772,12 +774,12 @@ const SingleAssignment: React.FC = () => {
 
 							{existingSubmission && (
 								<SubmissionAttemptsInfo>
-									<AttemptsLabel>Submission attempts:</AttemptsLabel>
+									<AttemptsLabel>{t('submissionAttempts')}:</AttemptsLabel>
 									<AttemptsCount $attempts={existingSubmission.attempt_count || 1}>
 										{existingSubmission.attempt_count || 1}/2
 										{existingSubmission.attempt_count && existingSubmission.attempt_count >= 2 && (
 											<MaxAttemptsReached>
-												You have reached the maximum number of submission attempts
+												{t('maxAttemptsReached')}
 											</MaxAttemptsReached>
 										)}
 									</AttemptsCount>
@@ -789,7 +791,7 @@ const SingleAssignment: React.FC = () => {
 							<SubmissionHeader>
 								<div>
 									<FiClock size={16} color='#9e9e9e' />
-									<span>Not submitted yet</span>
+									<span>{t('notSubmittedYet')}</span>
 								</div>
 							</SubmissionHeader>
 
@@ -798,23 +800,23 @@ const SingleAssignment: React.FC = () => {
 									<FiFileText size={20} />
 								</FileIcon>
 								<FileDetails>
-									<FileName>No files uploaded</FileName>
-									<FileInfo>Use the form below to submit your assignment</FileInfo>
+									<FileName>{t('noFilesUploaded')}</FileName>
+									<FileInfo>{t('useFormBelowToSubmitAssignment')}</FileInfo>
 								</FileDetails>
 							</ExistingFilePreview>
 
 							<GradeFeedbackContainer>
 								<GradeContainer>
-									<GradeLabel>Grade:</GradeLabel>
+									<GradeLabel>{t('grade')}:</GradeLabel>
 									<span style={{ fontSize: '14px', color: '#9e9e9e', fontStyle: 'italic' }}>
-										Not graded yet
+										{t('notGradedYet')}
 									</span>
 								</GradeContainer>
 
 								<FeedbackContainer>
-									<FeedbackLabel>Teacher Feedback:</FeedbackLabel>
+									<FeedbackLabel>{t('teacherFeedback')}:</FeedbackLabel>
 									<FeedbackContent style={{ color: '#9e9e9e', fontStyle: 'italic' }}>
-										Feedback will be provided after submission
+										{t('feedbackProvidedAfterSubmission')}
 									</FeedbackContent>
 								</FeedbackContainer>
 							</GradeFeedbackContainer>
@@ -852,11 +854,11 @@ const SingleAssignment: React.FC = () => {
 											<FiUpload size={32} />
 											<DropzoneText>
 												{isDragActive
-													? 'Drop the file here...'
-													: 'Drag and drop a file here, or click to select a file'}
+													? t('dropTheFileHere')
+													: t('dragAndDropAFileHereOrClickToSelectAFile')}
 											</DropzoneText>
 											<DropzoneSupportedText>
-												Supported file types: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, JPG, PNG
+												{t('supportedFileTypes')}: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, JPG, PNG
 											</DropzoneSupportedText>
 										</DropzoneContent>
 									)}
@@ -865,17 +867,17 @@ const SingleAssignment: React.FC = () => {
 								{uploading && (
 									<ProgressContainer>
 										<ProgressBar $progress={uploadProgress} />
-										<ProgressText>{uploadProgress}% uploaded</ProgressText>
+										<ProgressText>{uploadProgress}% {t('uploaded')}</ProgressText>
 									</ProgressContainer>
 								)}
 
 								<SubmitButtonContainer>
 									<SubmitButton type='submit' disabled={!selectedFile || uploading}>
 										{uploading
-											? `Uploading... ${uploadProgress}%`
+											? `${t('uploading')} ${uploadProgress}%`
 											: existingSubmission
-											? 'Resubmit Assignment'
-											: 'Submit Assignment'}
+											? t('resubmitAssignment')
+											: t('submitAssignment')}
 									</SubmitButton>
 								</SubmitButtonContainer>
 							</SubmissionForm>
@@ -884,8 +886,8 @@ const SingleAssignment: React.FC = () => {
 					{existingSubmission && existingSubmission.status !== 'rejected' && (
 						<PendingReviewMessage>
 							{existingSubmission.status === 'accepted'
-								? 'Your submission has been accepted by your teacher.'
-								: 'Your submission is currently under review by your teacher. You will be able to resubmit if it gets rejected.'}
+								? t('submissionAcceptedDescription')
+								: t('submissionUnderReviewDescription')}
 						</PendingReviewMessage>
 					)}
 
@@ -894,8 +896,7 @@ const SingleAssignment: React.FC = () => {
 						existingSubmission.attempt_count &&
 						existingSubmission.attempt_count >= 2 && (
 							<MaxAttemptsMessage>
-								Your submission was rejected and you have used all available submission attempts.
-								Please contact your teacher for further assistance.
+								{t('submissionRejectedMaxAttemptsMessage')}
 							</MaxAttemptsMessage>
 						)}
 				</Section>

@@ -6,6 +6,7 @@ import {
   FiArrowLeft, FiBook, FiCalendar, FiFileText, 
   FiUser, FiVideo, FiDownload, FiInfo, FiX, FiChevronRight 
 } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 import supabase from '../../config/supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-toastify';
@@ -117,6 +118,7 @@ const getEmbedUrl = (url: string | null): string => {
 };
 
 const LessonModal: React.FC<LessonModalProps> = ({ lesson, onClose }) => {
+  const { t } = useTranslation();
   // Parse materials if needed
   const materials = lesson.fileurls ? parseFileUrls(lesson.fileurls) : [];
 
@@ -138,13 +140,13 @@ const LessonModal: React.FC<LessonModalProps> = ({ lesson, onClose }) => {
         <ModalBody>
           {lesson.description && (
             <ModalSection>
-              <h3>Description</h3>
+              <h3>{t('student.courseDetail.description')}</h3>
               <p>{lesson.description}</p>
             </ModalSection>
           )}
           {lesson.videourl && (
             <ModalSection>
-              <h3>Video</h3>
+              <h3>{t('student.courseDetail.video')}</h3>
               <ModalVideoContainer>
                 <iframe 
                   src={getEmbedUrl(lesson.videourl)} 
@@ -157,7 +159,7 @@ const LessonModal: React.FC<LessonModalProps> = ({ lesson, onClose }) => {
           )}
           {materials.length > 0 && (
             <ModalSection>
-              <h3>Materials</h3>
+              <h3>{t('student.courseDetail.materials')}</h3>
               <ModalMaterialsList>
                 {materials.map((material, index) => (
                   <MaterialItem key={`modal-material-${index}`}>
@@ -177,8 +179,8 @@ const LessonModal: React.FC<LessonModalProps> = ({ lesson, onClose }) => {
           {materials.length === 0 && !lesson.videourl && !lesson.description && (
             <CenteredContainer style={{ padding: '32px 0' }}>
               <IconWrapper><FiBook size={40} /></IconWrapper>
-              <h2>No Content Available</h2>
-              <p>This lesson currently has no description, video, or materials.</p>
+              <h2>{t('student.courseDetail.noContentAvailable')}</h2>
+              <p>{t('student.courseDetail.noContentDescription')}</p>
             </CenteredContainer>
           )}
         </ModalBody>
@@ -188,6 +190,7 @@ const LessonModal: React.FC<LessonModalProps> = ({ lesson, onClose }) => {
 };
 
 const CourseDetail: React.FC = () => {
+  const { t } = useTranslation();
   const { courseId } = useParams<{ courseId: string }>();
   const [activeTab, setActiveTab] = useState<string>('lessons');
   const [subject, setSubject] = useState<Subject | null>(null);
@@ -324,7 +327,7 @@ const CourseDetail: React.FC = () => {
   return (
       <CenteredContainer>
         <Spinner />
-        <p>Loading course details...</p>
+        <p>{t('student.courseDetail.loadingCourse')}</p>
       </CenteredContainer>
     );
   }
@@ -334,11 +337,11 @@ const CourseDetail: React.FC = () => {
     return (
       <CenteredContainer>
         <IconWrapper><FiX size={40} /></IconWrapper>
-        <h2>Failed to Load Course</h2>
-        <p>{error || 'Course could not be loaded. Please try again.'}</p>
+        <h2>{t('student.courseDetail.failedToLoad')}</h2>
+        <p>{error || t('student.courseDetail.courseLoadError')}</p>
         <BackButton to="/student/courses">
               <FiArrowLeft />
-          Back to Courses
+          {t('student.courseDetail.backToCourses')}
             </BackButton>
       </CenteredContainer>
     );
@@ -356,13 +359,13 @@ const CourseDetail: React.FC = () => {
     >
       <BackButton to="/student/courses">
         <FiArrowLeft />
-        Back to Courses
+        {t('student.courseDetail.backToCourses')}
       </BackButton>
       
       {/* Course Header with Color */}
       <CourseHeader $color={color}>
         <h1>{subject.subjectname}</h1>
-        <p>{subject.code || 'No Code'}</p>
+        <p>{subject.code || t('student.courseDetail.noCode')}</p>
         
         {subject.teacher && (
           <TeacherInfo>
@@ -379,7 +382,7 @@ const CourseDetail: React.FC = () => {
           onClick={() => setActiveTab('lessons')}
             >
               <FiBook />
-          Lessons
+          {t('student.courseDetail.lessons')}
           {lessons.length > 0 && <TabCount>{lessons.length}</TabCount>}
             </TabButton>
       </TabsContainer>
@@ -391,8 +394,8 @@ const CourseDetail: React.FC = () => {
             {lessons.length === 0 ? (
               <CenteredContainer>
                 <IconWrapper><FiBook size={40} /></IconWrapper>
-                <h2>No Lessons Yet</h2>
-                <p>This course doesn't have any lessons assigned yet.</p>
+                <h2>{t('student.courseDetail.noLessonsYet')}</h2>
+                <p>{t('student.courseDetail.noLessonsDescription')}</p>
               </CenteredContainer>
             ) : (
                   <LessonsList>
