@@ -59,28 +59,28 @@ const ProfilePage: React.FC = () => {
 
 		// Username validation
 		if (!formData.username.trim()) {
-			newErrors.username = 'Username is required'
+			newErrors.username = t('profile.usernameRequired')
 			isValid = false
 		} else if (formData.username.length < 3) {
-			newErrors.username = 'Username must be at least 3 characters'
+			newErrors.username = t('profile.usernameMinLength')
 			isValid = false
 		}
 
 		// Email validation
 		if (!formData.email.trim()) {
-			newErrors.email = 'Email is required'
+			newErrors.email = t('profile.emailRequired')
 			isValid = false
 		} else if (!validateEmail(formData.email)) {
-			newErrors.email = 'Please enter a valid email address'
+			newErrors.email = t('profile.emailInvalid')
 			isValid = false
 		}
 
 		// first name and last name validation min length for firstname is 3 and max is 20, same for lastname
 		if (!formData.firstName.trim()) {
-			newErrors.firstName = 'First name is required'
+			newErrors.firstName = t('profile.firstNameRequired')
 			isValid = false
 		} else if (formData.firstName.length < 3 || formData.firstName.length > 20) {
-			newErrors.firstName = 'First name must be between 3 and 20 characters'
+			newErrors.firstName = t('profile.firstNameLength')
 			isValid = false
 		}
 
@@ -94,31 +94,31 @@ const ProfilePage: React.FC = () => {
 
 		// Current password validation
 		if (!formData.currentPassword) {
-			newErrors.currentPassword = 'Current password is required'
+			newErrors.currentPassword = t('profile.currentPasswordRequired')
 			isValid = false
 		}
 
 		// New password validation
 		if (!formData.newPassword) {
-			newErrors.newPassword = 'New password is required'
+			newErrors.newPassword = t('profile.newPasswordRequired')
 			isValid = false
 		} else if (formData.newPassword.length < 6) {
-			newErrors.newPassword = 'Password must be at least 6 characters'
+			newErrors.newPassword = t('profile.newPasswordMinLength')
 			isValid = false
 		} else if (!/\d/.test(formData.newPassword)) {
-			newErrors.newPassword = 'Password must contain at least one number'
+			newErrors.newPassword = t('profile.passwordMustContainNumber')
 			isValid = false
 		} else if (!/[a-zA-Z]/.test(formData.newPassword)) {
-			newErrors.newPassword = 'Password must contain at least one letter'
+			newErrors.newPassword = t('profile.passwordMustContainLetter')
 			isValid = false
 		}
 
 		// Confirm password validation
 		if (!formData.confirmPassword) {
-			newErrors.confirmPassword = 'Please confirm your password'
+			newErrors.confirmPassword = t('profile.confirmPasswordRequired')
 			isValid = false
 		} else if (formData.newPassword !== formData.confirmPassword) {
-			newErrors.confirmPassword = 'Passwords do not match'
+			newErrors.confirmPassword = t('profile.passwordsDoNotMatch')
 			isValid = false
 		}
 
@@ -176,13 +176,13 @@ const ProfilePage: React.FC = () => {
 
 		// Validate form
 		if (!validateGeneralForm()) {
-			setErrorMessage('Please correct the errors in the form')
+			setErrorMessage(t('profile.correctFormErrors'))
 			return
 		}
 
 		try {
 			if (!user) {
-				setErrorMessage('User not found')
+				setErrorMessage(t('profile.userNotFound'))
 				return
 			}
 
@@ -197,7 +197,7 @@ const ProfilePage: React.FC = () => {
 			}
 
 			// Show success message
-			setSuccessMessage('Profile updated successfully!')
+			setSuccessMessage(t('profile.profileUpdatedSuccess'))
 			setErrorMessage('')
 
 			// Exit edit mode
@@ -208,7 +208,7 @@ const ProfilePage: React.FC = () => {
 				setSuccessMessage('')
 			}, 3000)
 		} catch (error) {
-			setErrorMessage('Failed to update profile. Please try again.')
+			setErrorMessage(t('profile.profileUpdateFailed'))
 			setSuccessMessage('')
 		}
 	}
@@ -222,7 +222,7 @@ const ProfilePage: React.FC = () => {
 
 		// Validate password form
 		if (!validatePasswordForm()) {
-			setErrorMessage('Please correct the errors in the form')
+			setErrorMessage(t('profile.correctFormErrors'))
 			return
 		}
 
@@ -252,7 +252,7 @@ const ProfilePage: React.FC = () => {
 				setSuccessMessage('')
 			}, 3000)
 		} catch (error) {
-			setErrorMessage('Failed to change password. Please try again.')
+			setErrorMessage(t('profile.passwordChangeFailed'))
 			setSuccessMessage('')
 		}
 	}
@@ -324,7 +324,7 @@ const ProfilePage: React.FC = () => {
 					{activeTab === 'general' && (
 						<form onSubmit={handleSubmit}>
 							<ContentHeader>
-								<SectionTitle>General Information</SectionTitle>
+								<SectionTitle>{t('profile.generalInformation')}</SectionTitle>
 								<ActionButtons>
 									{isEditing ? (
 										<>
@@ -346,7 +346,7 @@ const ProfilePage: React.FC = () => {
 							</ContentHeader>
 
 							<FormGroup>
-								<FormLabel htmlFor='username'>Username</FormLabel>
+								<FormLabel htmlFor='username'>{t('profile.username')}</FormLabel>
 								<FormInput
 									type='text'
 									id='username'
@@ -361,7 +361,7 @@ const ProfilePage: React.FC = () => {
 							</FormGroup>
 
 							<FormGroup>
-								<FormLabel htmlFor='fullName'>First Name</FormLabel>
+								<FormLabel htmlFor='fullName'>{t('profile.firstName')}</FormLabel>
 								<FormInput
 									type='text'
 									id='firstName'
@@ -374,7 +374,7 @@ const ProfilePage: React.FC = () => {
 								{errors.firstName && <ErrorMessage>{errors.firstName}</ErrorMessage>}
 							</FormGroup>
 							<FormGroup>
-								<FormLabel htmlFor='lastName'>Last Name</FormLabel>
+								<FormLabel htmlFor='lastName'>{t('profile.lastName')}</FormLabel>
 								<FormInput
 									type='text'
 									id='lastName'
@@ -388,7 +388,7 @@ const ProfilePage: React.FC = () => {
 							</FormGroup>
 
 							<FormGroup>
-								<FormLabel htmlFor='email'>Email Address</FormLabel>
+								<FormLabel htmlFor='email'>{t('profile.emailAddress')}</FormLabel>
 								<FormInput
 									type='email'
 									id='email'
@@ -406,7 +406,7 @@ const ProfilePage: React.FC = () => {
 					{activeTab === 'security' && (
 						<form onSubmit={handleChangePassword}>
 							<ContentHeader>
-								<SectionTitle>Password & Security</SectionTitle>
+								<SectionTitle>{t('profile.passwordAndSecurity')}</SectionTitle>
 							</ContentHeader>
 
 							<PasswordRequirements>
@@ -417,7 +417,7 @@ const ProfilePage: React.FC = () => {
 							</PasswordRequirements>
 
 							<FormGroup>
-								<FormLabel htmlFor='currentPassword'>Current Password</FormLabel>
+								<FormLabel htmlFor='currentPassword'>{t('profile.currentPassword')}</FormLabel>
 								<FormInput
 									type='password'
 									id='currentPassword'
@@ -431,7 +431,7 @@ const ProfilePage: React.FC = () => {
 							</FormGroup>
 
 							<FormGroup>
-								<FormLabel htmlFor='newPassword'>New Password</FormLabel>
+								<FormLabel htmlFor='newPassword'>{t('profile.newPassword')}</FormLabel>
 								<PasswordInputWrapper>
 									<FormInput
 										type='password'
@@ -447,7 +447,7 @@ const ProfilePage: React.FC = () => {
 							</FormGroup>
 
 							<FormGroup>
-								<FormLabel htmlFor='confirmPassword'>Confirm New Password</FormLabel>
+								<FormLabel htmlFor='confirmPassword'>{t('profile.confirmPassword')}</FormLabel>
 								<FormInput
 									type='password'
 									id='confirmPassword'

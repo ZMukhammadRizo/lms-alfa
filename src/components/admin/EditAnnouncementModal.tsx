@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FiAlertCircle, FiCheckCircle, FiTrash2, FiUpload, FiX } from 'react-icons/fi'
 import styled from 'styled-components'
 import { v4 as uuidv4 } from 'uuid'
@@ -41,6 +42,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 	onSave,
 	roles,
 }) => {
+	const { t } = useTranslation()
 	const [formData, setFormData] = useState<FormData>({
 		title: '',
 		content: '',
@@ -147,13 +149,13 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 					} as Announcement
 					onSave(updatedAnnouncement)
 
-					setSuccess('Photo deleted successfully')
+					setSuccess(t('announcements.photoDeletedSuccess'))
 					setTimeout(() => setSuccess(null), 3000)
 				}
 			}
 		} catch (err: any) {
 			console.error('Error deleting photo:', err)
-			setError(err.message || 'Failed to delete photo')
+			setError(err.message || t('announcements.failedToDeletePhoto'))
 			setTimeout(() => setError(null), 3000)
 		} finally {
 			setPhotoFile(null)
@@ -192,13 +194,13 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 					} as Announcement
 					onSave(updatedAnnouncement)
 
-					setSuccess('Video deleted successfully')
+					setSuccess(t('announcements.videoDeletedSuccess'))
 					setTimeout(() => setSuccess(null), 3000)
 				}
 			}
 		} catch (err: any) {
 			console.error('Error deleting video:', err)
-			setError(err.message || 'Failed to delete video')
+			setError(err.message || t('announcements.failedToDeleteVideo'))
 			setTimeout(() => setError(null), 3000)
 		} finally {
 			setVideoFile(null)
@@ -227,7 +229,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 		e.preventDefault()
 
 		if (!formData.title || !formData.content) {
-			setError('Please fill out all required fields')
+			setError(t('announcements.fillRequiredFields'))
 			return
 		}
 
@@ -290,7 +292,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 				throw new Error(`Error updating announcement: ${updateError.message}`)
 			}
 
-			setSuccess('Announcement updated successfully!')
+			setSuccess(t('announcements.announcementUpdatedSuccess'))
 			setTimeout(() => {
 				setSuccess(null)
 				onSave(updatedAnnouncement as Announcement)
@@ -298,7 +300,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 			}, 1500)
 		} catch (err: any) {
 			console.error('Error updating announcement:', err)
-			setError(err.message || 'An error occurred while updating the announcement')
+			setError(err.message || t('announcements.updateError'))
 		} finally {
 			setIsSubmitting(false)
 		}
@@ -310,7 +312,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 		<ModalOverlay>
 			<ModalContent>
 				<ModalHeader>
-					<h2>Edit Announcement</h2>
+					<h2>{t('announcements.editAnnouncement')}</h2>
 					<CloseButton onClick={onClose}>
 						<FiX size={24} />
 					</CloseButton>
@@ -330,27 +332,27 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 
 				<form onSubmit={handleSubmit}>
 					<FormGroup>
-						<FormLabel htmlFor='title'>Title*</FormLabel>
+						<FormLabel htmlFor='title'>{t('announcements.titleLabel')}</FormLabel>
 						<FormInput
 							type='text'
 							id='title'
 							name='title'
 							value={formData.title}
 							onChange={handleChange}
-							placeholder='Enter announcement title'
+							placeholder={t('announcements.titlePlaceholder')}
 							required
 							disabled={isSubmitting}
 						/>
 					</FormGroup>
 
 					<FormGroup>
-						<FormLabel htmlFor='content'>Content*</FormLabel>
+						<FormLabel htmlFor='content'>{t('announcements.contentLabel')}</FormLabel>
 						<FormTextarea
 							id='content'
 							name='content'
 							value={formData.content}
 							onChange={handleChange}
-							placeholder='Enter announcement content'
+							placeholder={t('announcements.contentPlaceholder')}
 							rows={4}
 							required
 							disabled={isSubmitting}
@@ -359,7 +361,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 
 					<FormRow>
 						<FormGroup>
-							<FormLabel htmlFor='targetAudience'>Target Audience*</FormLabel>
+							<FormLabel htmlFor='targetAudience'>{t('announcements.targetAudienceLabel')}</FormLabel>
 							<FormSelect
 								id='targetAudience'
 								name='targetAudience'
@@ -367,7 +369,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 								onChange={handleChange}
 								disabled={isSubmitting}
 							>
-								<option value='all'>All Users</option>
+								<option value='all'>{t('announcements.allUsers')}</option>
 								{roles.map(role => (
 									<option key={role.id} value={role.name.toLowerCase()}>
 										{role.name}s Only
@@ -385,21 +387,21 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 									onChange={handleChange}
 									disabled={isSubmitting}
 								/>
-								<span>Mark as Important</span>
+								<span>{t('announcements.markAsImportant')}</span>
 							</FormCheckboxLabel>
 						</FormGroup>
 					</FormRow>
 
 					<MediaSection>
-						<h3>Media Attachments</h3>
+						<h3>{t('announcements.mediaAttachments')}</h3>
 
 						<MediaRow>
 							<MediaColumn>
-								<FormLabel htmlFor='photo'>Image</FormLabel>
+								<FormLabel htmlFor='photo'>{t('announcements.image')}</FormLabel>
 								<FileInputContainer>
 									<FileInputLabel htmlFor='photo'>
 										<FiUpload />
-										<span>Choose Image</span>
+										<span>{t('announcements.chooseImage')}</span>
 									</FileInputLabel>
 									<FileInput
 										type='file'
@@ -419,18 +421,18 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 											disabled={isSubmitting}
 										>
 											<FiTrash2 />
-											<span>Remove</span>
+											<span>{t('announcements.remove')}</span>
 										</DeleteMediaButton>
 									</MediaPreview>
 								)}
 							</MediaColumn>
 
 							<MediaColumn>
-								<FormLabel htmlFor='video'>Video</FormLabel>
+								<FormLabel htmlFor='video'>{t('announcements.video')}</FormLabel>
 								<FileInputContainer>
 									<FileInputLabel htmlFor='video'>
 										<FiUpload />
-										<span>Choose Video</span>
+										<span>{t('announcements.chooseVideo')}</span>
 									</FileInputLabel>
 									<FileInput
 										type='file'
@@ -445,7 +447,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 									<MediaPreview>
 										<MediaPreviewVideo controls>
 											<source src={videoPreview} type='video/mp4' />
-											Your browser does not support the video tag.
+											{t('announcements.videoNotSupported')}
 										</MediaPreviewVideo>
 										<DeleteMediaButton
 											type='button'
@@ -453,7 +455,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 											disabled={isSubmitting}
 										>
 											<FiTrash2 />
-											<span>Remove</span>
+											<span>{t('announcements.remove')}</span>
 										</DeleteMediaButton>
 									</MediaPreview>
 								)}
@@ -463,7 +465,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 
 					<ButtonRow>
 						<Button type='button' variant='secondary' onClick={onClose} disabled={isSubmitting}>
-							Cancel
+							{t('announcements.cancel')}
 						</Button>
 						<Button
 							type='submit'
@@ -471,7 +473,7 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 							disabled={isSubmitting}
 							isLoading={isSubmitting}
 						>
-							{isSubmitting ? 'Saving...' : 'Save Changes'}
+							{isSubmitting ? t('announcements.saving') : t('announcements.saveChanges')}
 						</Button>
 					</ButtonRow>
 				</form>

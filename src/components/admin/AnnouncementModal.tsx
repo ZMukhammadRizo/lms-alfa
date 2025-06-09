@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FiAlertCircle, FiImage, FiTrash2, FiX } from 'react-icons/fi'
 import styled from 'styled-components'
 import supabase from '../../config/supabaseClient'
@@ -29,6 +30,7 @@ interface Role {
 }
 
 const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalone = false }) => {
+	const { t } = useTranslation()
 	const [roles, setRoles] = useState<Role[]>([])
 	const [formData, setFormData] = useState<AnnouncementFormData>({
 		title: '',
@@ -98,17 +100,17 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 		if (e.target.files && e.target.files.length > 0) {
 			const file = e.target.files[0]
 
-			// Check file size (max 5MB)
-			if (file.size > 5 * 1024 * 1024) {
-				showError('Image size must be less than 5MB')
-				return
-			}
+					// Check file size (max 5MB)
+		if (file.size > 5 * 1024 * 1024) {
+			showError(t('announcements.imageSizeError'))
+			return
+		}
 
-			// Check file type
-			if (!file.type.match('image.*')) {
-				showError('Please select an image file')
-				return
-			}
+		// Check file type
+		if (!file.type.match('image.*')) {
+			showError(t('announcements.selectImageFile'))
+			return
+		}
 
 			setImageFile(file)
 
@@ -137,11 +139,11 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 			const url = imagePreview
 
 			setUploadingImage(false)
-			showSuccess('Image uploaded successfully')
+			showSuccess(t('announcements.imageUploadedSuccess'))
 			return url
 		} catch (error) {
 			setUploadingImage(false)
-			showError('Failed to upload image')
+			showError(t('announcements.failedToUploadImage'))
 			console.error('Error uploading image:', error)
 			return null
 		}
@@ -157,17 +159,17 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 		if (e.target.files && e.target.files.length > 0) {
 			const file = e.target.files[0]
 
-			// Check file size (max 50MB)
-			if (file.size > 50 * 1024 * 1024) {
-				showError('Video size must be less than 50MB')
-				return
-			}
+					// Check file size (max 50MB)
+		if (file.size > 50 * 1024 * 1024) {
+			showError(t('announcements.videoSizeError'))
+			return
+		}
 
-			// Check file type
-			if (!file.type.match('video.*')) {
-				showError('Please select a video file')
-				return
-			}
+		// Check file type
+		if (!file.type.match('video.*')) {
+			showError(t('announcements.selectVideoFile'))
+			return
+		}
 
 			setVideoFile(file)
 
@@ -195,11 +197,11 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 			const url = videoPreview
 
 			setUploadingVideo(false)
-			showSuccess('Video uploaded successfully')
+			showSuccess(t('announcements.videoUploadedSuccess'))
 			return url
 		} catch (error) {
 			setUploadingVideo(false)
-			showError('Failed to upload video')
+			showError(t('announcements.failedToUploadVideo'))
 			console.error('Error uploading video:', error)
 			return null
 		}
@@ -215,7 +217,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 		e.preventDefault()
 
 		if (!formData.title || !formData.content) {
-			setFormError('Please fill out all required fields')
+			setFormError(t('announcements.fillRequiredFields'))
 			return
 		}
 
@@ -317,12 +319,12 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 				throw new Error(`Failed to create announcement: ${announcementError.message}`)
 			}
 
-			showSuccess('Announcement created successfully!')
+			showSuccess(t('announcements.announcementCreatedSuccess'))
 			onClose()
 		} catch (err) {
 			console.error('Error creating announcement:', err)
-			setFormError(err instanceof Error ? err.message : 'An unexpected error occurred')
-			showError('Failed to create announcement')
+			setFormError(err instanceof Error ? err.message : t('announcements.unexpectedError'))
+			showError(t('announcements.failedToCreate'))
 		} finally {
 			setFormSubmitting(false)
 			setUploadingImage(false)
@@ -340,27 +342,27 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 
 			<ModalForm onSubmit={handleSubmit}>
 				<FormGroup>
-					<FormLabel htmlFor='title'>Title*</FormLabel>
+					<FormLabel htmlFor='title'>{t('announcements.titleLabel')}</FormLabel>
 					<FormInput
 						type='text'
 						id='title'
 						name='title'
 						value={formData.title}
 						onChange={handleFormChange}
-						placeholder='Enter announcement title'
+						placeholder={t('announcements.titlePlaceholder')}
 						required
 						disabled={formSubmitting}
 					/>
 				</FormGroup>
 
 				<FormGroup>
-					<FormLabel htmlFor='content'>Content*</FormLabel>
+					<FormLabel htmlFor='content'>{t('announcements.contentLabel')}</FormLabel>
 					<FormTextarea
 						id='content'
 						name='content'
 						value={formData.content}
 						onChange={handleFormChange}
-						placeholder='Enter announcement content'
+						placeholder={t('announcements.contentPlaceholder')}
 						rows={4}
 						required
 						disabled={formSubmitting}
@@ -370,8 +372,8 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 				<FormGroup>
 					<FormLabel>
 						<ImageLabelContent>
-							<span>Video</span>
-							<ImageHelpText>Optional - Add a video to your announcement</ImageHelpText>
+							<span>{t('announcements.video')}</span>
+							<ImageHelpText>{t('announcements.videoOptional')}</ImageHelpText>
 						</ImageLabelContent>
 					</FormLabel>
 
@@ -392,8 +394,8 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 						<VideoUploadContainer>
 							<VideoInputLabel htmlFor='video-upload'>
 								<FiImage size={24} />
-								<span>Click to upload a video</span>
-								<small>MP4, MOV or AVI, max 50MB</small>
+								<span>{t('announcements.clickToUploadVideo')}</span>
+								<small>{t('announcements.videoFormats')}</small>
 							</VideoInputLabel>
 							<VideoInput
 								id='video-upload'
@@ -409,8 +411,8 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 				<FormGroup>
 					<FormLabel>
 						<ImageLabelContent>
-							<span>Image</span>
-							<ImageHelpText>Optional - Add an image to your announcement</ImageHelpText>
+							<span>{t('announcements.image')}</span>
+							<ImageHelpText>{t('announcements.imageOptional')}</ImageHelpText>
 						</ImageLabelContent>
 					</FormLabel>
 
@@ -431,8 +433,8 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 						<ImageUploadContainer>
 							<FileInputLabel htmlFor='image-upload'>
 								<FiImage size={24} />
-								<span>Click to upload an image</span>
-								<small>JPG, PNG or GIF, max 5MB</small>
+								<span>{t('announcements.clickToUploadImage')}</span>
+								<small>{t('announcements.imageFormats')}</small>
 							</FileInputLabel>
 							<FileInput
 								id='image-upload'
@@ -447,7 +449,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 
 				<FormRow>
 					<FormGroup>
-						<FormLabel htmlFor='target'>Target Audience*</FormLabel>
+						<FormLabel htmlFor='target'>{t('announcements.targetAudienceLabel')}</FormLabel>
 						<FormSelect
 							id='target'
 							name='target'
@@ -455,7 +457,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 							onChange={handleFormChange}
 							disabled={formSubmitting}
 						>
-							<option value='all'>All Users</option>
+							<option value='all'>{t('announcements.allUsers')}</option>
 							{roles.map(role => (
 								<option key={role.id} value={role.name.toLowerCase()}>
 									{role.name}s Only
@@ -473,7 +475,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 								onChange={handleFormChange}
 								disabled={formSubmitting}
 							/>
-							<span>Mark as Important</span>
+							<span>{t('announcements.markAsImportant')}</span>
 						</FormCheckboxLabel>
 					</FormGroup>
 				</FormRow>
@@ -485,7 +487,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 						onClick={onClose}
 						disabled={formSubmitting || uploadingImage || uploadingVideo}
 					>
-						Cancel
+						{t('announcements.cancel')}
 					</Button>
 					<Button
 						type='submit'
@@ -494,8 +496,8 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 						isLoading={formSubmitting || uploadingImage || uploadingVideo}
 					>
 						{formSubmitting || uploadingImage || uploadingVideo
-							? 'Creating...'
-							: 'Create Announcement'}
+							? t('announcements.creating')
+							: t('announcements.createAnnouncementButton')}
 					</Button>
 				</ButtonRow>
 			</ModalForm>
@@ -504,7 +506,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 		<ModalOverlay>
 			<ModalContainer>
 				<ModalHeader>
-					<ModalTitle>Create New Announcement</ModalTitle>
+					<ModalTitle>{t('announcements.createNewAnnouncement')}</ModalTitle>
 					<CloseButton onClick={onClose} disabled={formSubmitting}>
 						<FiX size={24} />
 					</CloseButton>
@@ -518,27 +520,27 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 
 				<ModalForm onSubmit={handleSubmit}>
 					<FormGroup>
-						<FormLabel htmlFor='title'>Title*</FormLabel>
+						<FormLabel htmlFor='title'>{t('announcements.titleLabel')}</FormLabel>
 						<FormInput
 							type='text'
 							id='title'
 							name='title'
 							value={formData.title}
 							onChange={handleFormChange}
-							placeholder='Enter announcement title'
+							placeholder={t('announcements.titlePlaceholder')}
 							required
 							disabled={formSubmitting}
 						/>
 					</FormGroup>
 
 					<FormGroup>
-						<FormLabel htmlFor='content'>Content*</FormLabel>
+						<FormLabel htmlFor='content'>{t('announcements.contentLabel')}</FormLabel>
 						<FormTextarea
 							id='content'
 							name='content'
 							value={formData.content}
 							onChange={handleFormChange}
-							placeholder='Enter announcement content'
+							placeholder={t('announcements.contentPlaceholder')}
 							rows={4}
 							required
 							disabled={formSubmitting}
@@ -548,8 +550,8 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 					<FormGroup>
 						<FormLabel>
 							<ImageLabelContent>
-								<span>Video</span>
-								<ImageHelpText>Optional - Add a video to your announcement</ImageHelpText>
+								<span>{t('announcements.video')}</span>
+								<ImageHelpText>{t('announcements.videoOptional')}</ImageHelpText>
 							</ImageLabelContent>
 						</FormLabel>
 
@@ -570,8 +572,8 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 							<VideoUploadContainer>
 								<VideoInputLabel htmlFor='video-upload'>
 									<FiImage size={24} />
-									<span>Click to upload a video</span>
-									<small>MP4, MOV or AVI, max 50MB</small>
+									<span>{t('announcements.clickToUploadVideo')}</span>
+									<small>{t('announcements.videoFormats')}</small>
 								</VideoInputLabel>
 								<VideoInput
 									id='video-upload'
@@ -587,8 +589,8 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 					<FormGroup>
 						<FormLabel>
 							<ImageLabelContent>
-								<span>Image</span>
-								<ImageHelpText>Optional - Add an image to your announcement</ImageHelpText>
+								<span>{t('announcements.image')}</span>
+								<ImageHelpText>{t('announcements.imageOptional')}</ImageHelpText>
 							</ImageLabelContent>
 						</FormLabel>
 
@@ -609,8 +611,8 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 							<ImageUploadContainer>
 								<FileInputLabel htmlFor='image-upload'>
 									<FiImage size={24} />
-									<span>Click to upload an image</span>
-									<small>JPG, PNG or GIF, max 5MB</small>
+									<span>{t('announcements.clickToUploadImage')}</span>
+									<small>{t('announcements.imageFormats')}</small>
 								</FileInputLabel>
 								<FileInput
 									id='image-upload'
@@ -625,7 +627,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 
 					<FormRow>
 						<FormGroup>
-							<FormLabel htmlFor='target'>Target Audience*</FormLabel>
+							<FormLabel htmlFor='target'>{t('announcements.targetAudienceLabel')}</FormLabel>
 							<FormSelect
 								id='target'
 								name='target'
@@ -633,7 +635,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 								onChange={handleFormChange}
 								disabled={formSubmitting}
 							>
-								<option value='all'>All Users</option>
+								<option value='all'>{t('announcements.allUsers')}</option>
 								{roles.map(role => (
 									<option key={role.id} value={role.name.toLowerCase()}>
 										{role.name}s Only
@@ -651,7 +653,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 									onChange={handleFormChange}
 									disabled={formSubmitting}
 								/>
-								<span>Mark as Important</span>
+								<span>{t('announcements.markAsImportant')}</span>
 							</FormCheckboxLabel>
 						</FormGroup>
 					</FormRow>
@@ -663,7 +665,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 							onClick={onClose}
 							disabled={formSubmitting || uploadingImage || uploadingVideo}
 						>
-							Cancel
+							{t('announcements.cancel')}
 						</Button>
 						<Button
 							type='submit'
@@ -672,8 +674,8 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onClose, standalo
 							isLoading={formSubmitting || uploadingImage || uploadingVideo}
 						>
 							{formSubmitting || uploadingImage || uploadingVideo
-								? 'Creating...'
-								: 'Create Announcement'}
+								? t('announcements.creating')
+								: t('announcements.createAnnouncementButton')}
 						</Button>
 					</ButtonRow>
 				</ModalForm>

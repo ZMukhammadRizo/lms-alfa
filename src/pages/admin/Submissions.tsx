@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
 	FiCalendar,
 	FiCheck,
@@ -687,6 +688,7 @@ const ITEMS_PER_PAGE = 10
 
 const AdminSubmissions: React.FC = () => {
 	const { user } = useAuth()
+	const { t } = useTranslation()
 	const [allSubmissions, setAllSubmissions] = useState<Submission[]>([])
 	const [filteredSubmissions, setFilteredSubmissions] = useState<Submission[]>([])
 	const [displayedSubmissions, setDisplayedSubmissions] = useState<Submission[]>([])
@@ -834,7 +836,7 @@ const AdminSubmissions: React.FC = () => {
 			setPermissions(userPermissions)
 		} catch (error) {
 			console.error('Error checking permissions:', error)
-			toast.error('Failed to check permissions')
+			toast.error(t('common.failedToCheckPermissions'))
 		}
 	}
 
@@ -893,7 +895,7 @@ const AdminSubmissions: React.FC = () => {
 			setClasses(data || [])
 		} catch (error) {
 			console.error('Error fetching classes:', error)
-			toast.error('Failed to load classes')
+			toast.error(t('submissions.failedToLoadClasses'))
 		}
 	}
 
@@ -981,7 +983,7 @@ const AdminSubmissions: React.FC = () => {
 			setIsLoading(false)
 		} catch (error) {
 			console.error('Error fetching submissions:', error)
-			toast.error('Failed to load submissions')
+			toast.error(t('submissions.failedToLoadSubmissions'))
 			setIsLoading(false)
 		}
 	}
@@ -1066,10 +1068,10 @@ const AdminSubmissions: React.FC = () => {
 				)
 			)
 
-			toast.success('Feedback saved successfully!')
+			toast.success(t('submissions.gradeAndFeedbackSaved'))
 		} catch (error) {
 			console.error('Error saving feedback:', error)
-			toast.error('Failed to save feedback')
+			toast.error(t('submissions.failedToSaveGradeFeedback'))
 		}
 	}
 
@@ -1098,9 +1100,9 @@ const AdminSubmissions: React.FC = () => {
 			<Header>
 				<HeaderContent>
 					<div>
-						<PageTitle>Submissions</PageTitle>
+						<PageTitle>{t('submissions.title')}</PageTitle>
 						<PageDescription>
-							Review and manage all student submissions in the system
+							{t('submissions.description')}
 						</PageDescription>
 					</div>
 				</HeaderContent>
@@ -1110,7 +1112,7 @@ const AdminSubmissions: React.FC = () => {
 						<SearchIcon />
 						<SearchInput
 							type='text'
-							placeholder='Search by student name or assignment title...'
+							placeholder={t('submissions.searchByStudentOrAssignment')}
 							value={searchTerm}
 							onChange={handleSearchChange}
 						/>
@@ -1120,8 +1122,8 @@ const AdminSubmissions: React.FC = () => {
 						<FilterButton onClick={() => setShowClassDropdown(!showClassDropdown)}>
 							<FiFilter />
 							{selectedClass
-								? `Class: ${classes.find(c => c.id === selectedClass)?.classname || 'Selected'}`
-								: 'All Classes'}
+								? `${t('submissions.class')}: ${classes.find(c => c.id === selectedClass)?.classname || t('common.selected')}`
+								: t('submissions.allClasses')}
 							<FiChevronDown />
 						</FilterButton>
 						{showClassDropdown && (
@@ -1133,7 +1135,7 @@ const AdminSubmissions: React.FC = () => {
 									}}
 									$isActive={selectedClass === null}
 								>
-									All Classes
+									{t('submissions.allClasses')}
 								</DropdownItem>
 								{classes.map(classItem => (
 									<DropdownItem
@@ -1156,18 +1158,18 @@ const AdminSubmissions: React.FC = () => {
 			<ContentContainer>
 				{isLoading ? (
 					<LoadingContainer>
-						<LoadingText>Loading submissions...</LoadingText>
+						<LoadingText>{t('submissions.loadingSubmissions')}</LoadingText>
 					</LoadingContainer>
 				) : !permissions.read_submissions ? (
 					<EmptyState>
-						<EmptyStateText>You don't have permission to view submissions.</EmptyStateText>
+						<EmptyStateText>{t('submissions.noPermissionView')}</EmptyStateText>
 					</EmptyState>
 				) : filteredSubmissions.length === 0 ? (
 					<EmptyState>
 						<EmptyStateText>
 							{allSubmissions.length === 0
-								? 'No submissions found in the system.'
-								: 'No submissions match your filter criteria.'}
+								? t('submissions.noSubmissionsFound')
+								: t('submissions.noSubmissionsMatchFilter')}
 						</EmptyStateText>
 					</EmptyState>
 				) : (
@@ -1175,12 +1177,12 @@ const AdminSubmissions: React.FC = () => {
 						<SubmissionsGrid>
 							{displayedSubmissions.map(submission => (
 								<SubmissionCard key={submission.id} onClick={() => handleOpenDetail(submission)}>
-									<CardHeader>{submission.assignment?.title || 'Untitled Assignment'}</CardHeader>
+									<CardHeader>{submission.assignment?.title || t('submissions.untitledAssignment')}</CardHeader>
 									<CardBody>
 										<CardInfo>
 											<InfoItem>
 												<FiUser />
-												<InfoText>{submission.student?.fullName || 'Unknown Student'}</InfoText>
+												<InfoText>{submission.student?.fullName || t('submissions.unknownStudent')}</InfoText>
 											</InfoItem>
 											{submission.student?.email && (
 												<InfoItem>
@@ -1196,7 +1198,7 @@ const AdminSubmissions: React.FC = () => {
 											)}
 											<InfoItem>
 												<FiCalendar />
-												<InfoText>Submitted: {formatDate(submission.submittedat)}</InfoText>
+												<InfoText>{t('submissions.submittedColon')} {formatDate(submission.submittedat)}</InfoText>
 											</InfoItem>
 										</CardInfo>
 
@@ -1208,7 +1210,7 @@ const AdminSubmissions: React.FC = () => {
 															<a href={url} target='_blank' rel='noopener noreferrer'>
 																<FiExternalLink size={14} />
 																<span>
-																	View File {submission.fileurl.length > 1 ? `${index + 1}` : ''}
+																	{t('submissions.viewFile')} {submission.fileurl.length > 1 ? `${index + 1}` : ''}
 																</span>
 															</a>
 															<DownloadButton
@@ -1226,18 +1228,18 @@ const AdminSubmissions: React.FC = () => {
 										</CardActions>
 										<FeedbackSection>
 											{submission.grade ? (
-												<GradeBadge>Grade: {submission.grade}/10</GradeBadge>
+												<GradeBadge>{t('submissions.grade')}: {submission.grade}/10</GradeBadge>
 											) : (
-												<PendingBadge>Not Graded</PendingBadge>
+												<PendingBadge>{t('submissions.notGraded')}</PendingBadge>
 											)}
 											{submission.status && (
 												<StatusBadge $status={submission.status}>
-													{submission.status === 'accepted' ? 'Accepted' : 'Rejected'}
+													{submission.status === 'accepted' ? t('submissions.accepted') : t('submissions.rejected')}
 												</StatusBadge>
 											)}
 											{submission.feedback && (
 												<FeedbackIndicator>
-													<FiMessageSquare /> Feedback provided
+													<FiMessageSquare /> {t('submissions.feedbackProvided')}
 												</FeedbackIndicator>
 											)}
 										</FeedbackSection>
@@ -1249,7 +1251,7 @@ const AdminSubmissions: React.FC = () => {
 						{hasMore && (
 							<LoadMoreContainer>
 								<LoadMoreButton onClick={loadMore}>
-									Load More <FiChevronRight />
+									{t('submissions.loadMore')} <FiChevronRight />
 								</LoadMoreButton>
 							</LoadMoreContainer>
 						)}
@@ -1262,7 +1264,7 @@ const AdminSubmissions: React.FC = () => {
 				<ModalOverlay onClick={handleCloseDetail}>
 					<ModalContent onClick={e => e.stopPropagation()}>
 						<ModalHeader>
-							<ModalTitle>Submission Details</ModalTitle>
+							<ModalTitle>{t('submissions.submissionDetails')}</ModalTitle>
 							<CloseButton onClick={handleCloseDetail}>
 								<FiX size={20} />
 							</CloseButton>
@@ -1270,29 +1272,29 @@ const AdminSubmissions: React.FC = () => {
 						<ModalBody>
 							<SubmissionInfo>
 								<InfoGroup>
-									<InfoLabel>Assignment</InfoLabel>
+									<InfoLabel>{t('submissions.assignment')}</InfoLabel>
 									<InfoValue>
-										{selectedSubmission.assignment?.title || 'Untitled Assignment'}
+										{selectedSubmission.assignment?.title || t('submissions.untitledAssignment')}
 									</InfoValue>
 								</InfoGroup>
 								<InfoGroup>
-									<InfoLabel>Student</InfoLabel>
-									<InfoValue>{selectedSubmission.student?.fullName || 'Unknown Student'}</InfoValue>
+									<InfoLabel>{t('submissions.student')}</InfoLabel>
+									<InfoValue>{selectedSubmission.student?.fullName || t('submissions.unknownStudent')}</InfoValue>
 								</InfoGroup>
 								{selectedSubmission.student?.email && (
 									<InfoGroup>
-										<InfoLabel>Email</InfoLabel>
+										<InfoLabel>{t('submissions.email')}</InfoLabel>
 										<InfoValue>{selectedSubmission.student.email}</InfoValue>
 									</InfoGroup>
 								)}
 								{selectedSubmission.assignment?.class?.classname && (
 									<InfoGroup>
-										<InfoLabel>Class</InfoLabel>
+										<InfoLabel>{t('submissions.class')}</InfoLabel>
 										<InfoValue>{selectedSubmission.assignment.class.classname}</InfoValue>
 									</InfoGroup>
 								)}
 								<InfoGroup>
-									<InfoLabel>Submission Date</InfoLabel>
+									<InfoLabel>{t('submissions.submissionDate')}</InfoLabel>
 									<InfoValue>{formatDate(selectedSubmission.submittedat)}</InfoValue>
 								</InfoGroup>
 							</SubmissionInfo>
@@ -1300,13 +1302,13 @@ const AdminSubmissions: React.FC = () => {
 							{Array.isArray(selectedSubmission.fileurl) &&
 								selectedSubmission.fileurl.length > 0 && (
 									<FileContainer>
-										<FileHeader>Submitted Files</FileHeader>
+										<FileHeader>{t('submissions.submittedFiles')}</FileHeader>
 										{selectedSubmission.fileurl.map((url, index) => (
 											<FileItem key={index}>
 												<FileInfo>
 													<FiFileText />
 													<FileName>
-														Submission File{' '}
+														{t('submissions.submissionFile')}{' '}
 														{selectedSubmission.fileurl.length > 1 ? `${index + 1}` : ''}
 													</FileName>
 												</FileInfo>
@@ -1326,26 +1328,26 @@ const AdminSubmissions: React.FC = () => {
 							{permissions.update_submissions && (
 								<FeedbackForm>
 									<FormGroup>
-										<FormLabel>Grade (1-10)</FormLabel>
+										<FormLabel>{t('submissions.gradeRange')}</FormLabel>
 										<GradeInput
 											type='number'
 											min='1'
 											max='10'
 											value={gradeInput}
 											onChange={handleGradeChange}
-											placeholder='1-10'
+											placeholder={t('submissions.gradeOneTo10')}
 										/>
 									</FormGroup>
 									<FormGroup>
-										<FormLabel>Feedback</FormLabel>
+										<FormLabel>{t('submissions.feedback')}</FormLabel>
 										<FeedbackTextarea
 											value={feedbackInput}
 											onChange={e => setFeedbackInput(e.target.value)}
-											placeholder='Provide feedback on the submission...'
+											placeholder={t('submissions.provideFeedback')}
 										/>
 									</FormGroup>
 									<FormGroup>
-										<FormLabel>Status</FormLabel>
+										<FormLabel>{t('submissions.status')}</FormLabel>
 										<StatusOptions>
 											<StatusOption
 												type='button'
@@ -1353,7 +1355,7 @@ const AdminSubmissions: React.FC = () => {
 												$status='accepted'
 												onClick={() => setSubmissionStatus('accepted')}
 											>
-												<FiCheck /> Accept
+												<FiCheck /> {t('submissions.accept')}
 											</StatusOption>
 											<StatusOption
 												type='button'
@@ -1361,14 +1363,14 @@ const AdminSubmissions: React.FC = () => {
 												$status='rejected'
 												onClick={() => setSubmissionStatus('rejected')}
 											>
-												<FiXCircle /> Reject
+												<FiXCircle /> {t('submissions.reject')}
 											</StatusOption>
 										</StatusOptions>
 									</FormGroup>
 									<ButtonGroup>
-										<CancelButton onClick={handleCloseDetail}>Cancel</CancelButton>
+										<CancelButton onClick={handleCloseDetail}>{t('submissions.cancel')}</CancelButton>
 										<SaveButton onClick={handleSaveGradeFeedback}>
-											<FiCheck /> Save Feedback
+											<FiCheck /> {t('submissions.saveFeedback')}
 										</SaveButton>
 									</ButtonGroup>
 								</FeedbackForm>
