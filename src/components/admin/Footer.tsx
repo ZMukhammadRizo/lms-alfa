@@ -22,8 +22,8 @@ const Footer: React.FC = () => {
 
 const FooterContainer = styled.footer`
   background-color: ${props => props.theme.colors.background.primary};
-  border-top: 1px solid ${props => props.theme.colors.border};
-  padding: ${props => props.theme.spacing.md};
+  border-top: 1px solid ${props => props.theme.colors.border.light};
+  padding: ${props => props.theme.spacing[4]};
 `;
 
 const FooterContent = styled.div`
@@ -33,7 +33,7 @@ const FooterContent = styled.div`
   
   @media (max-width: ${props => props.theme.breakpoints.md}) {
     flex-direction: column;
-    gap: ${props => props.theme.spacing.sm};
+    gap: ${props => props.theme.spacing[2]};
   }
 `;
 
@@ -45,11 +45,11 @@ const FooterText = styled.p`
 
 const FooterLinks = styled.div`
   display: flex;
-  gap: ${props => props.theme.spacing.md};
+  gap: ${props => props.theme.spacing[4]};
   
   @media (max-width: ${props => props.theme.breakpoints.sm}) {
     flex-direction: column;
-    gap: ${props => props.theme.spacing.xs};
+    gap: ${props => props.theme.spacing[1]};
     align-items: center;
   }
 `;

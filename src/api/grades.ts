@@ -176,20 +176,7 @@ export interface GradeLevelSummary {
 	subjectCount: number // Assuming we can get this count too
 }
 
-// Helper to get ordinal suffix (e.g., 1st, 2nd, 3rd, 10th)
-const getOrdinalSuffix = (n: number): string => {
-	if (n > 3 && n < 21) return 'th'
-	switch (n % 10) {
-		case 1:
-			return 'st'
-		case 2:
-			return 'nd'
-		case 3:
-			return 'rd'
-		default:
-			return 'th'
-	}
-}
+
 
 // Fetches summary data for each grade level
 export const getGradeLevelSummaries = async (): Promise<GradeLevelSummary[]> => {

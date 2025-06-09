@@ -1,21 +1,18 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 import { FiBell, FiChevronDown, FiChevronLeft, FiChevronRight, FiMenu } from 'react-icons/fi'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import styled, { css } from 'styled-components'
 import {
-	adminMenu,
 	getAdminMenu,
 	announcementsSubItems,
 	getManagerMenu,
 	getModuleLeaderMenu,
 	getSystemMenu,
-	menuItemPermissionMap,
 } from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
 import { getUserParentRole, getUserRole, hasPermission, hasRole } from '../../utils/authUtils'
 import LogoutButton from '../common/LogoutButton'
-import PermissionMenuItem from '../common/PermissionMenuItem'
 import { useTranslation } from 'react-i18next'
 
 interface SidebarProps {
@@ -88,7 +85,6 @@ interface MenuItemWithSubmenuProps {
 		[key: string]: any
 	}[]
 	onMobileClick?: () => void
-	requiredPermissions?: string[]
 }
 
 const MenuItemWithSubmenu: React.FC<MenuItemWithSubmenuProps> = ({
@@ -97,7 +93,6 @@ const MenuItemWithSubmenu: React.FC<MenuItemWithSubmenuProps> = ({
 	isCollapsed,
 	subItems,
 	onMobileClick,
-	requiredPermissions,
 }) => {
 	const [isOpen, setIsOpen] = useState(false)
 	const location = useLocation()
@@ -183,7 +178,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileT
 	const [isMobileOpen, setIsMobileOpen] = useState(false)
 	const { user } = useAuth()
 	const { t } = useTranslation()
-	const navigate = useNavigate()
 
 	// Handle window resize
 	useEffect(() => {
@@ -842,20 +836,7 @@ const ProfileRole = styled.div`
 	color: ${props => props.theme.colors.text.tertiary};
 `
 
-const SidebarLogoutButton = styled(LogoutButton)`
-	padding: 0.5rem;
-	background: transparent;
 
-	svg {
-		color: ${props => props.theme.colors.text.secondary};
-	}
-
-	&:hover {
-		svg {
-			color: ${props => props.theme.colors.danger[500]};
-		}
-	}
-`
 
 const SubmenuTrigger = styled.div<MenuItemContainerProps>`
 	display: flex;

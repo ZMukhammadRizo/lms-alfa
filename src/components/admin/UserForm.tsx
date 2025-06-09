@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react'
 import {
 	FiCalendar,
 	FiCheck,
-	FiLock,
 	FiMail,
 	FiShield,
 	FiUser,
@@ -571,80 +570,6 @@ const UserForm: React.FC<UserFormProps> = ({
 		}
 	}
 
-	// Function to assign children to a parent
-	const assignChildrenToParent = async (parentId: string, childrenIds: string[]) => {
-		try {
-			console.log('Assigning children to parent:', { parentId, childrenIds })
-
-			// First, fetch all children currently assigned to this parent
-			const { data: currentChildren, error: fetchError } = await supabase
-				.from('users')
-				.select('id')
-				.eq('parent_id', parentId)
-
-			if (fetchError) {
-				console.error('Error fetching current children:', fetchError)
-				throw fetchError
-			}
-
-			// Extract IDs of current children
-			const currentChildrenIds = currentChildren?.map(child => child.id) || []
-
-			// Find children to remove (those in currentChildrenIds but not in new childrenIds)
-			const childrenToRemove = currentChildrenIds.filter(id => !childrenIds.includes(id))
-
-			// Find children to add (those in new childrenIds but not already assigned)
-			const childrenToAdd = childrenIds.filter(id => !currentChildrenIds.includes(id))
-
-			// Create a batch of promises to update all changes at once
-			const updatePromises = []
-
-			// Remove parent_id from children that should no longer be assigned to this parent
-			if (childrenToRemove.length > 0) {
-				const removePromise = supabase
-					.from('users')
-					.update({ parent_id: null })
-					.in('id', childrenToRemove)
-				updatePromises.push(removePromise)
-			}
-
-			// Assign parent_id to new children
-			if (childrenToAdd.length > 0) {
-				const addPromise = supabase
-				.from('users')
-				.update({ parent_id: parentId })
-					.in('id', childrenToAdd)
-				updatePromises.push(addPromise)
-			}
-
-			// Execute all updates
-			const results = await Promise.all(updatePromises)
-			
-			// Check for errors
-			for (const result of results) {
-				if (result.error) {
-					console.error('Error updating parent-child relationships:', result.error)
-					throw result.error
-				}
-			}
-
-			console.log('Successfully updated parent-child relationships')
-			return results
-		} catch (err) {
-			console.error('Error in assignChildrenToParent:', err)
-			throw err
-		}
-	}
-
-	// Check if user has permission to create a parent user
-	const canCreateParent = () => {
-		return canCreateUserWithRole({
-			currentUserRole,
-			currentUserPermissions,
-			newUserRole: 'Parent',
-		})
-	}
-
 	// Check if user has permission to create a user with a specific role
 	const canCreateUserWithSpecificRole = (roleName: string) => {
 		return canCreateUserWithRole({
@@ -1186,14 +1111,13 @@ const FormSelect = styled.select<FormInputProps>`
 	}
 `
 
-const StatusOptions = styled.div`
+const StatusToggleGroup = styled.div`
 	display: flex;
 	gap: ${props => props.theme.spacing[3]};
-	margin-top: ${props => props.theme.spacing[1]};
+	margin-top: ${props => props.theme.spacing[2]};
 
-	@media (max-width: ${props => props.theme.breakpoints.sm}) {
+	@media (max-width: ${props => props.theme.breakpoints.md}) {
 		flex-direction: column;
-		width: 100%;
 	}
 `
 
@@ -1246,19 +1170,6 @@ const StatusOption = styled.div<StatusOptionProps>`
 	}
 `
 
-const StatusRadio = styled.input.attrs({ type: 'radio' })`
-	position: absolute;
-	opacity: 0;
-	width: 100%;
-	height: 100%;
-	cursor: pointer;
-	z-index: 1;
-	top: 0;
-	left: 0;
-	margin: 0;
-	padding: 0;
-`
-
 interface StatusIndicatorProps {
 	$active: boolean
 }
@@ -1282,28 +1193,6 @@ const StatusIndicator = styled.div<StatusIndicatorProps>`
 		opacity: ${props => (props.$active ? 1 : 0)};
 		font-size: 14px;
 		transition: all ${props => props.theme.transition.fast};
-	}
-`
-
-const StatusLabel = styled.label`
-	font-size: 0.95rem;
-	font-weight: 500;
-	cursor: pointer;
-	color: ${props => props.theme.colors.text.primary};
-	transition: color ${props => props.theme.transition.fast};
-
-	&:hover {
-		color: ${props => props.theme.colors.primary[600]};
-	}
-`
-
-const StatusToggleGroup = styled.div`
-	display: flex;
-	gap: ${props => props.theme.spacing[3]};
-	margin-top: ${props => props.theme.spacing[2]};
-
-	@media (max-width: ${props => props.theme.breakpoints.md}) {
-		flex-direction: column;
 	}
 `
 
@@ -1386,12 +1275,7 @@ const SubmitButton = styled.button`
 	}
 `
 
-// New styled component for help text
-const HelpText = styled.div`
-	font-size: 12px;
-	color: #6b7280;
-	margin-top: 4px;
-`
+
 
 // New styled component for loading indicator
 const LoadingIndicator = styled.div`

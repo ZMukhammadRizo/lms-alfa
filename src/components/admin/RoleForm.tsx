@@ -6,12 +6,7 @@ import styled from 'styled-components'
 import supabase from '../../config/supabaseClient'
 import { usePermissionsStore } from '../../stores/permissionsStore'
 
-// Permission interface
-interface Permission {
-	id: string
-	name: string
-	description: string
-}
+
 
 // Role interface
 interface Role {
