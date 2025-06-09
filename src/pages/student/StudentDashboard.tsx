@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { FiAward, FiBook, FiCalendar, FiCheckSquare, FiClock, FiFileText } from 'react-icons/fi'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
+import { useTranslation } from 'react-i18next'
 import supabase from '../../config/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
 import {
@@ -40,6 +41,7 @@ interface DailyAttendance {
 
 const StudentDashboard: React.FC = () => {
 	const { user } = useAuth()
+	const { t } = useTranslation()
 	const [isLoading, setIsLoading] = useState(true)
 
 	// State for dashboard data
@@ -129,10 +131,10 @@ const StudentDashboard: React.FC = () => {
 
 	// Convert stats to the format needed for display
 	const dashboardStats: DashboardStatCard[] = [
-		{ id: 1, title: 'Courses', value: courseCount.toString(), icon: <FiBook />, color: 'primary' },
+		{ id: 1, title: t('student.dashboard.stats.courses'), value: courseCount.toString(), icon: <FiBook />, color: 'primary' },
 		{
 			id: 2,
-			title: 'Assignments',
+			title: t('student.dashboard.stats.assignments'),
 			value: assignmentCount.toString(),
 			icon: <FiFileText />,
 			color: 'yellow',
@@ -171,7 +173,7 @@ const StudentDashboard: React.FC = () => {
 	if (isLoading) {
 		return (
 			<LoadingContainer>
-				<div>Loading dashboard data...</div>
+				<div>{t('student.dashboard.loading')}</div>
 			</LoadingContainer>
 		)
 	}
@@ -190,14 +192,14 @@ const StudentDashboard: React.FC = () => {
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.3, delay: 0.1 }}
 					>
-						Welcome back, {user?.fullName || 'Student'}
+						{t('student.dashboard.welcomeBack', { name: user?.fullName || t('student.dashboard.fallbackName') })}
 					</motion.h1>
 					<motion.p
 						initial={{ opacity: 0, y: -10 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.3, delay: 0.2 }}
 					>
-						Here's an overview of your academic progress
+						{t('student.dashboard.academicOverview')}
 					</motion.p>
 				</WelcomeMessage>
 			</WelcomeSection>
@@ -234,10 +236,10 @@ const StudentDashboard: React.FC = () => {
 					<SectionHeader>
 						<SectionTitle>
 							<FiFileText />
-							<span>Pending Assignments</span>
+							<span>{t('student.dashboard.sections.pendingAssignments')}</span>
 						</SectionTitle>
 						<ViewAllButton as={Link} to='/student/assignments'>
-							View All
+							{t('student.dashboard.viewAll')}
 						</ViewAllButton>
 					</SectionHeader>
 					<ContentCard>
@@ -254,11 +256,11 @@ const StudentDashboard: React.FC = () => {
 										<SubjectBadge $subject={assignment.subject}>{assignment.subject}</SubjectBadge>
 										<AssignmentStatus $status={assignment.status}>
 											{assignment.status === 'pending'
-												? 'Pending'
+											? t('student.dashboard.status.pending')
 												: assignment.status === 'in-progress'
-												? 'In Progress'
+											? t('student.dashboard.status.inProgress')
 												: assignment.status === 'completed'
-												? 'Completed'
+											? t('student.dashboard.status.completed')
 												: assignment.status.charAt(0).toUpperCase() + assignment.status.slice(1)}
 										</AssignmentStatus>
 									</AssignmentHeader>
@@ -266,7 +268,7 @@ const StudentDashboard: React.FC = () => {
 									<AssignmentDueDate>
 										<FiClock size={14} />
 										<span>
-											Due:{' '}
+											{t('student.dashboard.due')}{' '}
 											{new Date(assignment.dueDate).toLocaleDateString('en-US', {
 												month: 'short',
 												day: 'numeric',
@@ -277,7 +279,7 @@ const StudentDashboard: React.FC = () => {
 								</AssignmentItem>
 							))
 						) : (
-							<EmptyState>No pending assignments</EmptyState>
+							<EmptyState>{t('student.dashboard.emptyStates.noPendingAssignments')}</EmptyState>
 						)}
 					</ContentCard>
 				</GridItem>
@@ -292,15 +294,15 @@ const StudentDashboard: React.FC = () => {
 					<SectionHeader>
 						<SectionTitle>
 							<FiCheckSquare />
-							<span>Daily Attendance</span>
+							<span>{t('student.dashboard.sections.dailyAttendance')}</span>
 						</SectionTitle>
 						<ViewAllButton as={Link} to='/student/daily-attendance'>
-							View All
+							{t('student.dashboard.viewAll')}
 						</ViewAllButton>
 					</SectionHeader>
 					<ContentCard>
 						{loadingAttendance ? (
-							<LoadingState>Loading attendance records...</LoadingState>
+							<LoadingState>{t('student.dashboard.loading.attendanceRecords')}</LoadingState>
 						) : recentAttendance.length > 0 ? (
 							recentAttendance.map((record, index) => (
 								<AttendanceItem
@@ -312,12 +314,20 @@ const StudentDashboard: React.FC = () => {
 								>
 									<AttendanceDate>{formatDate(record.noted_for)}</AttendanceDate>
 									<AttendanceStatus $status={record.status}>
-										{record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+										{record.status === 'present' 
+											? t('student.dashboard.attendanceStatus.present')
+											: record.status === 'late'
+											? t('student.dashboard.attendanceStatus.late') 
+											: record.status === 'excused'
+											? t('student.dashboard.attendanceStatus.excused')
+											: record.status === 'absent'
+											? t('student.dashboard.attendanceStatus.absent')
+											: record.status.charAt(0).toUpperCase() + record.status.slice(1)}
 									</AttendanceStatus>
 								</AttendanceItem>
 							))
 						) : (
-							<EmptyState>No attendance records found</EmptyState>
+							<EmptyState>{t('student.dashboard.emptyStates.noAttendanceRecords')}</EmptyState>
 						)}
 					</ContentCard>
 				</GridItem>
@@ -332,10 +342,10 @@ const StudentDashboard: React.FC = () => {
 					<SectionHeader>
 						<SectionTitle>
 							<FiCalendar />
-							<span>Today's Schedule</span>
+							<span>{t('student.dashboard.sections.todaySchedule')}</span>
 						</SectionTitle>
 						<ViewAllButton as={Link} to='/student/schedule'>
-							View Calendar
+							{t('student.dashboard.viewCalendar')}
 						</ViewAllButton>
 					</SectionHeader>
 					<ContentCard>
@@ -358,12 +368,12 @@ const StudentDashboard: React.FC = () => {
 									</ScheduleTime>
 									<ScheduleDetails>
 										<LessonTitle>{entry.title}</LessonTitle>
-										<LessonDetails>{entry.location || 'No Location'}</LessonDetails>
+										<LessonDetails>{entry.location || t('student.dashboard.noLocation')}</LessonDetails>
 									</ScheduleDetails>
 								</ScheduleItem>
 							))
 						) : (
-							<EmptyState>No lessons scheduled for today</EmptyState>
+							<EmptyState>{t('student.dashboard.emptyStates.noLessonsToday')}</EmptyState>
 						)}
 					</ContentCard>
 				</GridItem>
@@ -378,9 +388,9 @@ const StudentDashboard: React.FC = () => {
 					<SectionHeader>
 						<SectionTitle>
 							<FiAward />
-							<span>Recent Grades</span>
+							<span>{t('student.dashboard.sections.recentGrades')}</span>
 						</SectionTitle>
-						<ViewAllButton>View All</ViewAllButton>
+						<ViewAllButton>{t('student.dashboard.viewAll')}</ViewAllButton>
 					</SectionHeader>
 					<ContentCard>
 						{grades.length > 0 ? (
@@ -406,7 +416,7 @@ const StudentDashboard: React.FC = () => {
 								</GradeItem>
 							))
 						) : (
-							<EmptyState>No grades to display</EmptyState>
+							<EmptyState>{t('student.dashboard.emptyStates.noGrades')}</EmptyState>
 						)}
 					</ContentCard>
 				</GridItem>
@@ -421,10 +431,10 @@ const StudentDashboard: React.FC = () => {
 					<SectionHeader>
 						<SectionTitle>
 							<FiBook />
-							<span>My Courses</span>
+							<span>{t('student.dashboard.sections.myCourses')}</span>
 						</SectionTitle>
 						<ViewAllButton as={Link} to='/student/courses'>
-							View All
+							{t('student.dashboard.viewAll')}
 						</ViewAllButton>
 					</SectionHeader>
 					<ContentCard>
@@ -442,7 +452,7 @@ const StudentDashboard: React.FC = () => {
 								</CourseItem>
 							))
 						) : (
-							<EmptyState>No courses enrolled</EmptyState>
+							<EmptyState>{t('student.dashboard.emptyStates.noCourses')}</EmptyState>
 						)}
 					</ContentCard>
 				</GridItem>

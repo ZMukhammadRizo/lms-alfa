@@ -11,6 +11,7 @@ import {
 	FiSearch,
 	FiVideo,
 } from 'react-icons/fi'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
@@ -53,6 +54,7 @@ interface ExtendedAssignment extends Assignment {
 }
 
 const Assignments: React.FC = () => {
+	const { t } = useTranslation()
 	const [searchTerm, setSearchTerm] = useState('')
 	const [selectedCourse, setSelectedCourse] = useState<string | null>(null)
 	const [showCourseDropdown, setShowCourseDropdown] = useState(false)
@@ -123,8 +125,8 @@ const Assignments: React.FC = () => {
 								...assignment,
 								created_at, // Add the fixed created_at
 								subjectName: assignment.subject_id
-									? subjectMap.get(assignment.subject_id) || 'Unknown Subject'
-									: 'General',
+									? subjectMap.get(assignment.subject_id) || t('student.assignments.unknownSubject')
+									: t('student.assignments.general'),
 								submission: processedSubmission,
 							} as ExtendedAssignment
 						} catch (error) {
@@ -141,8 +143,8 @@ const Assignments: React.FC = () => {
 								...assignment,
 								created_at, // Add the fixed created_at
 								subjectName: assignment.subject_id
-									? subjectMap.get(assignment.subject_id) || 'Unknown Subject'
-									: 'General',
+									? subjectMap.get(assignment.subject_id) || t('student.assignments.unknownSubject')
+									: t('student.assignments.general'),
 							} as ExtendedAssignment
 						}
 					})
@@ -152,7 +154,7 @@ const Assignments: React.FC = () => {
 				setCourses(coursesData)
 			} catch (error) {
 				console.error('Error fetching assignments data:', error)
-				toast.error('Failed to load assignments. Please try again later.')
+				toast.error(t('student.assignments.errors.failedToLoad'))
 			} finally {
 				setLoading(false)
 			}
@@ -163,14 +165,14 @@ const Assignments: React.FC = () => {
 
 	// Format date for display - with error handling
 	const formatDate = (dateString: string | null | undefined): string => {
-		if (!dateString) return 'Not specified'
+		if (!dateString) return t('student.assignments.dates.notSpecified')
 
 		try {
 			const date = new Date(dateString)
 
 			// Check if date is valid
 			if (isNaN(date.getTime())) {
-				return 'Not specified'
+				return t('student.assignments.dates.notSpecified')
 			}
 
 			return date.toLocaleDateString('en-US', {
@@ -180,20 +182,20 @@ const Assignments: React.FC = () => {
 			})
 		} catch (error) {
 			console.error('Error formatting date:', error)
-			return 'Not specified'
+			return t('student.assignments.dates.notSpecified')
 		}
 	}
 
 	// Format time for display - with error handling
 	const formatTime = (dateString: string | null | undefined): string => {
-		if (!dateString) return 'N/A'
+		if (!dateString) return t('student.assignments.dates.notAvailable')
 
 		try {
 			const date = new Date(dateString)
 
 			// Check if date is valid
 			if (isNaN(date.getTime())) {
-				return 'N/A'
+				return t('student.assignments.dates.notAvailable')
 			}
 
 			return date.toLocaleTimeString('en-US', {
@@ -202,7 +204,7 @@ const Assignments: React.FC = () => {
 			})
 		} catch (error) {
 			console.error('Error formatting time:', error)
-			return 'N/A'
+			return t('student.assignments.dates.notAvailable')
 		}
 	}
 
@@ -213,31 +215,31 @@ const Assignments: React.FC = () => {
 		if (!due_date) {
 			return assignment.status
 				? assignment.status.charAt(0).toUpperCase() + assignment.status.slice(1)
-				: 'Unknown'
+				: t('student.assignments.statuses.unknown')
 		}
 
 		// First check submission status - prioritize teacher's status feedback
 		if (submission) {
 			if (submission.status === 'accepted') {
-				return 'Accepted'
+				return t('student.assignments.statuses.accepted')
 			}
 
 			if (submission.status === 'rejected') {
-				return 'Rejected'
+				return t('student.assignments.statuses.rejected')
 			}
 
 			// Check if assignment has been resubmitted (more than one file and null status)
 			if (submission.status === null && submission.fileurl && submission.fileurl.length > 1) {
-				return 'Resubmitted'
+				return t('student.assignments.statuses.resubmitted')
 			}
 
 			// Then check if graded
 			if (submission.grade !== undefined && submission.grade !== null) {
-				return 'Completed'
+				return t('student.assignments.statuses.completed')
 			}
 
 			// Default for any submission without explicit status
-			return 'Submitted'
+			return t('student.assignments.statuses.submitted')
 		}
 
 		// Local implementation of getDaysRemaining
@@ -268,13 +270,80 @@ const Assignments: React.FC = () => {
 		// If not submitted, check due date
 		const days = getLocalDaysRemaining(due_date)
 		if (days <= 3 && days > 0) {
-			return 'Due Soon'
+			return t('student.assignments.statuses.dueSoon')
 		} else if (days <= 0) {
-			return 'Overdue'
+			return t('student.assignments.statuses.overdue')
 		} else if (days <= 7) {
-			return 'In Progress'
+			return t('student.assignments.statuses.inProgress')
 		} else {
-			return 'Upcoming'
+			return t('student.assignments.statuses.upcoming')
+		}
+	}
+
+	// Helper function to get status type for colors (language-independent)
+	const getStatusType = (assignment: ExtendedAssignment): string => {
+		const { due_date, submission } = assignment
+
+		if (!due_date) {
+			return assignment.status || 'unknown'
+		}
+
+		// First check submission status - prioritize teacher's status feedback
+		if (submission) {
+			if (submission.status === 'accepted') {
+				return 'accepted'
+			}
+
+			if (submission.status === 'rejected') {
+				return 'rejected'
+			}
+
+			// Check if assignment has been resubmitted
+			if (submission.status === null && submission.fileurl && submission.fileurl.length > 1) {
+				return 'resubmitted'
+			}
+
+			// Then check if graded
+			if (submission.grade !== undefined && submission.grade !== null) {
+				return 'completed'
+			}
+
+			// Default for any submission without explicit status
+			return 'submitted'
+		}
+
+		// If not submitted, check due date
+		const getLocalDaysRemaining = (dueDateStr: string): number => {
+			try {
+				const dueDate = new Date(dueDateStr)
+				const today = new Date()
+
+				if (isNaN(dueDate.getTime())) {
+					return 0
+				}
+
+				today.setHours(0, 0, 0, 0)
+				dueDate.setHours(0, 0, 0, 0)
+
+				const differenceMs = dueDate.getTime() - today.getTime()
+				const differenceDays = Math.ceil(differenceMs / (1000 * 3600 * 24))
+
+				return differenceDays
+			} catch (error) {
+				console.error('Error calculating days remaining:', error)
+				return 0
+			}
+		}
+
+		const days = getLocalDaysRemaining(due_date)
+		if (days <= 3 && days > 0) {
+			return 'dueSoon'
+		} else if (days <= 0) {
+			return 'overdue'
+		} else if (days <= 7) {
+			return 'inProgress'
+		} else {
+			return 'upcoming'
 		}
 	}
 
@@ -301,9 +370,9 @@ const Assignments: React.FC = () => {
 
 	// Get course name for dropdown display
 	const getCourseName = (courseId: string | null) => {
-		if (!courseId) return 'All Courses'
+		if (!courseId) return t('student.assignments.allCourses')
 		const course = courses.find(c => c.id === courseId)
-		return course ? course.name : 'All Courses'
+		return course ? course.name : t('student.assignments.allCourses')
 	}
 
 	// Open modal with assignment details
@@ -316,7 +385,7 @@ const Assignments: React.FC = () => {
 		try {
 			// Check if URL exists
 			if (!file.url) {
-				toast.error('File URL is missing. Cannot download the file.')
+				toast.error(t('student.assignments.errors.fileUrlMissing'))
 				return
 			}
 
@@ -331,10 +400,10 @@ const Assignments: React.FC = () => {
 			link.click()
 			document.body.removeChild(link)
 
-			toast.success(`Downloading file: ${file.name}`)
+			toast.success(t('student.assignments.messages.downloadingFile', { fileName: file.name }))
 		} catch (error) {
 			console.error('Error downloading file:', error)
-			toast.error('Failed to download file. Please try again.')
+			toast.error(t('student.assignments.errors.downloadFailed'))
 		}
 	}
 
@@ -351,7 +420,7 @@ const Assignments: React.FC = () => {
 	}
 
 	const getFileName = (fileUrl: string | null | undefined) => {
-		if (!fileUrl) return 'Assignment Document'
+		if (!fileUrl) return t('student.assignments.attachments.document')
 
 		try {
 			// Extract filename from URL
@@ -363,7 +432,7 @@ const Assignments: React.FC = () => {
 
 			// If the file name is still complex or empty, provide a default
 			if (!fileName || fileName.length < 3) {
-				return 'Assignment Document'
+				return t('student.assignments.attachments.document')
 			}
 
 			// Try to decode URI components and remove any UUID prefixes
@@ -378,12 +447,12 @@ const Assignments: React.FC = () => {
 			}
 			// Also clean up if it's just a UUID without a real filename
 			else if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(decodedName)) {
-				return 'Assignment Document'
+				return t('student.assignments.attachments.document')
 			}
 
 			return decodedName
 		} catch (e) {
-			return 'Assignment Document'
+			return t('student.assignments.attachments.document')
 		}
 	}
 
@@ -391,7 +460,7 @@ const Assignments: React.FC = () => {
 		return (
 			<LoadingContainer>
 				<LoadingSpinner />
-				<p>Loading assignments...</p>
+				<p>{t('student.assignments.loadingAssignments')}</p>
 			</LoadingContainer>
 		)
 	}
@@ -400,8 +469,8 @@ const Assignments: React.FC = () => {
 		<AssignmentsContainer>
 			<PageHeader>
 				<HeaderContent>
-					<PageTitle>Assignments</PageTitle>
-					<PageDescription>View and manage your course assignments</PageDescription>
+					<PageTitle>{t('student.assignments.title')}</PageTitle>
+					<PageDescription>{t('student.assignments.description')}</PageDescription>
 				</HeaderContent>
 			</PageHeader>
 
@@ -412,7 +481,7 @@ const Assignments: React.FC = () => {
 					</SearchIcon>
 					<SearchInput
 						type='text'
-						placeholder='Search assignments...'
+						placeholder={t('student.assignments.searchPlaceholder')}
 						value={searchTerm}
 						onChange={e => setSearchTerm(e.target.value)}
 					/>
@@ -431,7 +500,7 @@ const Assignments: React.FC = () => {
 									onClick={() => handleCourseSelect(null)}
 									$isSelected={selectedCourse === null}
 								>
-									All Courses
+									{t('student.assignments.allCourses')}
 								</CourseOption>
 								{courses.map(course => (
 									<CourseOption
@@ -448,49 +517,49 @@ const Assignments: React.FC = () => {
 
 					<TabsContainer>
 						<TabButton $isActive={activeTab === 'all'} onClick={() => setActiveTab('all')}>
-							All
+							{t('student.assignments.statuses.all')}
 						</TabButton>
 						<TabButton
 							$isActive={activeTab === 'in-progress' || activeTab === 'In Progress'}
 							onClick={() => setActiveTab('In Progress')}
 						>
-							In Progress
+							{t('student.assignments.statuses.inProgress')}
 						</TabButton>
 						<TabButton
 							$isActive={activeTab === 'upcoming' || activeTab === 'Upcoming'}
 							onClick={() => setActiveTab('Upcoming')}
 						>
-							Upcoming
+							{t('student.assignments.statuses.upcoming')}
 						</TabButton>
 						<TabButton
 							$isActive={activeTab === 'submitted' || activeTab === 'Submitted'}
 							onClick={() => setActiveTab('Submitted')}
 						>
-							Submitted
+							{t('student.assignments.statuses.submitted')}
 						</TabButton>
 						<TabButton
 							$isActive={activeTab === 'resubmitted' || activeTab === 'Resubmitted'}
 							onClick={() => setActiveTab('Resubmitted')}
 						>
-							Resubmitted
+							{t('student.assignments.statuses.resubmitted')}
 						</TabButton>
 						<TabButton
 							$isActive={activeTab === 'completed' || activeTab === 'Completed'}
 							onClick={() => setActiveTab('Completed')}
 						>
-							Completed
+							{t('student.assignments.statuses.completed')}
 						</TabButton>
 						<TabButton
 							$isActive={activeTab === 'due soon' || activeTab === 'Due Soon'}
 							onClick={() => setActiveTab('Due Soon')}
 						>
-							Due Soon
+							{t('student.assignments.statuses.dueSoon')}
 						</TabButton>
 						<TabButton
 							$isActive={activeTab === 'overdue' || activeTab === 'Overdue'}
 							onClick={() => setActiveTab('Overdue')}
 						>
-							Overdue
+							{t('student.assignments.statuses.overdue')}
 						</TabButton>
 					</TabsContainer>
 				</FilterControls>
@@ -502,9 +571,9 @@ const Assignments: React.FC = () => {
 						<AssignmentContent>
 							<AssignmentHeader>
 								<CourseName>
-									{assignment.subjectName || assignment.className || 'General'}
+									{assignment.subjectName || assignment.className || t('student.assignments.general')}
 								</CourseName>
-								<AssignmentStatus $status={getStatusText(assignment)}>
+								<AssignmentStatus $status={getStatusType(assignment)}>
 									{getStatusText(assignment)}
 								</AssignmentStatus>
 							</AssignmentHeader>
@@ -513,11 +582,11 @@ const Assignments: React.FC = () => {
 							<AssignmentDates>
 								<DateItem>
 									<FiCalendar size={14} />
-									Assigned: {formatDate(assignment.created_at)}
+									{t('student.assignments.dates.assigned')} {formatDate(assignment.created_at)}
 								</DateItem>
 								<DateItem>
 									<FiClock size={14} />
-									Due: {formatDate(assignment.due_date)} at {formatTime(assignment.due_date)}
+									{t('student.assignments.dates.due')} {formatDate(assignment.due_date)} {t('student.assignments.dates.at')} {formatTime(assignment.due_date)}
 								</DateItem>
 							</AssignmentDates>
 
@@ -525,7 +594,7 @@ const Assignments: React.FC = () => {
 								<AttachmentsSection>
 									<AttachmentsHeader>
 										<FiPaperclip size={14} />
-										<span>Attachments ({assignment.attachments.length})</span>
+										<span>{t('student.assignments.attachments.count', { count: assignment.attachments.length })}</span>
 									</AttachmentsHeader>
 									<AttachmentsList>
 										{assignment.attachments.map(attachment => (
@@ -540,21 +609,21 @@ const Assignments: React.FC = () => {
 							)}
 
 							{assignment.status === 'completed' ||
-							getStatusText(assignment) === 'Completed' ||
-							getStatusText(assignment) === 'Submitted' ||
-							getStatusText(assignment) === 'Accepted' ||
-							getStatusText(assignment) === 'Resubmitted' ||
-							getStatusText(assignment) === 'Rejected' ? (
+							getStatusType(assignment) === 'completed' ||
+							getStatusType(assignment) === 'submitted' ||
+							getStatusType(assignment) === 'accepted' ||
+							getStatusType(assignment) === 'resubmitted' ||
+							getStatusType(assignment) === 'rejected' ? (
 								<CompletedSection>
 									<CompletedHeader>
 										<FiCheckCircle
 											size={14}
-											color={getStatusText(assignment) === 'Rejected' ? '#f44336' : '#4caf50'}
+											color={getStatusType(assignment) === 'rejected' ? '#f44336' : '#4caf50'}
 										/>
 										<span>
 											{assignment.submission
-												? `Submitted on ${formatDate(assignment.submission.submittedat)}`
-												: `Completed on ${formatDate(
+												? `${t('student.assignments.dates.submittedOn')} ${formatDate(assignment.submission.submittedat)}`
+												: `${t('student.assignments.dates.completedOn')} ${formatDate(
 														assignment.submission_date || assignment.updated_at
 												  )}`}
 										</span>
@@ -562,7 +631,7 @@ const Assignments: React.FC = () => {
 									{assignment.submission?.grade !== undefined &&
 										assignment.submission?.grade !== null && (
 											<GradeDisplay>
-												<GradeLabel>Grade:</GradeLabel>
+												<GradeLabel>{t('student.assignments.grading.grade')}</GradeLabel>
 												<GradeValue $score={assignment.submission.grade}>
 													{assignment.submission.grade}/10
 												</GradeValue>
@@ -570,7 +639,7 @@ const Assignments: React.FC = () => {
 										)}
 									{assignment.submission?.feedback && (
 										<FeedbackPreview>
-											<FeedbackLabel>Feedback:</FeedbackLabel>
+											<FeedbackLabel>{t('student.assignments.grading.feedback')}</FeedbackLabel>
 											<FeedbackText>
 												{assignment.submission.feedback.length > 50
 													? `${assignment.submission.feedback.substring(0, 50)}...`
@@ -583,18 +652,18 @@ const Assignments: React.FC = () => {
 								<CompletedSection>
 									<CompletedHeader>
 										<FiClock size={14} color='#9e9e9e' />
-										<span>Not submitted yet</span>
+										<span>{t('student.assignments.submission.notSubmittedYet')}</span>
 									</CompletedHeader>
 									<GradeDisplay>
-										<GradeLabel>Grade:</GradeLabel>
+										<GradeLabel>{t('student.assignments.grading.grade')}</GradeLabel>
 										<span style={{ fontSize: '13px', color: '#9e9e9e', fontStyle: 'italic' }}>
-											Not graded yet
+											{t('student.assignments.grading.notGradedYet')}
 										</span>
 									</GradeDisplay>
 									<FeedbackPreview>
-										<FeedbackLabel>Feedback:</FeedbackLabel>
+										<FeedbackLabel>{t('student.assignments.grading.feedback')}</FeedbackLabel>
 										<FeedbackText style={{ color: '#9e9e9e', fontStyle: 'italic' }}>
-											Feedback will be provided after submission
+											{t('student.assignments.grading.feedbackPending')}
 										</FeedbackText>
 									</FeedbackPreview>
 								</CompletedSection>
@@ -603,7 +672,7 @@ const Assignments: React.FC = () => {
 
 						<AssignmentFooter>
 							<ViewDetailsButton>
-								<Link to={`/student/assignments/${assignment.id}`}>View Details</Link>
+								<Link to={`/student/assignments/${assignment.id}`}>{t('student.assignments.submission.viewDetails')}</Link>
 							</ViewDetailsButton>
 						</AssignmentFooter>
 					</AssignmentCard>
@@ -613,8 +682,8 @@ const Assignments: React.FC = () => {
 			{filteredAssignments.length === 0 && (
 				<NoAssignmentsMessage>
 					<FiFileText size={40} />
-					<h3>No assignments found</h3>
-					<p>Try adjusting your search or filters to find assignments</p>
+					<h3>{t('student.assignments.noAssignments')}</h3>
+					<p>{t('student.assignments.tryAdjustingFilters')}</p>
 				</NoAssignmentsMessage>
 			)}
 		</AssignmentsContainer>
@@ -898,7 +967,7 @@ const CourseName = styled.span`
 `
 
 interface StatusProps {
-	$status: 'Completed' | 'Submitted' | 'In Progress' | 'Due Soon' | 'Overdue' | 'Upcoming' | string
+	$status: 'completed' | 'submitted' | 'inProgress' | 'dueSoon' | 'overdue' | 'upcoming' | 'accepted' | 'rejected' | 'resubmitted' | string
 }
 
 const AssignmentStatus = styled.span<StatusProps>`
@@ -908,23 +977,23 @@ const AssignmentStatus = styled.span<StatusProps>`
 	font-weight: 600;
 	background-color: ${props => {
 		switch (props.$status) {
-			case 'Completed':
+			case 'completed':
 				return '#e8f5e9' // Light green
-			case 'Submitted':
+			case 'submitted':
 				return '#e1f5fe' // Light blue
-			case 'Accepted':
+			case 'accepted':
 				return '#dcfce7' // Light green (success)
-			case 'Rejected':
+			case 'rejected':
 				return '#fee2e2' // Light red
-			case 'Resubmitted':
+			case 'resubmitted':
 				return '#e8f7ff' // Light blue (different shade)
-			case 'In Progress':
+			case 'inProgress':
 				return '#e3f2fd' // Medium blue
-			case 'Due Soon':
+			case 'dueSoon':
 				return '#fff3e0' // Orange-ish
-			case 'Overdue':
+			case 'overdue':
 				return '#ffebee' // Red-ish
-			case 'Upcoming':
+			case 'upcoming':
 				return '#fff8e1' // Yellow-ish
 			default:
 				return '#f5f5f5' // Light gray
@@ -932,23 +1001,23 @@ const AssignmentStatus = styled.span<StatusProps>`
 	}};
 	color: ${props => {
 		switch (props.$status) {
-			case 'Completed':
+			case 'completed':
 				return '#4caf50' // Green
-			case 'Submitted':
+			case 'submitted':
 				return '#03a9f4' // Blue
-			case 'Accepted':
+			case 'accepted':
 				return '#16a34a' // Green (success)
-			case 'Rejected':
+			case 'rejected':
 				return '#dc2626' // Red (danger)
-			case 'Resubmitted':
+			case 'resubmitted':
 				return '#0288d1' // Darker blue
-			case 'In Progress':
+			case 'inProgress':
 				return '#2196f3' // Medium blue
-			case 'Due Soon':
+			case 'dueSoon':
 				return '#ff9800' // Orange
-			case 'Overdue':
+			case 'overdue':
 				return '#f44336' // Red
-			case 'Upcoming':
+			case 'upcoming':
 				return '#ffc107' // Amber
 			default:
 				return '#9e9e9e' // Gray

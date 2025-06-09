@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { FiBook, FiUser, FiSearch, FiCheck, FiX, FiChevronRight, FiRefreshCw } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { getStudentGrades, SubjectGrade, getQuarters, getMockGrades, debugCheckTables } from '../../services/gradesService';
 import { testGradesDBSetup } from '../../utils/dbTester';
@@ -39,6 +40,7 @@ const cardVariants = {
 // Add style for No Grade text (defined before use)
 
 const Grades: React.FC = () => {
+  const { t } = useTranslation();
   const [subjects, setSubjects] = useState<SubjectGrade[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
@@ -81,7 +83,7 @@ const Grades: React.FC = () => {
         setLoading(false);
       } catch (error) {
         console.error('Error fetching grade data:', error);
-        toast.error('Failed to load grades data. Using example data instead.');
+        toast.error(t('student.grades.errorLoading'));
         
         // Use mock data for demonstration
         const mockData = getMockGrades();
@@ -106,7 +108,7 @@ const Grades: React.FC = () => {
   // Run database diagnostic
   const runDiagnostic = async () => {
     if (!user?.id) {
-      toast.error('You need to be logged in to run diagnostics');
+      toast.error(t('student.grades.loginRequired'));
       return;
     }
     
@@ -116,13 +118,13 @@ const Grades: React.FC = () => {
       setDiagnosticResults(results);
       
       if (results.success) {
-        toast.success('Database setup verified successfully!');
+        toast.success(t('student.grades.diagnosticSuccess'));
       } else {
-        toast.error(`Database issues found: ${results.message}`);
+        toast.error(t('student.grades.diagnosticError', { message: results.message }));
       }
     } catch (error) {
       console.error('Error running diagnostic:', error);
-      toast.error('Failed to run diagnostics');
+      toast.error(t('student.grades.diagnosticFailed'));
     } finally {
       setDiagLoading(false);
     }
@@ -133,7 +135,7 @@ const Grades: React.FC = () => {
     return (
       <LoadingContainer>
         <LoadingSpinner />
-        <p>Loading grades...</p>
+        <p>{t('student.grades.loading')}</p>
       </LoadingContainer>
     );
   }
@@ -142,8 +144,8 @@ const Grades: React.FC = () => {
     <GradesContainer>
       <PageHeader>
         <HeaderContent>
-          <PageTitle>My Grades</PageTitle>
-          <PageDescription>View your academic progress and attendance</PageDescription>
+          <PageTitle>{t('student.grades.title')}</PageTitle>
+          <PageDescription>{t('student.grades.description')}</PageDescription>
         </HeaderContent>
        
       </PageHeader>
@@ -151,7 +153,7 @@ const Grades: React.FC = () => {
       {diagnosticMode && (
         <DiagnosticsPanel>
           <DiagnosticsHeader>
-            <h3>Database Diagnostics</h3>
+            <h3>{t('student.grades.diagnostics.title')}</h3>
             <RefreshButton onClick={runDiagnostic} disabled={diagLoading}>
               <FiRefreshCw size={16} className={diagLoading ? 'spin' : ''} />
             </RefreshButton>
@@ -160,7 +162,7 @@ const Grades: React.FC = () => {
           {diagnosticResults ? (
             <>
               <DiagnosticsSection>
-                <h4>Tables Status:</h4>
+                <h4>{t('student.grades.diagnostics.tablesStatus')}:</h4>
                 <TableGrid>
                   {Object.entries(diagnosticResults.tables).map(([table, exists]) => (
                     <TableStatus key={table} $exists={exists as boolean}>
@@ -173,10 +175,10 @@ const Grades: React.FC = () => {
               
               {diagnosticResults.userData && (
                 <DiagnosticsSection>
-                  <h4>User Data:</h4>
+                  <h4>{t('student.grades.diagnostics.userData')}:</h4>
                   <div>
-                    <p><strong>Classes:</strong> {diagnosticResults.userData.classes?.length || 0}</p>
-                    <p><strong>Subjects:</strong> {diagnosticResults.userData.subjects?.length || 0}</p>
+                    <p><strong>{t('student.grades.diagnostics.classes')}:</strong> {diagnosticResults.userData.classes?.length || 0}</p>
+                    <p><strong>{t('student.grades.diagnostics.subjects')}:</strong> {diagnosticResults.userData.subjects?.length || 0}</p>
                   </div>
                 </DiagnosticsSection>
               )}
@@ -186,7 +188,7 @@ const Grades: React.FC = () => {
               </DiagnosticMessage>
             </>
           ) : (
-            <p>No diagnostic information available. Run the check to verify your database setup.</p>
+            <p>{t('student.grades.diagnostics.noDiagnostic')}</p>
           )}
         </DiagnosticsPanel>
       )}
@@ -198,7 +200,7 @@ const Grades: React.FC = () => {
           </SearchIcon>
           <SearchInput 
             type="text" 
-            placeholder="Search subjects or teachers..." 
+            placeholder={t('student.grades.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -240,7 +242,7 @@ const Grades: React.FC = () => {
                   console.log(`Navigating to subject grades for ID: ${subject.id}`);
                   navigate(`/student/grades/${subject.id}`);
                 }}>
-                  <span>View Full Details</span>
+                  <span>{t('student.grades.viewFullDetails')}</span>
                   <FiChevronRight size={16} />
                 </ViewMoreButton>
               </SubjectCard>
@@ -252,8 +254,8 @@ const Grades: React.FC = () => {
       {filteredSubjects.length === 0 && (
         <NoSubjectsMessage>
           <FiBook size={40} />
-          <h3>No subjects found</h3>
-          <p>You don't have any subjects assigned yet or your search didn't match any subjects</p>
+          <h3>{t('student.grades.noSubjectsFound')}</h3>
+          <p>{t('student.grades.noSubjectsDescription')}</p>
         </NoSubjectsMessage>
       )}
     </GradesContainer>
