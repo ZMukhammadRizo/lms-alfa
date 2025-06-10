@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { 
   FiCalendar, FiClock, FiFilter, FiChevronDown, 
   FiChevronLeft, FiChevronRight, FiArrowUp, FiUser,
-  FiMapPin, FiEdit, FiPlus, FiX, FiUsers
+  FiMapPin, FiEdit, FiPlus, FiX, FiUsers, FiBook, FiTrash
 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import supabase from '../../config/supabaseClient';
@@ -475,7 +475,47 @@ const CurrentTimeIndicator = styled.div`
   }
 `;
 
+const ColorLegend = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 15px;
+  padding: 15px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+`;
 
+const LegendTitle = styled.div`
+  font-weight: 600;
+  font-size: 14px;
+  color: #1e293b;
+`;
+
+const LegendItems = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+`;
+
+const LegendItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const ColorCircle = styled.div<{ $color: string }>`
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: ${props => props.$color};
+`;
+
+const LegendText = styled.div`
+  font-size: 12px;
+  color: #64748b;
+`;
 
 const TimeLabel = styled.div`
   display: flex;
@@ -914,7 +954,7 @@ const TeacherDetail = styled(ClassDetails)`
 const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = false }): React.ReactNode => {
   // State variables and hooks
   const { t } = useTranslation();
-
+  const theme = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filterCourse, setFilterCourse] = useState<string | null>(null);
   const [filterClass, setFilterClass] = useState<string | null>(null);
@@ -954,7 +994,8 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<ClassEvent | null>(null);
   
-
+  // Create a service to manage browser detection
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
   
   // Get week days starting from monday
   const monday = new Date();
@@ -977,7 +1018,18 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
     return color;
   };
   
-
+  // Create course colors object
+  const courseColors = allCourses.reduce((acc: Record<string, string>, course: CourseData) => ({
+    ...acc,
+    [course.name]: course.color
+  }), {
+    // Fallback colors in case data isn't loaded yet
+    "Algebra": "#4F46E5",
+    "Physics": "#0EA5E9",
+    "Chemistry": "#10B981",
+    "Biology": "#F59E0B",
+    "Geometry": "#8B5CF6"
+  });
 
   // Fetch all subjects from Supabase
   useEffect(() => {
@@ -1260,7 +1312,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
           // Get details for these subject IDs from the subjects table
               const { data: subjectsData, error: subjectsError } = await supabase
                 .from('subjects')
-                .select('id, subjectname') // Assuming 'name' is the column for subject name
+                .select('id, name, color') // Assuming 'name' is the column for subject name
                 .in('id', subjectIds);
 
               if (subjectsError) throw subjectsError;
@@ -1268,8 +1320,8 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
               if (subjectsData) {
             setTeacherSpecificCourses(subjectsData.map(s => ({ 
               id: s.id, 
-              name: s.subjectname || `Subject ${s.id}`, 
-              color: getRandomColor(s.subjectname || `Subject ${s.id}`)
+              name: s.name || `Subject ${s.id}`, 
+              color: s.color || getRandomColor(s.name || `Subject ${s.id}`)
             })));
               } else {
                 setTeacherSpecificCourses([]);
@@ -1365,6 +1417,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
 
             if (classteacherError || !classteacherData || !teacherId) {
               // If no specific assignment in classteachers, fallback to the class teacher
+              const classItem = timetableData.find(item => item.classId === pair.classId);
               
               // Try to get teacher from classes table
               if (pair.classId) {
@@ -1565,6 +1618,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
   };
   
   // Get unique courses and teachers
+  const uniqueCourses = [...new Set(classEvents.map((event: ClassEvent) => event.course || ''))];
   const uniqueClasses = getUniqueClasses();
   const uniqueTeachers = [...new Set(classEvents.map((event: ClassEvent) => event.teacher || event.teacherid || '').filter(Boolean))];
   
@@ -1599,7 +1653,8 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
     });
   };
   
-
+  // Available classes for assignment 
+  const availableClasses = ['10A', '10B', '11A', '11B', '12A', '12B'];
   
   // Function to calculate date for a given day of week (0-6)
   const calculateDateForDay = (dayOfWeek: number): string => {
@@ -2405,7 +2460,11 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
     setShowDeleteModal(true);
   };
   
-
+  // Handle cancellation of delete
+  const handleCancelDelete = () => {
+    setEventToDelete(null);
+    setShowDeleteModal(false);
+  };
   
   // Handle deletion of a lesson
   const handleDeleteLesson = async () => {
@@ -3091,6 +3150,32 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
   );
 };
 
-
+// Helper component for detail items in the modal
+const DetailItem = ({ icon, label, children, span = 1 }) => (
+  <div style={{ 
+    gridColumn: `span ${span}`,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px'
+  }}>
+    <div style={{ 
+      fontSize: '13px', 
+      color: '#64748b',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px'
+    }}>
+      {icon}
+      {label}
+    </div>
+    <div style={{ 
+      fontSize: '16px', 
+      color: '#1e293b',
+      fontWeight: '500'
+    }}>
+      {children}
+    </div>
+  </div>
+);
 
 export default Timetables; 

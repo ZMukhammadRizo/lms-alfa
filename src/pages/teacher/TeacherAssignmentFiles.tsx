@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import {
 	FiArrowLeft,
 	FiChevronLeft,
@@ -29,12 +28,10 @@ interface Assignment {
 	file_url?: Array<{ name: string; url: string }> | string | null
 	subject_id?: string
 	subject_name?: string
-	creator_email?: string
 }
 
 // Component for displaying teacher assignment files
 const TeacherAssignmentFiles: React.FC = () => {
-	const { t } = useTranslation()
 	// Get assignment ID from URL
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
@@ -133,7 +130,7 @@ const TeacherAssignmentFiles: React.FC = () => {
 				if (data.file_url) {
 					if (Array.isArray(data.file_url)) {
 						// New format: array of objects
-						const fileUrls = data.file_url.map((file: { name: string; url: string }) => file.url)
+						const fileUrls = data.file_url.map(file => file.url)
 						setFiles(fileUrls)
 
 						// Set first file as active if available
@@ -154,7 +151,7 @@ const TeacherAssignmentFiles: React.FC = () => {
 			}
 		} catch (error) {
 			console.error('Error fetching assignment:', error)
-			toast.error(t('teacherAssignmentFiles.failedToLoadData'))
+			toast.error('Failed to load assignment data')
 		} finally {
 			setIsLoading(false)
 		}
@@ -238,7 +235,7 @@ const TeacherAssignmentFiles: React.FC = () => {
 			return decodeURIComponent(fullName.split('?')[0])
 		} catch (error) {
 			console.error('Error extracting filename:', error)
-			return t('teacherAssignmentFiles.unknownFile')
+			return 'Unknown File'
 		}
 	}
 
@@ -252,7 +249,7 @@ const TeacherAssignmentFiles: React.FC = () => {
 			case 'image':
 				return (
 					<PreviewContainer>
-						<PreviewImage src={activeFile} alt={t('teacherAssignmentFiles.filePreview')} />
+						<PreviewImage src={activeFile} alt='File preview' />
 					</PreviewContainer>
 				)
 			case 'pdf':
@@ -260,7 +257,7 @@ const TeacherAssignmentFiles: React.FC = () => {
 					<PreviewContainer>
 						<iframe
 							src={activeFile}
-							title={t('teacherAssignmentFiles.pdfDocument')}
+							title='PDF document'
 							width='100%'
 							height='100%'
 							style={{ border: 'none' }}
@@ -276,15 +273,15 @@ const TeacherAssignmentFiles: React.FC = () => {
 					<PreviewContainer>
 						<UnsupportedPreviewContainer>
 							<FileIconLarge>{getFileIcon(activeFile)}</FileIconLarge>
-							<p>{t('teacherAssignmentFiles.unsupportedPreviewMessage')}</p>
+							<p>This file type cannot be previewed directly.</p>
 							<PreviewActionButtons>
 								<StyledButton as='a' href={activeFile} target='_blank' rel='noopener noreferrer'>
 									<FiExternalLink style={{ marginRight: '8px' }} />
-									{t('teacherAssignmentFiles.openInNewTab')}
+									Open in new tab
 								</StyledButton>
 								<StyledButton as='a' href={activeFile} download={getFileName(activeFile)}>
 									<FiDownload style={{ marginRight: '8px' }} />
-									{t('teacherAssignmentFiles.download')}
+									Download
 								</StyledButton>
 							</PreviewActionButtons>
 						</UnsupportedPreviewContainer>
@@ -296,11 +293,11 @@ const TeacherAssignmentFiles: React.FC = () => {
 					<PreviewContainer>
 						<UnsupportedPreviewContainer>
 							<FileIconLarge>{getFileIcon(activeFile)}</FileIconLarge>
-							<p>{t('teacherAssignmentFiles.cannotPreview')}</p>
+							<p>This file type cannot be previewed.</p>
 							<PreviewActionButtons>
 								<StyledButton as='a' href={activeFile} download={getFileName(activeFile)}>
 									<FiDownload style={{ marginRight: '8px' }} />
-									{t('teacherAssignmentFiles.download')}
+									Download
 								</StyledButton>
 							</PreviewActionButtons>
 						</UnsupportedPreviewContainer>
@@ -329,11 +326,11 @@ const TeacherAssignmentFiles: React.FC = () => {
 
 	// Format date for display
 	const formatDate = (dateString?: string) => {
-		if (!dateString) return t('teacherAssignmentFiles.noDueDate')
+		if (!dateString) return 'No due date'
 
 		try {
 			const date = new Date(dateString)
-			return date.toLocaleDateString(navigator.language, {
+			return date.toLocaleDateString('en-US', {
 				year: 'numeric',
 				month: 'long',
 				day: 'numeric',
@@ -351,59 +348,59 @@ const TeacherAssignmentFiles: React.FC = () => {
 			<Header>
 				<BackButton onClick={handleBack}>
 					<FiArrowLeft size={20} />
-					<span>{t('teacherAssignmentFiles.backToAssignments')}</span>
+					<span>Back to Assignments</span>
 				</BackButton>
-				<Title>{assignment?.title || t('teacherAssignmentFiles.assignmentFiles')}</Title>
+				<Title>{assignment?.title || 'Assignment Files'}</Title>
 			</Header>
 
 			{isLoading ? (
 				<LoadingContainer>
-					<div>{t('teacherAssignmentFiles.loadingFiles')}</div>
+					<div>Loading assignment files...</div>
 				</LoadingContainer>
 			) : (
 				<ContentContainer>
 					{files.length === 0 ? (
 						<NoFilesMessage>
 							<FiPaperclip size={32} />
-							<p>{t('teacherAssignmentFiles.noFilesAttached')}</p>
-							<BackButton onClick={handleBack}>{t('teacherAssignmentFiles.returnToAssignments')}</BackButton>
+							<p>No files are attached to this assignment.</p>
+							<BackButton onClick={handleBack}>Return to Assignments</BackButton>
 						</NoFilesMessage>
 					) : (
 						<>
 							<SidePanel>
 								<AssignmentInfo>
 									<InfoItem>
-										<Label>{t('teacherAssignmentFiles.assignment')}</Label>
+										<Label>Assignment</Label>
 										<Value>{assignment?.title}</Value>
 									</InfoItem>
 									{assignment?.class_name && (
 										<InfoItem>
-											<Label>{t('teacherAssignmentFiles.class')}</Label>
+											<Label>Class</Label>
 											<Value>{assignment.class_name}</Value>
 										</InfoItem>
 									)}
 									{assignment?.duedate && (
 										<InfoItem>
-											<Label>{t('teacherAssignmentFiles.dueDate')}</Label>
+											<Label>Due Date</Label>
 											<Value>{formatDate(assignment.duedate)}</Value>
 										</InfoItem>
 									)}
 									{assignment?.creator_email && (
 										<InfoItem>
-											<Label>{t('teacherAssignmentFiles.createdBy')}</Label>
+											<Label>Created By</Label>
 											<Value>{assignment.creator_email}</Value>
 										</InfoItem>
 									)}
 									{assignment?.subject_name && (
 										<InfoItem>
-											<Label>{t('teacherAssignmentFiles.subject')}</Label>
+											<Label>Subject</Label>
 											<Value>{assignment.subject_name}</Value>
 										</InfoItem>
 									)}
 								</AssignmentInfo>
 
 								<FilesContainer>
-									<FilesHeader>{t('teacherAssignmentFiles.files', { count: files.length })}</FilesHeader>
+									<FilesHeader>Files ({files.length})</FilesHeader>
 									<FilesList>
 										{files.map((file, index) => (
 											<FileItem
@@ -444,7 +441,7 @@ const TeacherAssignmentFiles: React.FC = () => {
 												</NavigationButton>
 												<DownloadButton as='a' href={activeFile} download={getFileName(activeFile)}>
 													<FiDownload size={18} />
-													<span>{t('teacherAssignmentFiles.download')}</span>
+													<span>Download</span>
 												</DownloadButton>
 											</PreviewActions>
 										</PreviewHeader>

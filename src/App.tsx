@@ -100,7 +100,7 @@ export const useThemeContext = () => {
 function AppContent() {
 	const [isDarkMode, setIsDarkMode] = useState(false)
 	const [primaryColor, setPrimaryColor] = useState('#0ea5e9')
-	const { isAuthenticated } = useAuth()
+	const { isAuthenticated, loading, user } = useAuth()
 	const [tablesChecked, setTablesChecked] = useState(false)
 
 	const toggleTheme = () => {

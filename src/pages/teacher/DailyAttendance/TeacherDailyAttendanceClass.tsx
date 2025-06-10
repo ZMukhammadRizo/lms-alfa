@@ -2,7 +2,6 @@ import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 import { ArrowLeft, Calendar, FileText, Grid, List, Search } from 'react-feather'
 import { Link, useParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
 import * as XLSX from 'xlsx'
@@ -44,7 +43,6 @@ type ViewMode = 'grid' | 'table'
 type ExportPeriod = 'weekly' | 'monthly' | null
 
 const TeacherDailyAttendanceClass: React.FC = () => {
-	const { t } = useTranslation()
 	const { levelId, classId } = useParams<{ levelId: string; classId: string }>()
 	const [students, setStudents] = useState<Student[]>([])
 	const [filteredStudents, setFilteredStudents] = useState<Student[]>([])
@@ -118,7 +116,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 				.single()
 
 			if (error || !data) {
-				toast.error(t('teacherAttendance.noAccessToClass'))
+				toast.error('You do not have access to this class')
 				return
 			}
 
@@ -127,7 +125,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 			fetchCurrentQuarter()
 		} catch (error) {
 			console.error('Error verifying teacher access:', error)
-			toast.error(t('teacherAttendance.failedToVerifyAccess'))
+			toast.error('Failed to verify access')
 		}
 	}
 
@@ -186,7 +184,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 			setStudents(students)
 		} catch (error) {
 			console.error('Error fetching class and students:', error)
-			toast.error(t('teacherAttendance.failedToLoadStudents'))
+			toast.error('Failed to load students')
 		} finally {
 			setLoading(false)
 		}
@@ -354,7 +352,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 			setIsExportModalOpen(false)
 		} catch (error) {
 			console.error('Error exporting attendance data:', error)
-			toast.error(t('teacherAttendance.failedToExportData'))
+			toast.error('Failed to export attendance data')
 		} finally {
 			setExportLoading(false)
 		}
@@ -374,7 +372,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 						</StudentInfo>
 						<ActionButton onClick={() => handleStudentClick(student)}>
 							<Calendar size={16} />
-							<span>{t('teacherAttendance.attendance')}</span>
+							<span>Attendance</span>
 						</ActionButton>
 					</StudentCard>
 				))}
@@ -387,9 +385,9 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 			<StudentTable>
 				<thead>
 					<tr>
-						<TableHeader>{t('common.student')}</TableHeader>
-						<TableHeader>{t('common.email')}</TableHeader>
-						<TableHeader>{t('common.actions')}</TableHeader>
+						<TableHeader>Student</TableHeader>
+						<TableHeader>Email</TableHeader>
+						<TableHeader>Actions</TableHeader>
 					</tr>
 				</thead>
 				<tbody>
@@ -403,10 +401,10 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 							</TableCell>
 							<TableCell>{student.email}</TableCell>
 							<TableCell>
-															<TableActionButton onClick={() => handleStudentClick(student)}>
-								<Calendar size={16} />
-								<span>{t('teacherAttendance.attendance')}</span>
-							</TableActionButton>
+								<TableActionButton onClick={() => handleStudentClick(student)}>
+									<Calendar size={16} />
+									<span>Attendance</span>
+								</TableActionButton>
 							</TableCell>
 						</TableRow>
 					))}
@@ -419,29 +417,29 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 		<Container>
 			<BackLink to={`/teacher/daily-attendance/${levelId}`}>
 				<ArrowLeft size={16} />
-				<span>{t('teacherAttendance.backToClasses')}</span>
+				<span>Back to Classes</span>
 			</BackLink>
 
 			<PageHeader
-				title={classData ? t('teacherAttendance.dailyAttendanceForClass', { className: classData.classname }) : t('teacherAttendance.dailyAttendance')}
-				subtitle={level ? t('teacherAttendance.manageStudentAttendanceFor', { level: level.name }) : t('teacherAttendance.manageStudentAttendance')}
+				title={classData ? `${classData.classname} - Daily Attendance` : 'Daily Attendance'}
+				subtitle={level ? `${level.name} - Manage student attendance` : 'Manage student attendance'}
 			/>
 
 			{loading ? (
 				<LoadingContainer>
 					<LoadingSpinner />
-					<p>{t('teacherAttendance.loadingStudents')}</p>
+					<p>Loading students...</p>
 				</LoadingContainer>
 			) : students.length === 0 ? (
 				<EmptyState>
-					<h3>{t('teacherAttendance.noStudentsFound')}</h3>
-					<p>{t('teacherAttendance.noStudentsFoundDescription')}</p>
+					<h3>No students found</h3>
+					<p>There are no students enrolled in this class.</p>
 				</EmptyState>
 			) : (
 				<TableWrapper>
 					<SearchContainer>
 						<LeftSection>
-							<StudentCount>{students.length} {t('teacherAttendance.studentCount', { count: students.length })}</StudentCount>
+							<StudentCount>{students.length} Students</StudentCount>
 							<ViewToggle>
 								<ViewToggleButton
 									isActive={viewMode === 'grid'}
@@ -462,7 +460,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 						<ActionContainer>
 							<ExportButton onClick={handleExportClick}>
 								<FileText size={16} />
-								<span>{t('teacherAttendance.exportAttendance')}</span>
+								<span>Export Attendance</span>
 							</ExportButton>
 							<SearchInputWrapper>
 								<SearchIcon>
@@ -470,7 +468,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 								</SearchIcon>
 								<SearchInput
 									type='text'
-									placeholder={t('teacherAttendance.searchStudents')}
+									placeholder='Search students...'
 									value={searchQuery}
 									onChange={handleSearchChange}
 								/>
@@ -480,8 +478,8 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 
 					{filteredStudents.length === 0 ? (
 						<EmptyState>
-							<h3>{t('teacherAttendance.noMatchingStudents')}</h3>
-							<p>{t('teacherAttendance.noMatchingStudentsDescription')}</p>
+							<h3>No matching students</h3>
+							<p>No students match your search criteria.</p>
 						</EmptyState>
 					) : viewMode === 'grid' ? (
 						renderGridView()

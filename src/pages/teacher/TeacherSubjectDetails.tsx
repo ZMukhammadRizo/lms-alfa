@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import styled, { useTheme } from 'styled-components'
 import { FiArrowLeft, FiBookOpen, FiInfo, FiList, FiChevronRight, FiCalendar } from 'react-icons/fi'
-import { useTranslation } from 'react-i18next'
 import supabase from '../../config/supabaseClient'
 import { toast } from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -240,7 +239,6 @@ const OverviewContent = styled.div`
 const LessonsListContainer = styled.div``
 
 const TeacherSubjectDetails: React.FC = () => {
-  const { t } = useTranslation()
   const { classId, subjectId } = useParams<{ classId: string; subjectId: string }>()
   const navigate = useNavigate()
   const [subject, setSubject] = useState<Subject | null>(null)
@@ -253,7 +251,7 @@ const TeacherSubjectDetails: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (!subjectId || !classId) {
-        toast.error(t('common.missingClassOrSubjectId'))
+        toast.error('Missing class or subject ID.')
         setLoading(false)
         return
       }
@@ -295,7 +293,7 @@ const TeacherSubjectDetails: React.FC = () => {
 
       } catch (error: any) {
         console.error('Error fetching subject details:', error)
-        toast.error(error.message || t('teacher.subjects.loadingSubjectDetails'))
+        toast.error(error.message || 'Failed to load subject details.')
         setSubject(null)
         setLessons([])
       } finally {
@@ -323,7 +321,7 @@ const TeacherSubjectDetails: React.FC = () => {
   if (loading) {
     return (
       <PageContainer>
-        <LoadingState>{t('teacher.subjects.loadingSubjectDetails')}</LoadingState>
+        <LoadingState>Loading subject details...</LoadingState>
       </PageContainer>
     )
   }
@@ -332,9 +330,9 @@ const TeacherSubjectDetails: React.FC = () => {
     return (
       <PageContainer>
         <StyledBackButton onClick={handleBackClick}>
-          <FiArrowLeft /> {t('common.back')}
+          <FiArrowLeft /> Back
         </StyledBackButton>
-        <EmptyState>{t('teacher.subjects.subjectNotFound')}</EmptyState>
+        <EmptyState>Subject not found.</EmptyState>
       </PageContainer>
     )
   }
@@ -343,7 +341,7 @@ const TeacherSubjectDetails: React.FC = () => {
     <PageContainer>
       <PageHeader layout>
         <StyledBackButton onClick={handleBackClick}>
-          <FiArrowLeft /> {t('common.back')}
+          <FiArrowLeft /> Back
         </StyledBackButton>
         <HeaderContent>
           <PageTitle>{subject.subjectname}</PageTitle>
@@ -353,10 +351,10 @@ const TeacherSubjectDetails: React.FC = () => {
 
       <TabContainer>
         <TabButton $isActive={activeTab === 'overview'} onClick={() => setActiveTab('overview')}>
-          <FiInfo /> {t('common.overview')}
+          <FiInfo /> Overview
         </TabButton>
         <TabButton $isActive={activeTab === 'lessons'} onClick={() => setActiveTab('lessons')}>
-          <FiList /> {t('teacher.subjects.lessons')} ({lessons.length})
+          <FiList /> Lessons ({lessons.length})
         </TabButton>
       </TabContainer>
 
@@ -370,7 +368,7 @@ const TeacherSubjectDetails: React.FC = () => {
         >
           {activeTab === 'overview' && (
             <OverviewContent>
-              <p>{subject.description || t('common.noDescription')}</p>
+              <p>{subject.description || 'No description provided for this subject.'}</p>
             </OverviewContent>
           )}
 
@@ -386,7 +384,7 @@ const TeacherSubjectDetails: React.FC = () => {
                     <CardBody>
                       <CardTitle>{lesson.lessonname}</CardTitle>
                       <CardDescription>
-                        {lesson.description || t('common.noDescription')}
+                        {lesson.description || 'No description.'}
                       </CardDescription>
                       <CardFooter>
                         <CardStat>
@@ -394,14 +392,14 @@ const TeacherSubjectDetails: React.FC = () => {
                           <span>{new Date(lesson.uploadedat).toLocaleDateString()}</span>
                         </CardStat>
                         <ViewDetailsButton>
-                          {t('teacher.subjects.viewLessons')} <FiChevronRight />
+                          View Lesson <FiChevronRight />
                         </ViewDetailsButton>
                       </CardFooter>
                     </CardBody>
                   </ItemCard>
                 ))
               ) : (
-                <EmptyState>{t('teacher.subjects.noLessonsFound')}</EmptyState>
+                <EmptyState>No lessons found for this subject.</EmptyState>
               )}
             </LessonsListContainer>
           )}

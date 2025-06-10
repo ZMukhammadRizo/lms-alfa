@@ -73,7 +73,7 @@ const getFlagComponent = (code: string) => {
 };
 
 const LanguageSelector: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 

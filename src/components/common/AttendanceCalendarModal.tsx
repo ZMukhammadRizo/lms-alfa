@@ -403,7 +403,7 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 								color='success'
 							>
 								<Check size={16} />
-								<span>{t('attendance.present')}</span>
+								<span>Present</span>
 							</StatusOption>
 							<StatusOption
 								status='late'
@@ -416,7 +416,7 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 								color='warning'
 							>
 								<Clock size={16} />
-								<span>{t('attendance.late')}</span>
+								<span>Late</span>
 							</StatusOption>
 							<StatusOption
 								status='excused'
@@ -429,7 +429,7 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 								color='primary'
 							>
 								<FileText size={16} />
-								<span>{t('attendance.excused')}</span>
+								<span>Excused</span>
 							</StatusOption>
 							<StatusOption
 								status='absent'
@@ -442,7 +442,7 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 								color='danger'
 							>
 								<XIcon size={16} />
-								<span>{t('attendance.absent')}</span>
+								<span>Absent</span>
 							</StatusOption>
 						</StatusDropdown>
 					)}
@@ -478,7 +478,27 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 		return `${monthNames[currentMonth.getMonth()]} ${currentMonth.getFullYear()}`
 	}
 
+	const renderCalendarHeader = () => {
+		const dayNames = [
+			t('calendar.monday'),
+			t('calendar.tuesday'),
+			t('calendar.wednesday'),
+			t('calendar.thursday'),
+			t('calendar.friday'),
+			t('calendar.saturday'),
+			t('calendar.sunday'),
+		]
 
+		return (
+			<CalendarHeader>
+				{dayNames.map((day, index) => (
+					<DayName key={index} isWeekend={index >= 5}>
+						{day.substring(0, 3)}
+					</DayName>
+				))}
+			</CalendarHeader>
+		)
+	}
 
 	if (!isOpen) return null
 
@@ -733,18 +753,6 @@ const Weekday = styled.div`
 	text-align: center;
 	font-weight: 600;
 	color: var(--color-text-secondary);
-	font-size: 0.9rem;
-	padding: 8px 0;
-`
-
-interface DayNameProps {
-	isWeekend: boolean
-}
-
-const DayName = styled.div<DayNameProps>`
-	text-align: center;
-	font-weight: 600;
-	color: ${props => (props.isWeekend ? 'var(--color-text-tertiary)' : 'var(--color-text-secondary)')};
 	font-size: 0.9rem;
 	padding: 8px 0;
 `

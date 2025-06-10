@@ -2,7 +2,6 @@ import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 import { FiAward, FiBarChart2, FiBookOpen, FiChevronRight, FiSearch, FiUsers } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 import { PageTitle } from '../../../components/common'
 import { Card, Container, Input } from '../../../components/ui'
@@ -22,7 +21,6 @@ interface GradeLevel {
 }
 
 const GradeLevelSelect: React.FC = () => {
-	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const [searchTerm, setSearchTerm] = useState('')
 	const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -159,7 +157,7 @@ const GradeLevelSelect: React.FC = () => {
 		// Show initial loading message only when store is fetching levels
 		return (
 			<PageContainer>
-				<LoadingMessage>{t('teacherGrades.loadingGradeLevels')}</LoadingMessage>
+				<LoadingMessage>Loading grade levels...</LoadingMessage>
 			</PageContainer>
 		)
 	}
@@ -168,7 +166,7 @@ const GradeLevelSelect: React.FC = () => {
 		// Show generic loading message if calculating counts (or potentially other loading)
 		return (
 			<PageContainer>
-				<LoadingMessage>{t('teacherGrades.loadingData')}</LoadingMessage>
+				<LoadingMessage>Loading data...</LoadingMessage>
 			</PageContainer>
 		)
 	}
@@ -186,14 +184,14 @@ const GradeLevelSelect: React.FC = () => {
 			<PageHeaderWrapper>
 				<PageHeader>
 					<HeaderContent>
-						<PageTitle>{t('teacherGrades.gradeManagement')}</PageTitle>
-						<SubTitle>{t('teacherGrades.selectGradeLevelDescription')}</SubTitle>
+						<PageTitle>Grade Management</PageTitle>
+						<SubTitle>Select a grade level to view and manage student grades</SubTitle>
 					</HeaderContent>
 					<HeaderRight>
 						<SearchWrapper>
 							<StyledInput
 								prefix={<FiSearch />}
-								placeholder={t('teacherGrades.searchGradeLevels')}
+								placeholder='Search grade levels...'
 								value={searchTerm}
 								onChange={e => setSearchTerm(e.target.value)}
 							/>
@@ -225,7 +223,7 @@ const GradeLevelSelect: React.FC = () => {
 									<GradeLevelIcon>
 										<FiBookOpen />
 									</GradeLevelIcon>
-									<GradeLevelName>{level.levelName}{t('teacherGrades.thGrade')}</GradeLevelName>
+									<GradeLevelName>{level.levelName}th Grade</GradeLevelName>
 								</CardTop>
 								<CardContent>
 									<GradeMetricRow>
@@ -239,7 +237,7 @@ const GradeLevelSelect: React.FC = () => {
 														? level.actualStudentCount
 														: level.studentCount}
 												</GradeMetricValue>
-												<GradeMetricLabel>{t('teacherGrades.students')}</GradeMetricLabel>
+												<GradeMetricLabel>Students</GradeMetricLabel>
 											</GradeMetricContent>
 										</GradeMetric>
 										<GradeMetric>
@@ -248,7 +246,7 @@ const GradeLevelSelect: React.FC = () => {
 											</GradeMetricIcon>
 											<GradeMetricContent>
 												<GradeMetricValue>{level.classCount}</GradeMetricValue>
-												<GradeMetricLabel>{t('teacherGrades.classes')}</GradeMetricLabel>
+												<GradeMetricLabel>Classes</GradeMetricLabel>
 											</GradeMetricContent>
 										</GradeMetric>
 										<GradeMetric>
@@ -257,13 +255,13 @@ const GradeLevelSelect: React.FC = () => {
 											</GradeMetricIcon>
 											<GradeMetricContent>
 												<GradeMetricValue>{level.subjectCount}</GradeMetricValue>
-												<GradeMetricLabel>{t('teacherGrades.subjects')}</GradeMetricLabel>
+												<GradeMetricLabel>Subjects</GradeMetricLabel>
 											</GradeMetricContent>
 										</GradeMetric>
 									</GradeMetricRow>
 									<CardArrow $isHovered={hoveredCard === level.levelId}>
 										<FiChevronRight />
-										<span>{t('teacherGrades.viewClasses')}</span>
+										<span>View Classes</span>
 									</CardArrow>
 								</CardContent>
 							</GradeLevelCard>
@@ -271,8 +269,8 @@ const GradeLevelSelect: React.FC = () => {
 					) : (
 						<NoResults>
 							{searchTerm
-								? t('teacherGrades.noGradeLevelsFound', { searchTerm })
-								: t('teacherGrades.noGradeLevelsAssigned')}
+								? `No grade levels found matching "${searchTerm}"`
+								: 'No grade levels assigned to you yet.'}
 						</NoResults>
 					)}
 				</GradeLevelGrid>
