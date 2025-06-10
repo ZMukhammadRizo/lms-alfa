@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'react-feather'
 import styled from 'styled-components'
 import { PageTitle } from '../../components/common'
@@ -28,7 +27,6 @@ interface Child {
 }
 
 const DailyAttendance: React.FC = () => {
-	const { t } = useTranslation()
 	const { user } = useAuth()
 	const [currentMonth, setCurrentMonth] = useState(new Date())
 	const [attendanceData, setAttendanceData] = useState<DailyAttendance[]>([])
@@ -203,10 +201,10 @@ const DailyAttendance: React.FC = () => {
 
 	return (
 		<Container>
-			<PageTitle>{t('parent.dailyAttendance.title')}</PageTitle>
+			<PageTitle>Daily Attendance</PageTitle>
 
 			<SelectWrapper>
-				<label htmlFor='child-select'>{t('parent.dailyAttendance.selectChild')}:</label>
+				<label htmlFor='child-select'>Select Child:</label>
 				<ChildSelect
 					id='child-select'
 					value={selectedChild || ''}
@@ -214,9 +212,9 @@ const DailyAttendance: React.FC = () => {
 					disabled={fetchingChildren || children.length === 0}
 				>
 					{fetchingChildren ? (
-						<option value=''>{t('parent.dailyAttendance.loadingChildren')}...</option>
+						<option value=''>Loading children...</option>
 					) : children.length === 0 ? (
-						<option value=''>{t('parent.dailyAttendance.noChildrenFound')}</option>
+						<option value=''>No children found</option>
 					) : (
 						children.map(child => (
 							<option key={child.id} value={child.id}>
@@ -235,7 +233,7 @@ const DailyAttendance: React.FC = () => {
 								<ChevronLeft size={20} />
 							</MonthNavButton>
 							<MonthYearDisplay>
-								{getSelectedChildName()}'s {t('parent.dailyAttendance.attendance')} -{' '}
+								{getSelectedChildName()}'s Attendance -{' '}
 								{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
 							</MonthYearDisplay>
 							<MonthNavButton onClick={handleNextMonth}>
@@ -244,19 +242,19 @@ const DailyAttendance: React.FC = () => {
 						</CalendarHeader>
 
 						<WeekdayHeader>
-							<Weekday>{t('parent.dailyAttendance.weekdays.mon')}</Weekday>
-							<Weekday>{t('parent.dailyAttendance.weekdays.tue')}</Weekday>
-							<Weekday>{t('parent.dailyAttendance.weekdays.wed')}</Weekday>
-							<Weekday>{t('parent.dailyAttendance.weekdays.thu')}</Weekday>
-							<Weekday>{t('parent.dailyAttendance.weekdays.fri')}</Weekday>
-							<Weekday>{t('parent.dailyAttendance.weekdays.sat')}</Weekday>
-							<Weekday>{t('parent.dailyAttendance.weekdays.sun')}</Weekday>
+							<Weekday>Mon</Weekday>
+							<Weekday>Tue</Weekday>
+							<Weekday>Wed</Weekday>
+							<Weekday>Thu</Weekday>
+							<Weekday>Fri</Weekday>
+							<Weekday>Sat</Weekday>
+							<Weekday>Sun</Weekday>
 						</WeekdayHeader>
 
 						<CalendarGrid>
 							{loading ? (
 								<LoadingContainer>
-									<p>{t('parent.dailyAttendance.loadingData')}...</p>
+									<p>Loading attendance data...</p>
 								</LoadingContainer>
 							) : (
 								renderCalendarDays()
@@ -266,19 +264,19 @@ const DailyAttendance: React.FC = () => {
 						<CalendarLegend>
 							<LegendItem>
 								<LegendColor status='present' />
-								<span>{t('parent.dailyAttendance.status.present')}</span>
+								<span>Present</span>
 							</LegendItem>
 							<LegendItem>
 								<LegendColor status='late' />
-								<span>{t('parent.dailyAttendance.status.late')}</span>
+								<span>Late</span>
 							</LegendItem>
 							<LegendItem>
 								<LegendColor status='excused' />
-								<span>{t('parent.dailyAttendance.status.excused')}</span>
+								<span>Excused</span>
 							</LegendItem>
 							<LegendItem>
 								<LegendColor status='absent' />
-								<span>{t('parent.dailyAttendance.status.absent')}</span>
+								<span>Absent</span>
 							</LegendItem>
 						</CalendarLegend>
 					</CalendarCard>

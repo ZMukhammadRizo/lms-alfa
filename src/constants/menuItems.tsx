@@ -114,19 +114,7 @@ export const studentMenu: MenuItem[] = [
 	{ path: '/student/flashcards', icon: <FiLayers />, label: 'Flashcards' },
 ]
 
-// Function to get translated parent menu items
-export const getParentMenu = (t: (key: string) => string): MenuItem[] => [
-	{ path: '/parent/dashboard', icon: <FiHome />, label: t('navigation.dashboard') },
-	{ path: '/parent/students', icon: <FiUsers />, label: t('navigation.myChildren') },
-	{ path: '/parent/assignments', icon: <FiClipboard />, label: t('navigation.assignments') },
-	{ path: '/parent/announcements', icon: <FiBell />, label: t('navigation.announcements') },
-	{ path: '/parent/grades', icon: <FiBarChart2 />, label: t('navigation.grades') },
-	{ path: '/parent/daily-attendance', icon: <FiCheckSquare />, label: t('navigation.dailyAttendance') },
-	{ path: '/parent/messages', icon: <FiMessageSquare />, label: t('navigation.messages') },
-	{ path: '/parent/calendar', icon: <FiCalendar />, label: t('navigation.calendar') },
-]
-
-// Parent menu items (kept for backward compatibility)
+// Parent menu items
 export const parentMenu: MenuItem[] = [
 	{ path: '/parent/dashboard', icon: <FiHome />, label: 'Dashboard' },
 	{ path: '/parent/students', icon: <FiUsers />, label: 'My Children' },

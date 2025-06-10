@@ -1,6 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { FiBell, FiCalendar, FiCheckCircle, FiSearch, FiX } from 'react-icons/fi'
 import styled from 'styled-components'
 import { useAuth } from '../../contexts/AuthContext'
@@ -23,7 +22,6 @@ export interface Announcement {
 }
 
 const AnnouncementsPage: React.FC = () => {
-	const { t } = useTranslation()
 	const {
 		announcements,
 		isLoading,
@@ -87,23 +85,6 @@ const AnnouncementsPage: React.FC = () => {
 		return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 	}
 
-	const getTargetAudienceText = (audience: string) => {
-		switch (audience.toLowerCase()) {
-			case 'all':
-				return t('parent.announcements.targetAudience.all')
-			case 'parent':
-				return t('parent.announcements.targetAudience.parent')
-			case 'student':
-				return t('parent.announcements.targetAudience.student')
-			case 'teacher':
-				return t('parent.announcements.targetAudience.teacher')
-			case 'admin':
-				return t('parent.announcements.targetAudience.admin')
-			default:
-				return audience.charAt(0).toUpperCase() + audience.slice(1)
-		}
-	}
-
 	const handleMarkAsRead = (id: string) => {
 		// Mark the announcement as read in localStorage through the store
 		markAnnouncementAsRead(id)
@@ -116,7 +97,7 @@ const AnnouncementsPage: React.FC = () => {
 			})
 		}
 
-		setSuccessMessage(t('parent.announcements.markedAsRead'))
+		setSuccessMessage('Announcement marked as read')
 	}
 
 	// Handle mark all as read with proper feedback
@@ -132,7 +113,7 @@ const AnnouncementsPage: React.FC = () => {
 			})
 		}
 
-		setSuccessMessage(t('parent.announcements.allMarkedAsRead'))
+		setSuccessMessage('All announcements marked as read')
 
 		// Force a refresh of announcements to reflect changes
 		setTimeout(() => {
@@ -154,14 +135,14 @@ const AnnouncementsPage: React.FC = () => {
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.3, delay: 0.1 }}
 					>
-						{t('parent.announcements.title')}
+						Announcements
 					</motion.h1>
 					<motion.p
 						initial={{ opacity: 0, y: -10 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.3, delay: 0.2 }}
 					>
-						{t('parent.announcements.description')}
+						Stay updated with important information
 					</motion.p>
 				</HeaderContent>
 				<SearchAndFilterContainer>
@@ -171,7 +152,7 @@ const AnnouncementsPage: React.FC = () => {
 						</SearchIcon>
 						<SearchInput
 							type='text'
-							placeholder={t('parent.announcements.searchPlaceholder')}
+							placeholder='Search announcements...'
 							value={searchTerm}
 							onChange={e => setSearchTerm(e.target.value)}
 						/>
@@ -183,7 +164,7 @@ const AnnouncementsPage: React.FC = () => {
 					</SearchBar>
 					{/* Add Mark All as Read button - only shown if there are unread announcements */}
 					{unreadCount > 0 && (
-						<MarkAllReadButton onClick={handleMarkAllAsRead}>{t('parent.announcements.markAllAsRead')}</MarkAllReadButton>
+						<MarkAllReadButton onClick={handleMarkAllAsRead}>Mark All as Read</MarkAllReadButton>
 					)}
 				</SearchAndFilterContainer>
 			</PageHeader>
@@ -196,166 +177,151 @@ const AnnouncementsPage: React.FC = () => {
 			)}
 
 			<ContentContainer>
-				{isLoading ? (
-					<LoadingContainer>
-						<LoadingSpinner />
-						<LoadingText>{t('common.loading')}...</LoadingText>
-					</LoadingContainer>
-				) : error ? (
-					<ErrorContainer>
-						<ErrorIcon>!</ErrorIcon>
-						<ErrorMessage>{error}</ErrorMessage>
-						<ErrorAction onClick={() => fetchAnnouncements('Parent')}>
-							{t('common.tryAgain')}
-						</ErrorAction>
-					</ErrorContainer>
-				) : (
-					<>
-						<AnnouncementsList>
-							{filteredAnnouncements.length > 0 ? (
-								filteredAnnouncements.map((announcement, index) => (
-									<AnnouncementItem
-										key={announcement.id}
-										$read={announcement.isRead === true}
-										$priority={announcement.isImportant ? 'important' : 'normal'}
-										as={motion.div}
-										initial={{ opacity: 0, y: 10 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ duration: 0.3, delay: index * 0.05 }}
-										onClick={() => {
-											// Create a copy of the announcement with normalized properties
-											const normalizedAnnouncement = {
-												...announcement,
-												created_by_name: announcement.created_by_name || '',
-												isRead: announcement.isRead === true,
-											}
+				<AnnouncementsList>
+					{filteredAnnouncements.length > 0 ? (
+						filteredAnnouncements.map((announcement, index) => (
+							<AnnouncementItem
+								key={announcement.id}
+								$read={announcement.isRead === true}
+								$priority={announcement.isImportant ? 'important' : 'normal'}
+								as={motion.div}
+								initial={{ opacity: 0, y: 10 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.3, delay: index * 0.05 }}
+								onClick={() => {
+									// Create a copy of the announcement with normalized properties
+									const normalizedAnnouncement = {
+										...announcement,
+										created_by_name: announcement.created_by_name || '',
+										isRead: announcement.isRead === true,
+									}
 
-											setSelectedAnnouncement(normalizedAnnouncement)
+									setSelectedAnnouncement(normalizedAnnouncement)
 
-											// If announcement is not read, mark it as read
-											if (!announcement.isRead) {
-												handleMarkAsRead(announcement.id)
-											}
-										}}
-										$isSelected={selectedAnnouncement?.id === announcement.id}
-									>
-										<AnnouncementHeader>
+									// If announcement is not read, mark it as read
+									if (!announcement.isRead) {
+										handleMarkAsRead(announcement.id)
+									}
+								}}
+								$isSelected={selectedAnnouncement?.id === announcement.id}
+							>
+								<AnnouncementHeader>
+									<TargetBadge>
+										{announcement.targetAudience.charAt(0).toUpperCase() +
+											announcement.targetAudience.slice(1)}
+									</TargetBadge>
+									<AnnouncementDate>
+										<FiCalendar size={14} />
+										<span>{formatDate(announcement.created_at)}</span>
+									</AnnouncementDate>
+								</AnnouncementHeader>
+								<AnnouncementTitle>{announcement.title}</AnnouncementTitle>
+								<AnnouncementPreview>
+									{announcement.content.substring(0, 100)}
+									{announcement.content.length > 100 ? '...' : ''}
+								</AnnouncementPreview>
+								{!announcement.isRead && <UnreadIndicator />}
+							</AnnouncementItem>
+						))
+					) : (
+						<NoAnnouncements>
+							<FiBell size={40} />
+							<p>No announcements found</p>
+						</NoAnnouncements>
+					)}
+				</AnnouncementsList>
+
+				<DetailPanel>
+					<AnimatePresence mode='wait'>
+						{selectedAnnouncement ? (
+							<AnnouncementDetail
+								key={selectedAnnouncement.id}
+								as={motion.div}
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								transition={{ duration: 0.3 }}
+							>
+								<DetailHeader>
+									<DetailHeaderContent>
+										<DetailTitle>{selectedAnnouncement.title}</DetailTitle>
+										<DetailMeta>
 											<TargetBadge>
-												{getTargetAudienceText(announcement.targetAudience)}
+												{selectedAnnouncement.targetAudience.charAt(0).toUpperCase() +
+													selectedAnnouncement.targetAudience.slice(1)}
 											</TargetBadge>
-											<AnnouncementDate>
-												<FiCalendar size={14} />
-												<span>{formatDate(announcement.created_at)}</span>
-											</AnnouncementDate>
-										</AnnouncementHeader>
-										<AnnouncementTitle>{announcement.title}</AnnouncementTitle>
-										<AnnouncementPreview>
-											{announcement.content.substring(0, 100)}
-											{announcement.content.length > 100 ? '...' : ''}
-										</AnnouncementPreview>
-										{!announcement.isRead && <UnreadIndicator />}
-									</AnnouncementItem>
-								))
-							) : (
-								<NoAnnouncements>
-									<FiBell size={40} />
-									<p>{t('parent.announcements.noAnnouncements')}</p>
-								</NoAnnouncements>
-							)}
-						</AnnouncementsList>
-
-						<DetailPanel>
-							<AnimatePresence mode='wait'>
-								{selectedAnnouncement ? (
-									<AnnouncementDetail
-										key={selectedAnnouncement.id}
-										as={motion.div}
-										initial={{ opacity: 0 }}
-										animate={{ opacity: 1 }}
-										exit={{ opacity: 0 }}
-										transition={{ duration: 0.3 }}
-									>
-										<DetailHeader>
-											<DetailHeaderContent>
-												<DetailTitle>{selectedAnnouncement.title}</DetailTitle>
-												<DetailMeta>
-													<TargetBadge>
-														{getTargetAudienceText(selectedAnnouncement.targetAudience)}
-													</TargetBadge>
-													{selectedAnnouncement.isImportant && (
-														<ImportantBadge>{t('parent.announcements.important')}</ImportantBadge>
-													)}
-													<DetailDate>
-														<FiCalendar size={14} />
-														<span>{formatDate(selectedAnnouncement.created_at)}</span>
-													</DetailDate>
-												</DetailMeta>
-											</DetailHeaderContent>
-										</DetailHeader>
-										<DetailContent>
-											{selectedAnnouncement.content
-												.split('\n')
-												.map((paragraph, i) =>
-													paragraph.trim() ? <p key={i}>{paragraph.trim()}</p> : <br key={i} />
-												)}
-
-											{(selectedAnnouncement.video_url || selectedAnnouncement.photo_url) && (
-												<MediaContainer>
-													{selectedAnnouncement.video_url && (
-														<MediaItem
-															onClick={e => {
-																const element = e.currentTarget
-																if (element.requestFullscreen) {
-																	element.requestFullscreen()
-																}
-															}}
-														>
-															<AnnouncementVideo
-																controls
-																disablePictureInPicture
-																controlsList='nodownload'
-																autoPlay={false}
-															>
-																<source src={selectedAnnouncement.video_url} type='video/mp4' />
-																{t('parent.announcements.videoNotSupported')}
-															</AnnouncementVideo>
-														</MediaItem>
-													)}
-													{selectedAnnouncement.photo_url && (
-														<MediaItem
-															onClick={e => {
-																const element = e.currentTarget
-																if (element.requestFullscreen) {
-																	element.requestFullscreen()
-																}
-															}}
-														>
-															<AnnouncementImage
-																src={selectedAnnouncement.photo_url}
-																alt={selectedAnnouncement.title}
-															/>
-														</MediaItem>
-													)}
-												</MediaContainer>
+											{selectedAnnouncement.isImportant && (
+												<ImportantBadge>Important</ImportantBadge>
 											)}
-										</DetailContent>
-									</AnnouncementDetail>
-								) : (
-									<NoAnnouncementSelected
-										as={motion.div}
-										initial={{ opacity: 0 }}
-										animate={{ opacity: 1 }}
-										exit={{ opacity: 0 }}
-										transition={{ duration: 0.3 }}
-									>
-										<FiBell size={50} />
-										<p>{t('parent.announcements.selectToView')}</p>
-									</NoAnnouncementSelected>
-								)}
-							</AnimatePresence>
-						</DetailPanel>
-					</>
-				)}
+											<DetailDate>
+												<FiCalendar size={14} />
+												<span>{formatDate(selectedAnnouncement.created_at)}</span>
+											</DetailDate>
+										</DetailMeta>
+									</DetailHeaderContent>
+								</DetailHeader>
+								<DetailContent>
+									{selectedAnnouncement.content
+										.split('\n')
+										.map((paragraph, i) =>
+											paragraph.trim() ? <p key={i}>{paragraph.trim()}</p> : <br key={i} />
+										)}
+
+									{(selectedAnnouncement.video_url || selectedAnnouncement.photo_url) && (
+										<MediaContainer>
+											{selectedAnnouncement.video_url && (
+												<MediaItem
+													onClick={e => {
+														const element = e.currentTarget
+														if (element.requestFullscreen) {
+															element.requestFullscreen()
+														}
+													}}
+												>
+													<AnnouncementVideo
+														controls
+														disablePictureInPicture
+														controlsList='nodownload'
+														autoPlay={false}
+													>
+														<source src={selectedAnnouncement.video_url} type='video/mp4' />
+														Your browser does not support the video tag.
+													</AnnouncementVideo>
+												</MediaItem>
+											)}
+											{selectedAnnouncement.photo_url && (
+												<MediaItem
+													onClick={e => {
+														const element = e.currentTarget
+														if (element.requestFullscreen) {
+															element.requestFullscreen()
+														}
+													}}
+												>
+													<AnnouncementImage
+														src={selectedAnnouncement.photo_url}
+														alt={selectedAnnouncement.title}
+													/>
+												</MediaItem>
+											)}
+										</MediaContainer>
+									)}
+								</DetailContent>
+							</AnnouncementDetail>
+						) : (
+							<NoAnnouncementSelected
+								as={motion.div}
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								transition={{ duration: 0.3 }}
+							>
+								<FiBell size={50} />
+								<p>Select an announcement to view details</p>
+							</NoAnnouncementSelected>
+						)}
+					</AnimatePresence>
+				</DetailPanel>
 			</ContentContainer>
 		</PageContainer>
 	)
@@ -844,75 +810,6 @@ const NoAnnouncements = styled.div`
 const MarkAllReadButton = styled.button`
 	display: flex;
 	align-items: center;
-	background-color: ${props => props.theme.colors.background.secondary};
-	color: ${props => props.theme.colors.primary};
-	padding: ${props => props.theme.spacing[2]} ${props => props.theme.spacing[3]};
-	border-radius: ${props => props.theme.borderRadius.md};
-	border: 1px solid ${props => props.theme.colors.primary};
-	cursor: pointer;
-	font-size: 0.95rem;
-	transition: all ${props => props.theme.transition.fast};
-
-	&:hover {
-		background-color: ${props => props.theme.colors.primary}15;
-	}
-`
-
-const LoadingContainer = styled.div`
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	height: 100%;
-	color: ${props => props.theme.colors.text.primary};
-	gap: ${props => props.theme.spacing[3]};
-`
-
-const LoadingSpinner = styled.div`
-	border: 4px solid ${props => props.theme.colors.background.secondary};
-	border-top: 4px solid ${props => props.theme.colors.primary};
-	border-radius: 50%;
-	width: 40px;
-	height: 40px;
-	animation: spin 1s linear infinite;
-
-	@keyframes spin {
-		0% {
-			transform: rotate(0deg);
-		}
-		100% {
-			transform: rotate(360deg);
-		}
-	}
-`
-
-const LoadingText = styled.p`
-	font-size: 1rem;
-	font-weight: 500;
-	margin: 0;
-`
-
-const ErrorContainer = styled.div`
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	height: 100%;
-	color: ${props => props.theme.colors.text.primary};
-	gap: ${props => props.theme.spacing[3]};
-`
-
-const ErrorIcon = styled.div`
-	font-size: 2rem;
-`
-
-const ErrorMessage = styled.p`
-	font-size: 1rem;
-	font-weight: 500;
-	margin: 0;
-`
-
-const ErrorAction = styled.button`
 	background-color: ${props => props.theme.colors.background.secondary};
 	color: ${props => props.theme.colors.primary};
 	padding: ${props => props.theme.spacing[2]} ${props => props.theme.spacing[3]};

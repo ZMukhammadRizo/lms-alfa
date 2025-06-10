@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { FiCalendar, FiCheck, FiChevronDown, FiChevronRight, FiClock, FiX } from 'react-icons/fi'
 import { PieChart } from 'react-minimal-pie-chart'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -42,7 +41,6 @@ interface PieChartData {
 }
 
 const AttendancePage: React.FC = () => {
-	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const [searchParams] = useSearchParams()
 	const studentParam = searchParams.get('student')
@@ -147,22 +145,6 @@ const AttendancePage: React.FC = () => {
 		})
 	}
 
-	// Get translated status text
-	const getStatusText = (status: string) => {
-		switch (status.toLowerCase()) {
-			case 'present':
-				return t('parent.attendance.status.present')
-			case 'late':
-				return t('parent.attendance.status.late')
-			case 'excused':
-				return t('parent.attendance.status.excused')
-			case 'absent':
-				return t('parent.attendance.status.absent')
-			default:
-				return status.charAt(0).toUpperCase() + status.slice(1)
-		}
-	}
-
 	// Get student's attendance data
 	const getChildAttendance = (childId: string) => {
 		return attendance.filter(record => record.student_id === childId)
@@ -198,25 +180,25 @@ const AttendancePage: React.FC = () => {
 			total,
 			pieData: [
 				{
-					title: t('parent.attendance.status.present'),
+					title: 'Present',
 					value: stats.present,
 					color: '#22c55e', // success.500
 					percentage: total > 0 ? Math.round((stats.present / total) * 100) : 0,
 				},
 				{
-					title: t('parent.attendance.status.late'),
+					title: 'Late',
 					value: stats.late,
 					color: '#f59e0b', // warning.500
 					percentage: total > 0 ? Math.round((stats.late / total) * 100) : 0,
 				},
 				{
-					title: t('parent.attendance.status.excused'),
+					title: 'Excused',
 					value: stats.excused,
 					color: '#3b82f6', // primary.500
 					percentage: total > 0 ? Math.round((stats.excused / total) * 100) : 0,
 				},
 				{
-					title: t('parent.attendance.status.absent'),
+					title: 'Absent',
 					value: stats.absent,
 					color: '#ef4444', // danger.500
 					percentage: total > 0 ? Math.round((stats.absent / total) * 100) : 0,
@@ -229,19 +211,19 @@ const AttendancePage: React.FC = () => {
 		<Container>
 			<PageHeader>
 				<TitleSection>
-					<PageTitle>{t('parent.attendance.title')}</PageTitle>
-					<SubTitle>{t('parent.attendance.description')}</SubTitle>
+					<PageTitle>My Children's Attendance</PageTitle>
+					<SubTitle>Monitor your children's class attendance records</SubTitle>
 				</TitleSection>
 
 				<StudentSelectorWrapper>
-					<SelectLabel>{t('parent.attendance.selectChild')}</SelectLabel>
+					<SelectLabel>Select Child:</SelectLabel>
 					<StudentSelector
 						value={selectedStudent}
 						onChange={handleStudentChange}
 						disabled={loading || children.length === 0}
 					>
-						<option value='all'>{t('parent.attendance.allChildren')}</option>
-						{children.length === 0 && <option value=''>{t('parent.attendance.noStudentsAvailable')}</option>}
+						<option value='all'>All Children</option>
+						{children.length === 0 && <option value=''>No students available</option>}
 						{children.map(child => (
 							<option key={child.id} value={child.id}>
 								{child.firstName} {child.lastName}
@@ -251,14 +233,14 @@ const AttendancePage: React.FC = () => {
 				</StudentSelectorWrapper>
 			</PageHeader>
 
-			{error && <ErrorMessage>{t('parent.attendance.errorLoading')}: {error}</ErrorMessage>}
+			{error && <ErrorMessage>Error loading data: {error}</ErrorMessage>}
 
 			{loading ? (
-				<LoadingState>{t('parent.attendance.loadingRecords')}</LoadingState>
+				<LoadingState>Loading attendance records...</LoadingState>
 			) : attendance.length === 0 ? (
 				<EmptyState>
-					<EmptyStateTitle>{t('parent.attendance.noRecordsAvailable')}</EmptyStateTitle>
-					<EmptyStateText>{t('parent.attendance.noRecordsForChildren')}</EmptyStateText>
+					<EmptyStateTitle>No attendance records available</EmptyStateTitle>
+					<EmptyStateText>There are no attendance records for your children yet.</EmptyStateText>
 				</EmptyState>
 			) : (
 				<>
@@ -274,9 +256,9 @@ const AttendancePage: React.FC = () => {
 										{child.firstName} {child.lastName}
 									</ChildName>
 									<EmptyState>
-										<EmptyStateTitle>{t('parent.attendance.noRecordsAvailable')}</EmptyStateTitle>
+										<EmptyStateTitle>No attendance records available</EmptyStateTitle>
 										<EmptyStateText>
-											{t('parent.attendance.noRecordsForChild')}
+											There are no attendance records for this child yet.
 										</EmptyStateText>
 									</EmptyState>
 								</ChildAttendanceSection>
@@ -291,7 +273,7 @@ const AttendancePage: React.FC = () => {
 								<AttendanceContainer>
 									{/* Attendance Summary with Pie Chart */}
 									<SummarySection>
-										<SummaryTitle>{t('parent.attendance.summary')}</SummaryTitle>
+										<SummaryTitle>Attendance Summary</SummaryTitle>
 
 										<SummaryContent>
 											<ChartContainer onMouseMove={handleMouseMove}>
@@ -330,14 +312,14 @@ const AttendancePage: React.FC = () => {
 																	{attendanceStats.pieData[hoverSegment.index].title}:{' '}
 																	{attendanceStats.pieData[hoverSegment.index].value}{' '}
 																	{attendanceStats.pieData[hoverSegment.index].value === 1
-																		? t('parent.attendance.day')
-																		: t('parent.attendance.days')}{' '}
+																		? 'day'
+																		: 'days'}{' '}
 																	({attendanceStats.pieData[hoverSegment.index].percentage}%)
 																</SimpleTooltip>
 															)}
 													</>
 												) : (
-													<NoDataMessage>{t('parent.attendance.noDataToDisplay')}</NoDataMessage>
+													<NoDataMessage>No attendance data to display</NoDataMessage>
 												)}
 											</ChartContainer>
 
@@ -348,7 +330,7 @@ const AttendancePage: React.FC = () => {
 													</StatsIcon>
 													<StatsContent>
 														<StatsValue>{attendanceStats.counts.present}</StatsValue>
-														<StatsLabel>{t('parent.attendance.status.present')}</StatsLabel>
+														<StatsLabel>Present</StatsLabel>
 														<StatsPercentage>
 															{attendanceStats.total > 0
 																? Math.round(
@@ -366,7 +348,7 @@ const AttendancePage: React.FC = () => {
 													</StatsIcon>
 													<StatsContent>
 														<StatsValue>{attendanceStats.counts.late}</StatsValue>
-														<StatsLabel>{t('parent.attendance.status.late')}</StatsLabel>
+														<StatsLabel>Late</StatsLabel>
 														<StatsPercentage>
 															{attendanceStats.total > 0
 																? Math.round(
@@ -384,7 +366,7 @@ const AttendancePage: React.FC = () => {
 													</StatsIcon>
 													<StatsContent>
 														<StatsValue>{attendanceStats.counts.excused}</StatsValue>
-														<StatsLabel>{t('parent.attendance.status.excused')}</StatsLabel>
+														<StatsLabel>Excused</StatsLabel>
 														<StatsPercentage>
 															{attendanceStats.total > 0
 																? Math.round(
@@ -402,7 +384,7 @@ const AttendancePage: React.FC = () => {
 													</StatsIcon>
 													<StatsContent>
 														<StatsValue>{attendanceStats.counts.absent}</StatsValue>
-														<StatsLabel>{t('parent.attendance.status.absent')}</StatsLabel>
+														<StatsLabel>Absent</StatsLabel>
 														<StatsPercentage>
 															{attendanceStats.total > 0
 																? Math.round(
@@ -422,21 +404,21 @@ const AttendancePage: React.FC = () => {
 										<DetailsHeader onClick={() => toggleDetailExpand(child.id)}>
 											<DetailsHeaderTitle>
 												{isDetailExpanded ? <FiChevronDown /> : <FiChevronRight />}
-												{t('parent.attendance.detailedRecords')}
+												Detailed Attendance Records
 											</DetailsHeaderTitle>
 											<DetailsHeaderInfo>
 												{childAttendance.length}{' '}
-												{childAttendance.length === 1 ? t('parent.attendance.record') : t('parent.attendance.records')}
+												{childAttendance.length === 1 ? 'record' : 'records'}
 											</DetailsHeaderInfo>
 										</DetailsHeader>
 
 										{isDetailExpanded && (
 											<AttendanceTable>
 												<TableHeader>
-													<HeaderCell>{t('parent.attendance.date')}</HeaderCell>
-													<HeaderCell>{t('parent.attendance.subject')}</HeaderCell>
-													<HeaderCell>{t('parent.attendance.lesson')}</HeaderCell>
-													<HeaderCell>{t('parent.attendance.status.label')}</HeaderCell>
+													<HeaderCell>Date</HeaderCell>
+													<HeaderCell>Subject</HeaderCell>
+													<HeaderCell>Lesson</HeaderCell>
+													<HeaderCell>Status</HeaderCell>
 												</TableHeader>
 
 												<TableBody>
@@ -446,7 +428,7 @@ const AttendancePage: React.FC = () => {
 															<DataCell>{record.lessons.subjects.subjectname}</DataCell>
 															<DataCell>{record.lessons.lessonname}</DataCell>
 															<StatusCell $status={getStatusColor(record.status)}>
-																{getStatusText(record.status)}
+																{record.status.charAt(0).toUpperCase() + record.status.slice(1)}
 															</StatusCell>
 														</TableRow>
 													))}

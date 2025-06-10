@@ -2,9 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { FiChevronDown, FiLogOut, FiSettings, FiUser } from 'react-icons/fi'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { useTranslation } from 'react-i18next'
 import Footer from '../components/admin/Footer'
-import LanguageSelector from '../components/admin/LanguageSelector'
 import ParentNotificationBell from '../components/parent/ParentNotificationBell'
 import ParentSidebar from '../components/parent/ParentSidebar'
 import { useAuth } from '../contexts/AuthContext'
@@ -382,7 +380,6 @@ const MenuItemIcon = styled.span`
 
 // Header component
 const Header: React.FC = () => {
-	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const { user, logout } = useAuth()
 	const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
@@ -419,7 +416,6 @@ const Header: React.FC = () => {
 		<HeaderContainer>
 			<HeaderActions>
 				<ParentNotificationBell basePath='/parent' />
-				<LanguageSelector />
 				<UserMenuContainer ref={userMenuRef}>
 					<UserAvatar onClick={toggleUserMenu}>
 						<AvatarText>{getUserInitials()}</AvatarText>
@@ -444,7 +440,7 @@ const Header: React.FC = () => {
 									<UserFullName>
 										{user?.firstName} {user?.lastName}
 									</UserFullName>
-									<UserRole>{t('roles.parent')}</UserRole>
+									<UserRole>Parent</UserRole>
 								</UserInfo>
 							</UserMenuHeader>
 
@@ -454,14 +450,14 @@ const Header: React.FC = () => {
 								<MenuItemIcon>
 									<FiUser />
 								</MenuItemIcon>
-								<span>{t('userMenu.myProfile')}</span>
+								<span>My Profile</span>
 							</UserMenuItem>
 
 							<UserMenuItem as={Link} to='/parent/settings' onClick={handleCloseUserMenu}>
 								<MenuItemIcon>
 									<FiSettings />
 								</MenuItemIcon>
-								<span>{t('userMenu.settings')}</span>
+								<span>Settings</span>
 							</UserMenuItem>
 
 							<UserMenuDivider />
@@ -470,7 +466,7 @@ const Header: React.FC = () => {
 								<MenuItemIcon>
 									<FiLogOut />
 								</MenuItemIcon>
-								<span>{t('userMenu.logout')}</span>
+								<span>Log out</span>
 							</UserMenuItem>
 						</UserMenu>
 					)}
