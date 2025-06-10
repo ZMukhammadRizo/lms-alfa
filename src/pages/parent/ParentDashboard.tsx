@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react'
 import { FiBarChart2, FiCheckSquare, FiChevronRight, FiClipboard, FiUser } from 'react-icons/fi'
 import { Link, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { useTranslation } from 'react-i18next'
 import StatCard from '../../components/admin/StatCard'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../services/supabaseClient'
@@ -56,7 +55,6 @@ interface DailyAttendanceRecord {
 }
 
 const ParentDashboard: React.FC = () => {
-	const { t } = useTranslation()
 	const { user } = useAuth()
 	const navigate = useNavigate()
 	const { fetchChildren, fetchScores, fetchAttendance, loading, error } = useParentStudentStore()
@@ -284,7 +282,7 @@ const ParentDashboard: React.FC = () => {
 	// Get selected student's grade level
 	const getSelectedChildGrade = () => {
 		// In a real app, you would get this from the class info
-		return t('parent.dashboard.gradeLevel', { grade: '10' }) // Placeholder
+		return '10th Grade' // Placeholder
 	}
 
 	return (
@@ -296,8 +294,8 @@ const ParentDashboard: React.FC = () => {
 		>
 			<DashboardHeader>
 				<div>
-					<DashboardTitle>{t('parent.dashboard.title')}</DashboardTitle>
-					<WelcomeMessage>{t('parent.dashboard.welcome', { name: user?.fullName || t('roles.parent') })}</WelcomeMessage>
+					<DashboardTitle>Parent Dashboard</DashboardTitle>
+					<WelcomeMessage>Welcome back, {user?.fullName || 'Parent'}!</WelcomeMessage>
 				</div>
 
 				<HeaderControls>
@@ -316,12 +314,12 @@ const ParentDashboard: React.FC = () => {
 			</DashboardHeader>
 
 			{children.length === 0 && !loading && (
-				<EmptyState>{t('parent.dashboard.noChildrenFound')}. {t('parent.dashboard.contactAdmin')}</EmptyState>
+				<EmptyState>No children found. Please contact the school administrator.</EmptyState>
 			)}
 
 			{/* Loading or Error States */}
-			{loading && <LoadingState>{t('parent.dashboard.loading')}</LoadingState>}
-			{error && <ErrorMessage>{t('common.error')}: {error}</ErrorMessage>}
+			{loading && <LoadingState>Loading dashboard data...</LoadingState>}
+			{error && <ErrorMessage>Error loading data: {error}</ErrorMessage>}
 
 			{!loading && !error && selectedStudent && children.length > 0 && (
 				<>
@@ -340,7 +338,7 @@ const ParentDashboard: React.FC = () => {
 										? '#f59e0b'
 										: '#ef4444'
 								}
-								title={t('parent.dashboard.overallGrade')}
+								title='Overall Grade'
 								value={overallStats.grade}
 								change={`${overallStats.gradeValue.toFixed(1)}/10`}
 								icon={<FiBarChart2 />}
@@ -369,16 +367,16 @@ const ParentDashboard: React.FC = () => {
 										? '#f59e0b'
 										: '#ef4444'
 								}
-								title={t('parent.dashboard.attendanceRate')}
+								title='Attendance'
 								value={overallStats.attendance}
 								change={
 									overallStats.attendanceValue >= 90
-										? t('parent.dashboard.excellent')
+										? 'Excellent'
 										: overallStats.attendanceValue >= 80
-										? t('parent.dashboard.good')
+										? 'Good'
 										: overallStats.attendanceValue >= 70
-										? t('parent.dashboard.needsImprovement')
-										: t('parent.dashboard.poor')
+										? 'Needs improvement'
+										: 'Critical'
 								}
 								icon={<FiUser />}
 								color={
@@ -406,14 +404,14 @@ const ParentDashboard: React.FC = () => {
 										? '#f59e0b'
 										: '#ef4444'
 								}
-								title={t('parent.dashboard.pendingAssignments')}
+								title='Pending Assignments'
 								value={overallStats.pendingAssignments}
 								change={
 									overallStats.pendingAssignments === 0
-										? t('parent.dashboard.allCompleted')
+										? 'All completed'
 										: overallStats.pendingAssignments <= 2
-										? t('parent.dashboard.almostDone')
-										: t('parent.dashboard.actionRequired')
+										? 'Almost there'
+										: 'Action required'
 								}
 								icon={<FiClipboard />}
 								color={
@@ -437,9 +435,9 @@ const ParentDashboard: React.FC = () => {
 							transition={{ duration: 0.3, delay: 0.3 }}
 						>
 							<SectionHeader>
-								<SectionTitle>{t('parent.dashboard.childOverview')}</SectionTitle>
+								<SectionTitle>Child Overview</SectionTitle>
 								<ViewAllButton as={Link} to='/parent/students'>
-									{t('common.viewDetails')} <FiChevronRight />
+									View Details <FiChevronRight />
 								</ViewAllButton>
 							</SectionHeader>
 							<OverviewCard>
@@ -459,15 +457,15 @@ const ParentDashboard: React.FC = () => {
 										}
 									>
 										{overallStats.gradeValue >= 7
-											? t('parent.dashboard.goodStanding')
+											? 'Good Standing'
 											: overallStats.gradeValue >= 5
-											? t('parent.dashboard.averageStanding')
-											: t('parent.dashboard.needsAttention')}
+											? 'Average Standing'
+											: 'Needs Attention'}
 									</PerformanceBadge>
 								</StudentProfile>
 								<ProgressSection>
 									<ProgressItem>
-										<ProgressLabel>{t('parent.dashboard.overallPerformance')}</ProgressLabel>
+										<ProgressLabel>Overall Performance</ProgressLabel>
 										<ProgressBar>
 											<ProgressFill
 												$percentage={overallStats.gradeValue * 10}
@@ -485,7 +483,7 @@ const ParentDashboard: React.FC = () => {
 										</ProgressValue>
 									</ProgressItem>
 									<ProgressItem>
-										<ProgressLabel>{t('navigation.attendance')}</ProgressLabel>
+										<ProgressLabel>Attendance</ProgressLabel>
 										<ProgressBar>
 											<ProgressFill
 												$percentage={overallStats.attendanceValue}
@@ -516,21 +514,21 @@ const ParentDashboard: React.FC = () => {
 							transition={{ duration: 0.3, delay: 0.4 }}
 						>
 							<SectionHeader>
-								<SectionTitle>{t('parent.dashboard.upcomingAssignments')}</SectionTitle>
+								<SectionTitle>Upcoming Assignments</SectionTitle>
 								<ViewAllButton as={Link} to='/parent/assignments'>
-									{t('common.viewAll')} <FiClipboard />
+									View All <FiClipboard />
 								</ViewAllButton>
 							</SectionHeader>
 							<AssignmentsCard>
 								{assignments.length === 0 ? (
-									<EmptyState>{t('parent.assignments.noUpcomingAssignments')}</EmptyState>
+									<EmptyState>No upcoming assignments found for this student</EmptyState>
 								) : (
 									assignments.map(assignment => (
 										<AssignmentItem key={assignment.id}>
 											<AssignmentHeader>
 												<AssignmentSubject>{assignment.subject}</AssignmentSubject>
 												<AssignmentDue $dueDate={assignment.dueDate}>
-													{t('parent.assignments.due')}: {assignment.dueDate}
+													Due: {assignment.dueDate}
 												</AssignmentDue>
 											</AssignmentHeader>
 											<AssignmentTitle>{assignment.title}</AssignmentTitle>
@@ -551,14 +549,14 @@ const ParentDashboard: React.FC = () => {
 							transition={{ duration: 0.3, delay: 0.5 }}
 						>
 							<SectionHeader>
-								<SectionTitle>{t('parent.dashboard.recentGrades')}</SectionTitle>
+								<SectionTitle>Recent Grades</SectionTitle>
 								<ViewAllButton as={Link} to={`/parent/grades?student=${selectedStudent || ''}`}>
-									{t('common.viewAll')} <FiBarChart2 />
+									View All <FiBarChart2 />
 								</ViewAllButton>
 							</SectionHeader>
 							<GradesCard>
 								{recentGrades.length === 0 ? (
-									<EmptyState>{t('parent.grades.noGrades')}</EmptyState>
+									<EmptyState>No grades available</EmptyState>
 								) : (
 									recentGrades.map(grade => (
 										<GradeItem key={grade.id}>
@@ -587,18 +585,18 @@ const ParentDashboard: React.FC = () => {
 							<SectionHeader>
 								<SectionTitle>
 									<FiCheckSquare />
-									<span>{t('parent.dashboard.dailyAttendance')}</span>
+									<span>Daily Attendance</span>
 								</SectionTitle>
 								<ViewAllLink to='/parent/daily-attendance'>
-									{t('common.viewAll')} <FiChevronRight />
+									View All <FiChevronRight />
 								</ViewAllLink>
 							</SectionHeader>
 
 							<SectionContent>
 								{loadingDailyAttendance ? (
-									<LoadingMessage>{t('parent.attendance.loadingData')}</LoadingMessage>
+									<LoadingMessage>Loading attendance data...</LoadingMessage>
 								) : recentDailyAttendance.length === 0 ? (
-									<EmptyMessage>{t('parent.attendance.noRecords')}</EmptyMessage>
+									<EmptyMessage>No attendance records found</EmptyMessage>
 								) : (
 									recentDailyAttendance.map(record => (
 										<AttendanceCard key={record.id}>

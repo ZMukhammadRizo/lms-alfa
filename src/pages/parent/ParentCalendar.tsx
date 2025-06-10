@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -149,7 +148,6 @@ const ErrorText = styled.div`
 `;
 
 const ParentCalendar: React.FC = () => {
-  const { t } = useTranslation();
   const theme = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -571,7 +569,7 @@ const ParentCalendar: React.FC = () => {
       setIsLoadingChildren(true);
 
       if (!user?.id) {
-        setChildrenError(t('parent.calendar.pleaseLogIn'));
+        setChildrenError("Please log in to view children's schedules.");
         setIsLoadingChildren(false);
         return;
       }
@@ -596,7 +594,7 @@ const ParentCalendar: React.FC = () => {
 
       } catch (error: any) {
         console.error("Error fetching children:", error);
-        setChildrenError(t('parent.calendar.failedToLoadChildren'));
+        setChildrenError("Failed to load children list. Please try again later.");
         setChildrenList([]); // Clear list on error
       } finally {
         setIsLoadingChildren(false);
@@ -604,7 +602,7 @@ const ParentCalendar: React.FC = () => {
     };
 
     fetchChildren();
-  }, [user, t]); // Re-fetch if parent user changes
+  }, [user]); // Re-fetch if parent user changes
 
   const handleChildSelectChange = (selectedOption: any) => {
     setSelectedChildId(selectedOption ? selectedOption.value : '');
@@ -614,7 +612,7 @@ const ParentCalendar: React.FC = () => {
                   return (
     <ParentCalendarContainer>
       {/* Display loading/error states for children fetching */}
-      {isLoadingChildren && <LoadingText>{t('parent.calendar.loadingChildren')}...</LoadingText>}
+      {isLoadingChildren && <LoadingText>Loading children...</LoadingText>}
       {childrenError && <ErrorText>{childrenError}</ErrorText>}
 
       {/* Render StudentSchedule only when children loading is done and no error */}

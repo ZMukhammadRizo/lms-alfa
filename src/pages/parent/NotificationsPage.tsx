@@ -1,12 +1,10 @@
 import React, { useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { FiClock, FiSearch, FiX } from 'react-icons/fi'
 import styled from 'styled-components'
 import { PageTitle } from '../../components/common'
 import { useParentStore } from '../../stores/useParentStore'
 
 const NotificationsPage: React.FC = () => {
-	const { t } = useTranslation()
 	const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useParentStore()
 	const [searchTerm, setSearchTerm] = useState('')
 	const [selectedType, setSelectedType] = useState<string | null>(null)
@@ -77,11 +75,11 @@ const NotificationsPage: React.FC = () => {
 	return (
 		<NotificationsContainer>
 			<PageHeader>
-				<PageTitle>{t('parent.notifications.title')}</PageTitle>
+				<PageTitle>Notifications</PageTitle>
 				<HeaderActions>
 					{notifications.some(n => !n.isRead) && (
 						<MarkAllReadButton onClick={markAllNotificationsAsRead}>
-							{t('parent.notifications.markAllAsRead')}
+							Mark all as read
 						</MarkAllReadButton>
 					)}
 				</HeaderActions>
@@ -94,7 +92,7 @@ const NotificationsPage: React.FC = () => {
 					</SearchIcon>
 					<SearchInput
 						type='text'
-						placeholder={t('parent.notifications.searchPlaceholder')}
+						placeholder='Search notifications...'
 						value={searchTerm}
 						onChange={e => setSearchTerm(e.target.value)}
 					/>
@@ -110,7 +108,7 @@ const NotificationsPage: React.FC = () => {
 						value={selectedType || ''}
 						onChange={e => setSelectedType(e.target.value || null)}
 					>
-						<option value=''>{t('parent.notifications.allTypes')}</option>
+						<option value=''>All Types</option>
 						{notificationTypes.map(type => (
 							<option key={type} value={type}>
 								{type}
@@ -125,18 +123,18 @@ const NotificationsPage: React.FC = () => {
 							checked={showUnreadOnly}
 							onChange={() => setShowUnreadOnly(!showUnreadOnly)}
 						/>
-						<label htmlFor='unread-only'>{t('parent.notifications.unreadOnly')}</label>
+						<label htmlFor='unread-only'>Unread only</label>
 					</FilterCheckbox>
 
 					{(searchTerm || selectedType || showUnreadOnly) && (
-						<ClearFiltersButton onClick={clearFilters}>{t('parent.notifications.clearFilters')}</ClearFiltersButton>
+						<ClearFiltersButton onClick={clearFilters}>Clear filters</ClearFiltersButton>
 					)}
 				</FilterControls>
 			</FiltersSection>
 
 			<NotificationsCount>
 				{filteredNotifications.length}{' '}
-				{filteredNotifications.length === 1 ? t('parent.notifications.notification') : t('parent.notifications.notifications')}
+				{filteredNotifications.length === 1 ? 'notification' : 'notifications'}
 			</NotificationsCount>
 
 			<NotificationsList>
@@ -166,9 +164,9 @@ const NotificationsPage: React.FC = () => {
 					))
 				) : (
 					<EmptyState>
-						<EmptyStateText>{t('parent.notifications.noNotifications')}</EmptyStateText>
+						<EmptyStateText>No notifications found</EmptyStateText>
 						{(searchTerm || selectedType || showUnreadOnly) && (
-							<EmptyStateSubtext>{t('parent.notifications.tryAdjustingFilters')}</EmptyStateSubtext>
+							<EmptyStateSubtext>Try adjusting your filters</EmptyStateSubtext>
 						)}
 					</EmptyState>
 				)}

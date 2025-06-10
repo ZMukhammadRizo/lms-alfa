@@ -3,8 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { FiChevronLeft, FiChevronRight, FiMenu } from 'react-icons/fi'
 import { NavLink, useLocation } from 'react-router-dom'
 import styled, { css } from 'styled-components'
-import { useTranslation } from 'react-i18next'
-import { getSystemMenu, getParentMenu } from '../../constants/menuItems'
+import { getSystemMenu, parentMenu } from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
 import LogoutButton from '../common/LogoutButton'
 import PermissionMenuItem from '../common/PermissionMenuItem'
@@ -67,7 +66,6 @@ const MenuItem: React.FC<MenuItemProps> = ({ icon, label, to, isCollapsed, onMob
 }
 
 const ParentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onMobileToggle }) => {
-	const { t } = useTranslation()
 	const [isMobile, setIsMobile] = useState(false)
 	const [isMobileOpen, setIsMobileOpen] = useState(false)
 	const { user } = useAuth()
@@ -170,9 +168,8 @@ const ParentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onM
 		return user?.fullName || user?.username || 'Parent'
 	}
 
-	// Get translated menu items
-	const parentMenuItems = getParentMenu(t)
-	const systemMenu = getSystemMenu('parent', t)
+	// Get system menu items for parent role
+	const systemMenu = getSystemMenu('parent')
 
 	return (
 		<>
@@ -227,7 +224,7 @@ const ParentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onM
 
 						<MenuContainer>
 							<MenuSection>
-								{parentMenuItems.map(item => (
+								{parentMenu.map(item => (
 									<PermissionMenuItem
 										key={item.path}
 										icon={item.icon}
@@ -248,7 +245,7 @@ const ParentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onM
 											exit={{ opacity: 0 }}
 											transition={{ delay: 0.2 }}
 										>
-											{t('navigation.system')}
+											System
 										</SectionLabel>
 									)}
 								</AnimatePresence>
@@ -277,7 +274,7 @@ const ParentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, onM
 										transition={{ duration: 0.2 }}
 									>
 										<ProfileName>{getFullName()}</ProfileName>
-										<ProfileRole>{t('roles.parent')}</ProfileRole>
+										<ProfileRole>Parent</ProfileRole>
 									</ProfileInfo>
 								)}
 							</AnimatePresence>

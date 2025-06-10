@@ -1,5 +1,4 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
-import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { 
@@ -30,7 +29,6 @@ enum SettingsTab {
 
 // Main component
 const SettingsPage: React.FC = () => {
-  const { t } = useTranslation();
   const { user } = useAuth();
   const { isDarkMode, toggleTheme, primaryColor, setPrimaryColor } = useThemeContext();
   const [activeTab, setActiveTab] = useState<SettingsTab>(SettingsTab.GENERAL);
@@ -126,12 +124,12 @@ const SettingsPage: React.FC = () => {
   // Render the general tab
   const renderGeneralTab = () => (
     <TabContent>
-      <PageTitle>{t('parent.settings.generalSettings')}</PageTitle>
+      <PageTitle>General Settings</PageTitle>
       <SettingsSection>
         <form onSubmit={handleGeneralSettingsSubmit}>
           <SettingsCard>
             <SettingsHeader>
-              <SettingsTitle>{t('parent.settings.siteSettings')}</SettingsTitle>
+              <SettingsTitle>Site Settings</SettingsTitle>
             </SettingsHeader>
             
             {successMessage && (
@@ -148,7 +146,7 @@ const SettingsPage: React.FC = () => {
 
             <FormGrid>
               <FormGroup>
-                <FormLabel htmlFor="siteName">{t('parent.settings.siteName')}</FormLabel>
+                <FormLabel htmlFor="siteName">Site Name</FormLabel>
                 <FormInputWrapper>
                   <SettingIcon>
                     <FiGlobe size={18} />
@@ -163,11 +161,11 @@ const SettingsPage: React.FC = () => {
                     $hasError={false}
                   />
                 </FormInputWrapper>
-                <HelperText>{t('parent.settings.siteNameHelper')}</HelperText>
+                <HelperText>The name of your learning management system</HelperText>
               </FormGroup>
               
               <FormGroup>
-                <FormLabel htmlFor="adminEmail">{t('parent.settings.adminEmail')}</FormLabel>
+                <FormLabel htmlFor="adminEmail">Admin Email</FormLabel>
                 <FormInputWrapper>
                   <SettingIcon>
                     <FiMail size={18} />
@@ -182,11 +180,11 @@ const SettingsPage: React.FC = () => {
                     $hasError={false}
                   />
                 </FormInputWrapper>
-                <HelperText>{t('parent.settings.adminEmailHelper')}</HelperText>
+                <HelperText>Email used for system notifications</HelperText>
               </FormGroup>
               <LockMessage>
                 <FiShield size={14} />
-                <span>{t('parent.settings.adminOnlySettings')}</span>
+                <span>These settings can only be changed by administrators</span>
               </LockMessage>
             </FormGrid>
 
@@ -199,7 +197,7 @@ const SettingsPage: React.FC = () => {
   // Render the appearance tab
   const renderAppearanceTab = () => (
     <TabContent>
-      <PageTitle>{t('parent.settings.appearanceSettings')}</PageTitle>
+      <PageTitle>Appearance Settings</PageTitle>
       <SettingsSection>
         <SettingsCard>
           <SettingsHeader>
@@ -342,8 +340,8 @@ const SettingsPage: React.FC = () => {
   return (
     <SettingsContainer>
       <PageHeader>
-        <h1>{t('parent.settings.title')}</h1>
-        <p>{t('parent.settings.description')}</p>
+        <h1>Settings</h1>
+        <p>Configure system settings and preferences</p>
       </PageHeader>
       
       <SettingsContent>
@@ -353,7 +351,7 @@ const SettingsPage: React.FC = () => {
             onClick={() => handleTabChange(SettingsTab.GENERAL)}
           >
             <FiSettings size={18} />
-            <span>{t('parent.settings.general')}</span>
+            <span>General</span>
           </TabButton>
           
           <TabButton 
@@ -361,7 +359,7 @@ const SettingsPage: React.FC = () => {
             onClick={() => handleTabChange(SettingsTab.APPEARANCE)}
           >
             <FiMonitor size={18} />
-            <span>{t('parent.settings.appearance')}</span>
+            <span>Appearance</span>
           </TabButton>
           
           <TabButton 
@@ -369,7 +367,7 @@ const SettingsPage: React.FC = () => {
             onClick={() => handleTabChange(SettingsTab.NOTIFICATIONS)}
           >
             <FiBell size={18} />
-            <span>{t('parent.settings.notifications')}</span>
+            <span>Notifications</span>
           </TabButton>
         </SettingsSidebar>
         
