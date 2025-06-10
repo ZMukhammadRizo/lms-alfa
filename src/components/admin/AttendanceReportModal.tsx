@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { X, Users, UserCheck, UserX, Clock, BookOpen, Loader, AlertCircle } from 'react-feather';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabaseClient';
 
 interface ClassAttendanceData {
@@ -298,6 +299,15 @@ const SummaryStatLabel = styled.div`
 `;
 
 const AttendanceReportModal: React.FC<AttendanceReportModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
+  
+  // Debug: Check if translations are working
+  console.log('Translation test:', {
+    present: t('attendance.present'),
+    absent: t('attendance.absent'),
+    title: t('dailyAttendanceReport.title')
+  });
+  
   const [attendanceData, setAttendanceData] = useState<ClassAttendanceData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -475,7 +485,7 @@ const AttendanceReportModal: React.FC<AttendanceReportModalProps> = ({ isOpen, o
         <ModalHeader>
           <ModalTitle>
             <Users size={24} />
-            Daily Attendance Report
+{t('dailyAttendanceReport.title')}
           </ModalTitle>
           <CloseButton onClick={onClose}>
             <X />
@@ -488,7 +498,7 @@ const AttendanceReportModal: React.FC<AttendanceReportModalProps> = ({ isOpen, o
               <LoadingSpinner>
                 <Loader size={24} />
               </LoadingSpinner>
-              <span>Loading attendance data...</span>
+              <span>{t('dailyAttendanceReport.loadingData')}</span>
             </LoadingContainer>
           )}
 
@@ -496,7 +506,7 @@ const AttendanceReportModal: React.FC<AttendanceReportModalProps> = ({ isOpen, o
             <ErrorContainer>
               <AlertCircle size={32} />
               <ErrorMessage>
-                Failed to load attendance data
+                {t('dailyAttendanceReport.failedToLoad')}
                 <br />
                 {error}
               </ErrorMessage>
@@ -506,7 +516,7 @@ const AttendanceReportModal: React.FC<AttendanceReportModalProps> = ({ isOpen, o
           {!loading && !error && attendanceData.length === 0 && (
             <NoDataContainer>
               <AlertCircle size={32} />
-              <span>No attendance data found for today</span>
+              <span>{t('dailyAttendanceReport.noDataFound')}</span>
             </NoDataContainer>
           )}
 
@@ -514,27 +524,27 @@ const AttendanceReportModal: React.FC<AttendanceReportModalProps> = ({ isOpen, o
             <>
               {/* Summary Card */}
               <SummaryCard>
-                <SummaryTitle>Overall Summary</SummaryTitle>
+                <SummaryTitle>{t('dailyAttendanceReport.overallSummary')}</SummaryTitle>
                 <SummaryStats>
                   <SummaryStat>
                     <SummaryStatValue>{totals.totalStudents}</SummaryStatValue>
-                    <SummaryStatLabel>Total Students</SummaryStatLabel>
+                    <SummaryStatLabel>{t('dailyAttendanceReport.totalStudents')}</SummaryStatLabel>
                   </SummaryStat>
                   <SummaryStat>
                     <SummaryStatValue>{totals.present}</SummaryStatValue>
-                    <SummaryStatLabel>Present</SummaryStatLabel>
+                    <SummaryStatLabel>{t('attendance.present')}</SummaryStatLabel>
                   </SummaryStat>
                   <SummaryStat>
                     <SummaryStatValue>{totals.absent}</SummaryStatValue>
-                    <SummaryStatLabel>Absent</SummaryStatLabel>
+                    <SummaryStatLabel>{t('attendance.absent')}</SummaryStatLabel>
                   </SummaryStat>
                   <SummaryStat>
                     <SummaryStatValue>{totals.late}</SummaryStatValue>
-                    <SummaryStatLabel>Late</SummaryStatLabel>
+                    <SummaryStatLabel>{t('attendance.late')}</SummaryStatLabel>
                   </SummaryStat>
                   <SummaryStat>
                     <SummaryStatValue>{totals.excused}</SummaryStatValue>
-                    <SummaryStatLabel>Excused</SummaryStatLabel>
+                    <SummaryStatLabel>{t('attendance.excused')}</SummaryStatLabel>
                   </SummaryStat>
                 </SummaryStats>
               </SummaryCard>
@@ -549,7 +559,7 @@ const AttendanceReportModal: React.FC<AttendanceReportModalProps> = ({ isOpen, o
                     </ClassName>
                     <TotalStudents>
                       <Users size={16} />
-                      {classData.totalStudents} Students
+{classData.totalStudents} {t('dailyAttendanceReport.students')}
                     </TotalStudents>
                   </ClassHeader>
 
@@ -559,7 +569,7 @@ const AttendanceReportModal: React.FC<AttendanceReportModalProps> = ({ isOpen, o
                         {getStatusIcon('present')}
                       </StatIcon>
                       <StatText>
-                        <StatLabel>Present</StatLabel>
+                        <StatLabel>{t('attendance.present')}</StatLabel>
                         <StatValue>{classData.present}</StatValue>
                       </StatText>
                     </StatItem>
@@ -569,7 +579,7 @@ const AttendanceReportModal: React.FC<AttendanceReportModalProps> = ({ isOpen, o
                         {getStatusIcon('absent')}
                       </StatIcon>
                       <StatText>
-                        <StatLabel>Absent</StatLabel>
+                        <StatLabel>{t('attendance.absent')}</StatLabel>
                         <StatValue>{classData.absent}</StatValue>
                       </StatText>
                     </StatItem>
@@ -579,7 +589,7 @@ const AttendanceReportModal: React.FC<AttendanceReportModalProps> = ({ isOpen, o
                         {getStatusIcon('late')}
                       </StatIcon>
                       <StatText>
-                        <StatLabel>Late</StatLabel>
+                        <StatLabel>{t('attendance.late')}</StatLabel>
                         <StatValue>{classData.late}</StatValue>
                       </StatText>
                     </StatItem>
@@ -589,7 +599,7 @@ const AttendanceReportModal: React.FC<AttendanceReportModalProps> = ({ isOpen, o
                         {getStatusIcon('excused')}
                       </StatIcon>
                       <StatText>
-                        <StatLabel>Excused</StatLabel>
+                        <StatLabel>{t('attendance.excused')}</StatLabel>
                         <StatValue>{classData.excused}</StatValue>
                       </StatText>
                     </StatItem>
