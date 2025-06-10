@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { 
   FiBook, FiUsers, FiClipboard, 
   FiCalendar,  FiClock, } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 import StatCard from '../../components/admin/StatCard';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
@@ -17,11 +18,12 @@ import {
 
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardStats, setDashboardStats] = useState([
-    { id: 1, title: 'My Courses', value: 0, change: '+0', icon: <FiBook />, color: 'primary' },
-    { id: 2, title: 'Students', value: 0, change: '+0', icon: <FiUsers />, color: 'green' },
-    { id: 3, title: 'Assignments', value: 0, change: '+0', icon: <FiClipboard />, color: 'yellow' },
+    { id: 1, title: t('teacherPanel.dashboard.myCourses'), value: 0, change: '+0', icon: <FiBook />, color: 'primary' },
+    { id: 2, title: t('teacherPanel.dashboard.students'), value: 0, change: '+0', icon: <FiUsers />, color: 'green' },
+    { id: 3, title: t('teacherPanel.dashboard.assignments'), value: 0, change: '+0', icon: <FiClipboard />, color: 'yellow' },
   ]);
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingClass[]>([]);
   const [pendingAssignments, setPendingAssignments] = useState<PendingAssignment[]>([]);
@@ -47,7 +49,7 @@ const TeacherDashboard: React.FC = () => {
         setDashboardStats([
           { 
             id: 1, 
-            title: 'My Courses', 
+            title: t('teacherPanel.dashboard.myCourses'), 
             value: stats.coursesCount, 
             change: '+0',
             icon: <FiBook />, 
@@ -55,7 +57,7 @@ const TeacherDashboard: React.FC = () => {
           },
           { 
             id: 2, 
-            title: 'Students', 
+            title: t('teacherPanel.dashboard.students'), 
             value: stats.studentsCount, 
             change: '+0',
             icon: <FiUsers />, 
@@ -63,7 +65,7 @@ const TeacherDashboard: React.FC = () => {
           },
           { 
             id: 3, 
-            title: 'Assignments', 
+            title: t('teacherPanel.dashboard.assignments'), 
             value: stats.assignmentsCount, 
             change: '+0',
             icon: <FiClipboard />, 
@@ -95,8 +97,8 @@ const TeacherDashboard: React.FC = () => {
     >
       <WelcomeSection>
         <WelcomeMessage>
-          <h1>Welcome back, {user?.fullName || 'Teacher'}</h1>
-          <p>Here's what's happening with your classes today</p>
+          <h1>{t('teacherPanel.dashboard.welcomeBack')}, {user?.fullName || t('common.teacher')}</h1>
+          <p>{t('teacherPanel.dashboard.welcomeMessage')}</p>
         </WelcomeMessage>
       </WelcomeSection>
 
@@ -132,8 +134,8 @@ const TeacherDashboard: React.FC = () => {
           transition={{ duration: 0.3, delay: 0.3 }}
         >
           <SectionHeader>
-            <SectionTitle>Today's Schedule</SectionTitle>
-            <ViewAllButton>View All <FiCalendar /></ViewAllButton>
+            <SectionTitle>{t('teacherPanel.dashboard.todaysSchedule')}</SectionTitle>
+            <ViewAllButton>{t('teacherPanel.dashboard.viewAll')} <FiCalendar /></ViewAllButton>
           </SectionHeader>
           <ScheduleCard>
             {upcomingClasses.length > 0 ? (
@@ -147,14 +149,14 @@ const TeacherDashboard: React.FC = () => {
                   <ScheduleDetails>
                     <SubjectName>{classItem.subject}</SubjectName>
                     <ClassDetails>
-                      Class {classItem.className} • {classItem.room}
+                      {t('teacherPanel.dashboard.class')} {classItem.className} • {classItem.room}
                     </ClassDetails>
                   </ScheduleDetails>
                 </ScheduleItem>
               ))
             ) : (
               <NoDataMessage>
-                {isLoading ? 'Loading schedule...' : 'No classes scheduled for today'}
+                {isLoading ? t('teacherPanel.dashboard.loadingSchedule') : t('teacherPanel.dashboard.noClassesScheduled')}
               </NoDataMessage>
             )}
           </ScheduleCard>
@@ -168,8 +170,8 @@ const TeacherDashboard: React.FC = () => {
           transition={{ duration: 0.3, delay: 0.4 }}
         >
           <SectionHeader>
-            <SectionTitle>Pending Assignments</SectionTitle>
-            <ViewAllButton>View All <FiClipboard /></ViewAllButton>
+            <SectionTitle>{t('teacherPanel.dashboard.pendingAssignments')}</SectionTitle>
+            <ViewAllButton>{t('teacherPanel.dashboard.viewAll')} <FiClipboard /></ViewAllButton>
           </SectionHeader>
           <AssignmentsCard>
             {pendingAssignments.length > 0 ? (
@@ -177,17 +179,17 @@ const TeacherDashboard: React.FC = () => {
                 <AssignmentItem key={assignment.id}>
                   <div>
                     <AssignmentTitle>{assignment.title}</AssignmentTitle>
-                    <AssignmentClass>Class {assignment.className}</AssignmentClass>
+                    <AssignmentClass>{t('teacherPanel.dashboard.class')} {assignment.className}</AssignmentClass>
                   </div>
                   <AssignmentInfo>
-                    <AssignmentDue>Due: {assignment.dueDate}</AssignmentDue>
-                    <AssignmentSubmissions>Submissions: {assignment.submissions}</AssignmentSubmissions>
+                    <AssignmentDue>{t('teacherPanel.dashboard.due')} {assignment.dueDate}</AssignmentDue>
+                    <AssignmentSubmissions>{t('teacherPanel.dashboard.submissions')} {assignment.submissions}</AssignmentSubmissions>
                   </AssignmentInfo>
                 </AssignmentItem>
               ))
             ) : (
               <NoDataMessage>
-                {isLoading ? 'Loading assignments...' : 'No pending assignments'}
+                {isLoading ? t('teacherPanel.dashboard.loadingAssignments') : t('teacherPanel.dashboard.noPendingAssignments')}
               </NoDataMessage>
             )}
           </AssignmentsCard>

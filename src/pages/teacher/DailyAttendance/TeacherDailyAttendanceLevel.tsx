@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { ArrowLeft, Search, Users } from 'react-feather'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
@@ -20,6 +21,7 @@ interface Level {
 }
 
 const TeacherDailyAttendanceLevel: React.FC = () => {
+	const { t } = useTranslation()
 	const { levelId } = useParams<{ levelId: string }>()
 	const [classes, setClasses] = useState<Class[]>([])
 	const [filteredClasses, setFilteredClasses] = useState<Class[]>([])
@@ -65,12 +67,12 @@ const TeacherDailyAttendanceLevel: React.FC = () => {
 
 			setLevel(levelData)
 
-			// Fetch classes for this level that are assigned to the teacher
+			// Fetch classes for this level where the teacher is assigned
 			const { data: classesData, error: classesError } = await supabase
 				.from('classes')
 				.select('id, classname, student_count, room')
 				.eq('level_id', levelId)
-				.eq('teacherid', user.id)
+				.eq('teacherid', user?.id)
 				.order('classname')
 
 			if (classesError) throw classesError
@@ -78,7 +80,7 @@ const TeacherDailyAttendanceLevel: React.FC = () => {
 			setClasses(classesData || [])
 		} catch (error) {
 			console.error('Error fetching level and classes:', error)
-			toast.error('Failed to load classes')
+			toast.error(t('dailyAttendance.loadingClasses'))
 		} finally {
 			setLoading(false)
 		}
@@ -96,35 +98,35 @@ const TeacherDailyAttendanceLevel: React.FC = () => {
 		<Container>
 			<BackLink to='/teacher/daily-attendance'>
 				<ArrowLeft size={16} />
-				<span>Back to Levels</span>
+				<span>{t('dailyAttendance.backToLevels')}</span>
 			</BackLink>
 
 			<PageHeader
-				title={level ? `${level.name} - Daily Attendance` : 'Daily Attendance'}
-				subtitle='Select a class to manage daily attendance'
+				title={level ? `${level.name} - ${t('dailyAttendance.title')}` : t('dailyAttendance.title')}
+				subtitle={t('dailyAttendance.selectClass')}
 			/>
 
 			{loading ? (
 				<LoadingContainer>
 					<LoadingSpinner />
-					<p>Loading classes...</p>
+					<p>{t('dailyAttendance.loadingClasses')}</p>
 				</LoadingContainer>
 			) : classes.length === 0 ? (
 				<EmptyState>
-					<h3>No classes found</h3>
-					<p>You don't have any classes assigned to you in this level.</p>
+					<h3>{t('dailyAttendance.noClassesFound')}</h3>
+					<p>{t('dailyAttendance.noClassesAvailable')}</p>
 				</EmptyState>
 			) : (
 				<>
 					<SearchContainer>
-						<ClassCount>{classes.length} Classes</ClassCount>
+						<ClassCount>{classes.length} {t('dailyAttendance.classes')}</ClassCount>
 						<SearchInputWrapper>
 							<SearchIcon>
 								<Search size={18} />
 							</SearchIcon>
 							<SearchInput
 								type='text'
-								placeholder='Search classes...'
+								placeholder={t('dailyAttendance.searchClasses')}
 								value={searchQuery}
 								onChange={handleSearchChange}
 							/>
@@ -133,8 +135,8 @@ const TeacherDailyAttendanceLevel: React.FC = () => {
 
 					{filteredClasses.length === 0 ? (
 						<EmptyState>
-							<h3>No matching classes</h3>
-							<p>No classes match your search criteria.</p>
+							<h3>{t('dailyAttendance.noMatchingClasses')}</h3>
+							<p>{t('dailyAttendance.noClassesMatchSearch')}</p>
 						</EmptyState>
 					) : (
 						<ClassesGrid>
@@ -142,11 +144,11 @@ const TeacherDailyAttendanceLevel: React.FC = () => {
 								<ClassCard key={cls.id} onClick={() => handleClassClick(cls.id)}>
 									<ClassInfo>
 										<ClassTitle>{cls.classname}</ClassTitle>
-										{cls.room && <ClassRoom>Room: {cls.room}</ClassRoom>}
+										{cls.room && <ClassRoom>{t('dailyAttendance.room')}: {cls.room}</ClassRoom>}
 									</ClassInfo>
 									<StudentCount>
 										<Users size={16} />
-										<span>{cls.student_count} Students</span>
+										<span>{cls.student_count} {t('dailyAttendance.students')}</span>
 									</StudentCount>
 								</ClassCard>
 							))}

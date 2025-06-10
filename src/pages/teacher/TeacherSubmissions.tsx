@@ -455,7 +455,7 @@ const TeacherSubmissions = () => {
 					<div>
 						<PageTitle>{t('submissions.studentSubmissions')}</PageTitle>
 						<PageDescription>
-							{t('submissions.teacherDescription')}
+							{t('teacherPanel.submissions.description')}
 						</PageDescription>
 					</div>
 				</HeaderContent>
@@ -465,7 +465,7 @@ const TeacherSubmissions = () => {
 						<SearchIcon />
 						<SearchInput
 							type='text'
-							placeholder={t('submissions.searchByStudentName')}
+							placeholder={t('teacherPanel.submissions.searchByStudentNameOrAssignment')}
 							value={searchTerm}
 							onChange={handleSearchChange}
 						/>
@@ -475,8 +475,8 @@ const TeacherSubmissions = () => {
 						<FilterButton onClick={() => setShowClassDropdown(!showClassDropdown)}>
 							<FiFilter />
 							{selectedClass
-								? `${t('submissions.class')}: ${classes.find(c => c.id === selectedClass)?.classname || t('common.selected')}`
-								: t('submissions.selectClass')}
+								? `${t('teacherPanel.submissions.class')}: ${classes.find(c => c.id === selectedClass)?.classname || t('common.selected')}`
+								: t('teacherPanel.submissions.selectClass')}
 							<FiChevronDown />
 						</FilterButton>
 						{showClassDropdown && (
@@ -488,7 +488,7 @@ const TeacherSubmissions = () => {
 									}}
 									$isActive={selectedClass === null}
 								>
-									{t('submissions.allClasses')}
+									{t('teacherPanel.submissions.allClasses')}
 								</DropdownItem>
 								{classes.map(classItem => (
 									<DropdownItem
@@ -510,8 +510,8 @@ const TeacherSubmissions = () => {
 						<FilterButton onClick={() => setShowQuarterDropdown(!showQuarterDropdown)}>
 							<FiCalendar />
 							{selectedQuarter
-								? `${t('submissions.quarter')}: ${quarters.find(q => q.id === selectedQuarter)?.name || t('common.selected')}`
-								: t('submissions.selectQuarter')}
+								? `${t('teacherPanel.submissions.quarter')}: ${quarters.find(q => q.id === selectedQuarter)?.name || t('common.selected')}`
+								: t('teacherPanel.submissions.selectQuarter')}
 							<FiChevronDown />
 						</FilterButton>
 						{showQuarterDropdown && (
@@ -523,7 +523,7 @@ const TeacherSubmissions = () => {
 									}}
 									$isActive={selectedQuarter === null}
 								>
-									{t('submissions.allQuarters')}
+									{t('teacherPanel.submissions.allQuarters')}
 								</DropdownItem>
 								{quarters.map(quarter => (
 									<DropdownItem
@@ -660,7 +660,7 @@ const TeacherSubmissions = () => {
 									<DetailValue>{selectedSubmission.assignment.class.classname}</DetailValue>
 								</DetailItem>
 								<DetailItem>
-									<DetailLabel>{t('submissions.quarter')}:</DetailLabel>
+									<DetailLabel>{t('teacherPanel.submissions.quarter')}:</DetailLabel>
 									<DetailValue>
 										{selectedSubmission.assignment.quarter?.name || t('submissions.noQuarter')}
 									</DetailValue>

@@ -2,8 +2,9 @@ import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 import { FiChevronLeft, FiChevronRight, FiMenu } from 'react-icons/fi'
 import { NavLink, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import styled, { css } from 'styled-components'
-import { getModuleLeaderMenu, getSystemMenu, teacherMenu } from '../../constants/menuItems'
+import { getModuleLeaderMenu, getSystemMenu, getTeacherMenu } from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
 import {
 	getUserParentRole,
@@ -74,6 +75,7 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 	const [isMobile, setIsMobile] = useState(false)
 	const [isMobileOpen, setIsMobileOpen] = useState(false)
 	const { user } = useAuth()
+	const { t } = useTranslation()
 
 	// Handle window resize
 	useEffect(() => {
@@ -159,8 +161,9 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 	const realRole = getUserRealRole()
 	const parentRole = getUserParentRole()
 
-	// Get system menu items for the current role
-	const systemMenu = getSystemMenu('teacher')
+	// Get translated menu items
+	const teacherMenuItems = getTeacherMenu(t)
+	const systemMenu = getSystemMenu('teacher', t)
 
 	return (
 		<>
@@ -215,7 +218,7 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 
 						<MenuContainer>
 							<MenuSection>
-								{teacherMenu.map(item => (
+								{teacherMenuItems.map(item => (
 									<PermissionMenuItem
 										key={item.path}
 										icon={item.icon}
@@ -235,9 +238,9 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 										exit={{ opacity: 0 }}
 										transition={{ delay: 0.2 }}
 									>
-										MODULE LEADER
+										{t('teacherPanel.common.moduleLeader')}
 									</SectionLabel>
-									{getModuleLeaderMenu(parentRole, realRole).map(item => (
+									{getModuleLeaderMenu(parentRole, realRole, t).map(item => (
 										<PermissionMenuItem
 											key={item.path}
 											icon={item.icon}
@@ -259,7 +262,7 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 											exit={{ opacity: 0 }}
 											transition={{ delay: 0.2 }}
 										>
-											SYSTEM
+											{t('teacherPanel.common.system')}
 										</SectionLabel>
 									)}
 								</AnimatePresence>
@@ -288,7 +291,7 @@ const TeacherSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 										transition={{ duration: 0.2 }}
 									>
 										<ProfileName>{getFullName()}</ProfileName>
-										<ProfileRole>Teacher</ProfileRole>
+										<ProfileRole>{t('teacherPanel.common.teacher')}</ProfileRole>
 									</ProfileInfo>
 								)}
 							</AnimatePresence>
