@@ -24,12 +24,10 @@
     "tryAgain": "Qayta urinib ko'ring",
     "never": "Hech qachon",
     "notSet": "Belgilanmagan",
-         "view": "Ko'rish",
-     "back": "Orqaga",
-     "backToLevels": "Darajalarga qaytish",
-     "backToClasses": "Sinflarga qaytish",
-     "next": "Keyingi",
-     "previous": "Oldingi",
+    "view": "Ko'rish",
+    "back": "Orqaga",
+    "next": "Keyingi",
+    "previous": "Oldingi",
     "sort": "Saralash",
     "noData": "Ma'lumot mavjud emas",
     "success": "Muvaffaqiyat",
@@ -956,7 +954,8 @@
     "maxAttemptsReached": "Maksimal urinishlar soniga yetildi"
   },
          "pendingReview": "Ko'rib chiqilmoqda",
-     "failedToCheckPermissions": "Ruxsatlarni tekshirish muvaffaqiyatsiz",
+     "failedToCheckPermissions": "Ruxsatlarni tekshirish muvaffaqiyatsiz"
+   },
    "teacher": {
      "dashboard": {
        "title": "O'qituvchi boshqaruv paneli",
@@ -1132,21 +1131,6 @@
    },
    "dailyAttendance": {
      "title": "Kunlik davomat",
-     "subtitle": "Barcha sinflar uchun kunlik davomat yozuvlarini boshqarish",
-     "totalLevels": "Jami darajalar",
-     "totalClasses": "Jami sinflar",
-     "totalStudents": "Jami o'quvchilar",
-     "selectLevel": "Darajani tanlang",
-     "filterAndReport": "Filtr va hisobot",
-     "searchLevels": "Darajalarni qidirish...",
-     "searchClasses": "Sinflarni qidirish...",
-     "searchStudents": "O'quvchilarni qidirish...",
-     "studentList": "O'quvchilar ro'yxati",
-     "exportAttendance": "Davomatni eksport qilish",
-     "viewAttendance": "Davomatni ko'rish",
-     "backToClasses": "Sinflarga qaytish",
-     "classes": "Sinflar",
-     "students": "O'quvchilar",
      "markAttendance": "Davomatni belgilash",
      "viewReports": "Hisobotlarni ko'rish",
      "selectClass": "Sinfni tanlang",
@@ -2098,22 +2082,7 @@
   "grade": "Baho",
   "teacherFeedback": "O'qituvchi fikr-mulohazasi",
   "submissionAttempts": "Topshirish urinishlari",
-  "maxAttemptsReached": "Maksimal urinishlar soniga yetildi",
-  "dashboard": {
-    "title": "Administrator Paneli",
-    "welcomeMessage": "LMS Administrator Paneliga xush kelibsiz",
-    "overview": "Umumiy ko'rinish",
-    "students": "O'quvchilar",
-    "courses": "Kurslar",
-    "totalUsers": "Jami Foydalanuvchilar",
-    "totalStudents": "Jami O'quvchilar",
-    "teachers": "O'qituvchilar",
-    "activeClasses": "Faol Sinflar",
-    "studentStatistics": "O'quvchilar Statistikasi",
-    "activeStudents": "Faol O'quvchilar",
-    "inactiveStudents": "Nofaol O'quvchilar",
-    "activeVsInactive": "Faol va Nofaol",
-    "attendanceOverview": "Davomat Umumiy Ko'rinishi",
-    "fullReport": "To'liq Hisobot"
-  }
+  "maxAttemptsReached": "Maksimal urinishlar soniga yetildi"
+}
+	}
 }
