@@ -28,11 +28,9 @@
     "student": "Ученик",
     "email": "Email",
     "view": "Просмотр",
-         "back": "Назад",
-     "backToLevels": "Назад к уровням",
-     "backToClasses": "Назад к классам",
-     "next": "Далее",
-     "previous": "Предыдущий",
+    "back": "Назад",
+    "next": "Далее",
+    "previous": "Предыдущий",
     "sort": "Сортировка",
     "noData": "Данные недоступны",
     "success": "Успех",
@@ -1159,7 +1157,7 @@
           "count": "Количество"
         },
         "noDailyScores": "Ежедневные оценки недоступны."
-      },
+      }
     "filter": "Фильтр",
     "allCourses": "Все Курсы",
     "loading": "Загрузка заданий...",
@@ -1608,21 +1606,6 @@
    },
    "dailyAttendance": {
      "title": "Ежедневная посещаемость",
-     "subtitle": "Управление записями ежедневной посещаемости для всех классов",
-     "totalLevels": "Всего уровней",
-     "totalClasses": "Всего классов",
-     "totalStudents": "Всего учеников",
-     "selectLevel": "Выберите уровень",
-     "filterAndReport": "Фильтр и отчет",
-     "searchLevels": "Поиск уровней...",
-     "searchClasses": "Поиск классов...",
-     "searchStudents": "Поиск учеников...",
-     "studentList": "Список учеников",
-     "exportAttendance": "Экспорт посещаемости",
-     "viewAttendance": "Просмотр посещаемости",
-     "backToClasses": "Назад к классам",
-     "classes": "Классы",
-     "students": "Ученики",
      "markAttendance": "Отметить посещаемость",
      "viewReports": "Просмотр отчетов",
      "selectClass": "Выберите класс",
@@ -2809,23 +2792,8 @@
   "grade": "Оценка",
   "teacherFeedback": "Отзыв учителя",
   "submissionAttempts": "Попытки сдачи",
-  "maxAttemptsReached": "Достигнуто максимальное количество попыток",
-  "dashboard": {
-    "title": "Панель Администратора",
-    "welcomeMessage": "Добро пожаловать в Панель Администратора LMS",
-    "overview": "Обзор",
-    "students": "Ученики",
-    "courses": "Курсы",
-    "totalUsers": "Всего Пользователей",
-    "totalStudents": "Всего Учеников",
-    "teachers": "Учителя",
-    "activeClasses": "Активные Классы",
-    "studentStatistics": "Статистика Учеников",
-    "activeStudents": "Активные Ученики",
-    "inactiveStudents": "Неактивные Ученики",
-    "activeVsInactive": "Активные против Неактивных",
-    "attendanceOverview": "Обзор Посещаемости",
-    "fullReport": "Полный Отчет"
-  }
-  }
+  "maxAttemptsReached": "Достигнуто максимальное количество попыток"
 }
+      "noMessages": "Сообщения не найдены"
+	}
+  }}
