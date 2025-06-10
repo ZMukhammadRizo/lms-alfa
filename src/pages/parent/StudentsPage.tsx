@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FaBook, FaUserGraduate } from 'react-icons/fa'
 import { FiBarChart2, FiCalendar, FiCheckCircle, FiChevronRight, FiFileText } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
@@ -65,6 +66,7 @@ interface ClassInfo {
 }
 
 const StudentsPage: React.FC = () => {
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 	// Get the store without destructuring to avoid unused variable warnings
 	const parentStudentStore = useParentStudentStore()
@@ -313,7 +315,7 @@ const StudentsPage: React.FC = () => {
 						return {
 							id: subjectData.subjectId,
 							name: subjectData.subjectName,
-							teacher: student.teacher || 'Not assigned',
+							teacher: student.teacher || t('common.notAssigned'),
 							grade: calculateGradeLetter(averageSubjectScore),
 							subjectId: subjectData.subjectId,
 						}
@@ -325,8 +327,8 @@ const StudentsPage: React.FC = () => {
 							courses.push({
 								id: subject.id,
 								name: subject.subjectname,
-								teacher: 'Not assigned',
-								grade: 'N/A',
+								teacher: t('common.notAssigned'),
+								grade: t('common.notAvailable'),
 								subjectId: subject.id,
 							})
 						}
@@ -344,7 +346,7 @@ const StudentsPage: React.FC = () => {
 				setLoading(false)
 			} catch (err) {
 				console.error('Error loading data:', err)
-				setError('Failed to load student data')
+				setError(t('parent.students.failedToLoad'))
 				setLoading(false)
 			}
 		}
@@ -369,19 +371,19 @@ const StudentsPage: React.FC = () => {
 		>
 			<PageHeader>
 				<div>
-					<PageTitle>My Children</PageTitle>
-					<PageDescription>Manage and view your children's academic information</PageDescription>
+					<PageTitle>{t('parent.students.title')}</PageTitle>
+					<PageDescription>{t('parent.students.description')}</PageDescription>
 				</div>
 			</PageHeader>
 
 			{loading ? (
-				<LoadingState>Loading student information...</LoadingState>
+				<LoadingState>{t('parent.students.loadingInfo')}</LoadingState>
 			) : error ? (
 				<ErrorMessage>{error}</ErrorMessage>
 			) : students.length === 0 ? (
 				<EmptyState>
-					<EmptyStateTitle>No students found</EmptyStateTitle>
-					<EmptyStateText>There are no children associated with your account.</EmptyStateText>
+					<EmptyStateTitle>{t('parent.students.noStudentsFound')}</EmptyStateTitle>
+					<EmptyStateText>{t('parent.students.noChildrenAccount')}</EmptyStateText>
 				</EmptyState>
 			) : (
 				<StudentsGrid>
@@ -402,9 +404,9 @@ const StudentsPage: React.FC = () => {
 										{student.firstName} {student.lastName}
 									</StudentName>
 									<StudentMeta>
-										{student.level}th Grade • {student.category} Class
+										{t('parent.students.gradeLevel', { grade: student.level })} • {student.category} {t('parent.students.class')}
 									</StudentMeta>
-									<TeacherName>Class Teacher: {student.teacher}</TeacherName>
+									<TeacherName>{t('parent.students.classTeacher')}: {student.teacher}</TeacherName>
 								</StudentInfo>
 							</StudentHeader>
 
@@ -414,8 +416,8 @@ const StudentsPage: React.FC = () => {
 										<FiBarChart2 />
 									</StatIcon>
 									<StatContent>
-										<StatValue>{student.grades || 'N/A'}</StatValue>
-										<StatLabel>Avg. Grade</StatLabel>
+										<StatValue>{student.grades || t('common.notAvailable')}</StatValue>
+										<StatLabel>{t('parent.students.avgGrade')}</StatLabel>
 									</StatContent>
 								</StatItem>
 
@@ -424,8 +426,8 @@ const StudentsPage: React.FC = () => {
 										<FiCheckCircle />
 									</StatIcon>
 									<StatContent>
-										<StatValue>{student.attendance || 'N/A'}</StatValue>
-										<StatLabel>Attendance</StatLabel>
+										<StatValue>{student.attendance || t('common.notAvailable')}</StatValue>
+										<StatLabel>{t('navigation.attendance')}</StatLabel>
 									</StatContent>
 								</StatItem>
 
@@ -435,7 +437,7 @@ const StudentsPage: React.FC = () => {
 									</StatIcon>
 									<StatContent>
 										<StatValue>{student.assignments}</StatValue>
-										<StatLabel>Assignments</StatLabel>
+										<StatLabel>{t('navigation.assignments')}</StatLabel>
 									</StatContent>
 								</StatItem>
 							</StatsContainer>
@@ -444,7 +446,7 @@ const StudentsPage: React.FC = () => {
 								<SectionIcon>
 									<FaBook />
 								</SectionIcon>
-								<span>Enrolled Courses</span>
+								<span>{t('parent.students.enrolledCourses')}</span>
 							</SectionTitle>
 
 							<CoursesList>
@@ -467,13 +469,13 @@ const StudentsPage: React.FC = () => {
 									<ButtonIcon>
 										<FiBarChart2 />
 									</ButtonIcon>
-									View Grades
+									{t('parent.students.viewGrades')}
 								</PrimaryButton>
 								<SecondaryButton onClick={() => handleViewAttendance(student.id)}>
 									<ButtonIcon>
 										<FiCalendar />
 									</ButtonIcon>
-									View Attendance
+									{t('parent.students.viewAttendance')}
 								</SecondaryButton>
 							</CardActions>
 						</StudentCard>
