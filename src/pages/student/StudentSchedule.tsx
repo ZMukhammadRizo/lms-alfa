@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { startOfWeek } from 'date-fns';
 import Select, { StylesConfig } from 'react-select';
+import { useTranslation } from 'react-i18next';
 
 // Helper functions
 const getWeekDays = (date: Date): Date[] => {
@@ -153,6 +154,7 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
   const theme = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth(); 
+  const { t } = useTranslation();
   const [courseFeedback, setCourseFeedback] = useState<string>("");
 
   // State variables
@@ -215,7 +217,7 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
 
       if (!targetStudentId) {
         console.error('No target student ID found');
-        setErrorMessage('Cannot load schedule: Student ID missing.');
+        setErrorMessage(t('parent.calendar.cannotLoadSchedule'));
         setClassEvents([]); // Clear events if no ID
         setLoading(false);
         return;
@@ -291,7 +293,7 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
               .eq('subjectid', pair.subjectId)
               .maybeSingle();
 
-            let teacherNameToSet = 'Teacher N/A';
+            let teacherNameToSet = t('parent.calendar.teacherNA');
             let assignedIdFromDb: string | undefined = undefined;
 
             if (!error && assignment) {
@@ -343,13 +345,13 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
             if (!isNaN(parsedEndMinute) && parsedEndMinute >= 0 && parsedEndMinute <= 59) endMinute = parsedEndMinute;
           }
 
-          const courseName = item.subjects?.subjectname || 'Unknown Course';
+          const courseName = item.subjects?.subjectname || t('parent.calendar.unknownCourse');
           const title = item.title || courseName;
           
           // Get the CORRECT assigned teacher's name from the map
           const assignmentKey = `${item.classId}-${item.subjectId}`;
           const assignmentDetails = teacherAssignments.get(assignmentKey);
-          const teacherName = assignmentDetails ? assignmentDetails.name : 'Teacher N/A';
+          const teacherName = assignmentDetails ? assignmentDetails.name : t('parent.calendar.teacherNA');
           
           // Generate color based on course name for consistency (using existing logic)
           const color = getRandomColor(courseName);
@@ -364,7 +366,7 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
             endMinute,
             day: item.day !== undefined && item.day !== null ? parseInt(String(item.day)) : 0,
             teacher: teacherName, // Use the correctly assigned teacher name
-            location: item.location || 'Unknown Location',
+            location: item.location || t('parent.calendar.unknownLocation'),
             color
           };
         });
@@ -373,16 +375,16 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
         setClassEvents(formattedEvents);
       } catch (error) {
         console.error('Error fetching student schedule:', error);
-        setErrorMessage('Failed to load schedule. Please try again later.');
+        setErrorMessage(t('parent.calendar.failedToLoadSchedule'));
         setClassEvents([]); // Clear events on error
-        toast.error('Failed to load schedule');
+        toast.error(t('parent.calendar.failedToLoadSchedule'));
       } finally {
         setLoading(false);
       }
     };
     
     fetchStudentSchedule();
-  }, [user, selectedChildId, isParentView]);
+  }, [user, selectedChildId, isParentView, t]);
   
   // Get all unique courses
   const uniqueCourses = [...new Set(classEvents.map(event => event.course))];
@@ -652,7 +654,7 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
       <Header>
         {/* Always show Title */} 
         <HeaderLeft>
-             <Title>Schedule</Title>
+             <Title>{t('parent.calendar.schedule')}</Title>
         </HeaderLeft>
         
         <HeaderCenter>
@@ -669,7 +671,7 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
                  options={childOptions}
                  value={selectedChildOption}
                  onChange={onChildChange}
-                 placeholder="-- Select Child --"
+                 placeholder={t('parent.calendar.selectChildPlaceholder')}
                  isClearable={false} 
                  styles={customSelectStyles} // Apply custom styles here
                />
@@ -678,7 +680,7 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
              <FilterContainer> {/* Existing Course Filter */} 
                <FilterButton onClick={() => setShowFilters(!showFilters)}>
                  <FiFilter />
-                 <span>Filter by Subject</span> {/* Maybe rename button text */} 
+                 <span>{t('parent.calendar.filterBySubject')}</span>
                  <FiChevronDown />
                </FilterButton>
                {showFilters && (
@@ -687,7 +689,7 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
                      onClick={() => handleFilterChange(null)}
                      $isActive={filterCourse === null}
                    >
-                     All Subjects
+                     {t('parent.calendar.allSubjects')}
                    </FilterOption>
                    {uniqueCourses.map(course => (
                      <FilterOption 
@@ -705,7 +707,7 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
           
           <TodayButton onClick={() => { setCurrentDate(new Date()); scrollToCurrentTime(); }}>
             <FiCalendar />
-            <span>Today</span>
+            <span>{t('parent.calendar.today')}</span>
           </TodayButton>
         </HeaderRight>
       </Header>
@@ -713,29 +715,29 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
       {loading ? (
         <LoadingContainer>
           <LoadingSpinner />
-          <LoadingText>Loading your schedule...</LoadingText>
+          <LoadingText>{t('parent.calendar.loadingYourSchedule')}</LoadingText>
         </LoadingContainer>
       ) : errorMessage ? (
         <ErrorContainer>
           <ErrorIcon>!</ErrorIcon>
           <ErrorMessage>{errorMessage}</ErrorMessage>
           <ErrorAction onClick={() => window.location.reload()}>
-            Try Again
+            {t('parent.calendar.tryAgain')}
           </ErrorAction>
         </ErrorContainer>
       ) : (isParentView && !selectedChildId) ? ( // Parent view, no child selected
-            <PlaceholderMessage>Please select a child to see their schedule.</PlaceholderMessage>
+            <PlaceholderMessage>{t('parent.calendar.pleaseSelectChild')}</PlaceholderMessage>
          ) 
        : filteredEvents.length === 0 ? ( // No events for selected child or student
             <EmptyStateContainer>
               <EmptyStateIcon>
                 <FiCalendar size={40} />
               </EmptyStateIcon>
-              <EmptyStateTitle>No Schedule Found</EmptyStateTitle>
+              <EmptyStateTitle>{t('parent.calendar.noScheduleFoundTitle')}</EmptyStateTitle>
               <EmptyStateMessage>
                 {filterCourse 
-                  ? `No scheduled lessons found for ${filterCourse}.` 
-                  : 'You don\'t have any scheduled lessons yet.'}
+                  ? t('parent.calendar.noScheduleForSubject', { subject: filterCourse })
+                  : t('parent.calendar.noScheduledLessons')}
               </EmptyStateMessage>
             </EmptyStateContainer>
          ) 
@@ -835,7 +837,7 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
          ) : (
             <MonthCalendar>
               {/* Month view implementation */}
-              <div className="month-placeholder">Month view coming soon</div>
+              <div className="month-placeholder">{t('parent.calendar.monthViewComingSoon')}</div>
             </MonthCalendar>
          )}
       
@@ -861,7 +863,7 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
               <ModalDetail>
                 <DetailIcon><FiBook /></DetailIcon>
                 <DetailText>
-                  <h4>Subject</h4>
+                  <h4>{t('parent.calendar.subject')}</h4>
                   <p>{selectedEvent.course}</p>
                 </DetailText>
               </ModalDetail>
@@ -869,7 +871,7 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
               <ModalDetail>
                 <DetailIcon><FiClock /></DetailIcon>
                 <DetailText>
-                  <h4>Time</h4>
+                  <h4>{t('parent.calendar.time')}</h4>
                   <p>{formatTimeWithMinutes(selectedEvent.startTime, selectedEvent.startMinute)} - {formatTimeWithMinutes(selectedEvent.endTime, selectedEvent.endMinute)}</p>
                 </DetailText>
               </ModalDetail>
@@ -877,7 +879,7 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
               <ModalDetail>
                 <DetailIcon><FiUser /></DetailIcon>
                 <DetailText>
-                  <h4>Teacher</h4>
+                  <h4>{t('parent.calendar.teacher')}</h4>
                   <p>{selectedEvent.teacher}</p>
                 </DetailText>
               </ModalDetail>
@@ -885,15 +887,15 @@ const StudentSchedule: React.FC<StudentScheduleProps> = ({
               <ModalDetail>
                 <DetailIcon><FiMapPin /></DetailIcon>
                 <DetailText>
-                  <h4>Location</h4>
+                  <h4>{t('parent.calendar.location')}</h4>
                   <p>{selectedEvent.location}</p>
                 </DetailText>
               </ModalDetail>    
               <AdditionalInfo>
                 <DetailIcon><FiInfo /></DetailIcon>
                 <DetailText>
-                  <h4>Additional Information</h4>
-                  <p>Please bring all required materials for this class.</p>
+                  <h4>{t('parent.calendar.additionalInformation')}</h4>
+                  <p>{t('parent.calendar.bringRequiredMaterials')}</p>
                 </DetailText>
               </AdditionalInfo>
             </ModalBody>
@@ -1020,6 +1022,17 @@ const EmptyStateMessage = styled.p`
   font-size: 16px;
   color: ${props => props.theme.colors.text.secondary};
   max-width: 400px;
+`;
+
+const PlaceholderMessage = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 400px;
+  font-size: 18px;
+  color: ${props => props.theme.colors.text.secondary};
+  text-align: center;
+  padding: 20px;
 `;
 
 // Styled Components
@@ -1507,12 +1520,6 @@ const DayName = styled.div`
 const DayDate = styled.div`
   font-size: 0.75rem;
   color: ${props => props.theme.colors.text.secondary};
-`;
-
-const PlaceholderMessage = styled.div`
-  font-size: 16px;
-  color: ${props => props.theme.colors.text.secondary};
-  max-width: 400px;
 `;
 
 export default StudentSchedule; 
