@@ -112,21 +112,7 @@ export const getModuleLeaderMenu = (
 	},
 ]
 
-// Function to get translated student menu items
-export const getStudentMenu = (t: (key: string) => string): MenuItem[] => [
-	{ path: '/student/dashboard', icon: <FiHome />, label: t('navigation.dashboard') },
-	{ path: '/student/announcements', icon: <FiBell />, label: t('navigation.announcements') },
-	{ path: '/student/courses', icon: <FiBook />, label: t('navigation.myCourses') },
-	{ path: '/student/assignments', icon: <FiFileText />, label: t('navigation.assignments') },
-	{ path: '/student/grades', icon: <FiBarChart2 />, label: t('navigation.myGrades') },
-	{ path: '/student/schedule', icon: <FiCalendar />, label: t('navigation.schedule') },
-	{ path: '/student/daily-attendance', icon: <FiCheckSquare />, label: t('navigation.dailyAttendance') },
-	{ path: '/student/messages', icon: <FiMessageSquare />, label: t('navigation.messages') },
-	{ path: '/student/tests', icon: <FiClipboard />, label: t('navigation.tests') },
-	{ path: '/student/flashcards', icon: <FiLayers />, label: t('navigation.flashcards') },
-]
-
-// Student menu items (kept for backward compatibility)
+// Student menu items
 export const studentMenu: MenuItem[] = [
 	{ path: '/student/dashboard', icon: <FiHome />, label: 'Dashboard' },
 	{ path: '/student/announcements', icon: <FiBell />, label: 'Announcements' },
