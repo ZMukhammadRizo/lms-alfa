@@ -6,7 +6,6 @@ import { FiArrowLeft, FiCalendar, FiUser, FiBarChart2, FiCheck, FiX, FiAlertCirc
 import { useAuth } from '../../contexts/AuthContext';
 import { getStudentGrades, SubjectGrade,   } from '../../services/gradesService';
 import { ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from 'recharts';
-import { useTranslation } from 'react-i18next';
 
 // Type for view mode
 type GradeViewMode = 'quarterly' | 'daily';
@@ -42,7 +41,6 @@ const GradeDetails: React.FC = () => {
   const [subject, setSubject] = useState<SubjectGrade | null>(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<GradeViewMode>('quarterly'); // State for view mode
-  const { t } = useTranslation();
   
   const { user } = useAuth();
   
@@ -80,10 +78,10 @@ const GradeDetails: React.FC = () => {
   // Get attendance pie chart data
   const getAttendanceChartData = (attendance: SubjectGrade['attendance']) => {
     return [
-      { name: t('student.gradeDetails.chart.present'), value: attendance.present, color: '#4CAF50' },
-      { name: t('student.gradeDetails.chart.absent'), value: attendance.absent, color: '#F44336' },
-      { name: t('student.gradeDetails.chart.late'), value: attendance.late, color: '#FF9800' },
-      { name: t('student.gradeDetails.chart.excused'), value: attendance.excused, color: '#2196F3' },
+      { name: 'Present', value: attendance.present, color: '#4CAF50' },
+      { name: 'Absent', value: attendance.absent, color: '#F44336' },
+      { name: 'Late', value: attendance.late, color: '#FF9800' },
+      { name: 'Excused', value: attendance.excused, color: '#2196F3' },
     ].filter(item => item.value > 0); // Only show non-zero values
   };
 
@@ -91,7 +89,7 @@ const GradeDetails: React.FC = () => {
     return (
       <LoadingContainer>
         <LoadingSpinner />
-        <p>{t('student.gradeDetails.loadingSubjectDetails')}</p>
+        <p>Loading subject details...</p>
       </LoadingContainer>
     );
   }
@@ -99,10 +97,10 @@ const GradeDetails: React.FC = () => {
   if (!subject) {
     return (
       <ErrorContainer>
-        <p>{t('student.gradeDetails.subjectNotFound')}</p>
+        <p>Subject not found</p>
         <BackButton onClick={() => navigate('/student/grades')}>
           <FiArrowLeft />
-          {t('student.gradeDetails.backToGrades')}
+          Back to Grades
         </BackButton>
       </ErrorContainer>
     );
@@ -117,7 +115,7 @@ const GradeDetails: React.FC = () => {
       <DetailsHeader>
         <BackButton onClick={() => navigate('/student/grades')}>
           <FiArrowLeft />
-          {t('student.gradeDetails.backToGrades')}
+          Back to Grades
         </BackButton>
         <DetailsTitle $color={subject.color}>
           {subject.subjectName}
@@ -139,31 +137,31 @@ const GradeDetails: React.FC = () => {
         <SectionContainer variants={itemVariants}>
           <SectionTitle>
             <FiClock size={20} />
-            {t('student.gradeDetails.attendance.title')}
+            Attendance
           </SectionTitle>
           <AttendanceSummary>
             <AttendanceStatItem>
               <StatIcon $color="#4CAF50"><FiCheck size={18} /></StatIcon>
-              <StatLabel>{t('student.gradeDetails.attendance.present')}</StatLabel>
-              <StatValue>{subject.attendance.present} {t('student.gradeDetails.attendance.days')}</StatValue>
+              <StatLabel>Present:</StatLabel>
+              <StatValue>{subject.attendance.present} days</StatValue>
             </AttendanceStatItem>
             <AttendanceStatItem>
               <StatIcon $color="#F44336"><FiX size={18} /></StatIcon>
-              <StatLabel>{t('student.gradeDetails.attendance.absent')}</StatLabel>
-              <StatValue>{subject.attendance.absent} {t('student.gradeDetails.attendance.days')}</StatValue>
+              <StatLabel>Absent:</StatLabel>
+              <StatValue>{subject.attendance.absent} days</StatValue>
             </AttendanceStatItem>
             <AttendanceStatItem>
               <StatIcon $color="#FF9800"><FiClock size={18} /></StatIcon>
-              <StatLabel>{t('student.gradeDetails.attendance.late')}</StatLabel>
-              <StatValue>{subject.attendance.late} {t('student.gradeDetails.attendance.days')}</StatValue>
+              <StatLabel>Late:</StatLabel>
+              <StatValue>{subject.attendance.late} days</StatValue>
             </AttendanceStatItem>
             <AttendanceStatItem>
               <StatIcon $color="#2196F3"><FiAlertCircle size={18} /></StatIcon>
-              <StatLabel>{t('student.gradeDetails.attendance.excused')}</StatLabel>
-              <StatValue>{subject.attendance.excused} {t('student.gradeDetails.attendance.days')}</StatValue>
+              <StatLabel>Excused:</StatLabel>
+              <StatValue>{subject.attendance.excused} days</StatValue>
             </AttendanceStatItem>
             <AttendanceRateWrapper>
-              <AttendanceRateLabel>{t('student.gradeDetails.attendance.totalAttendanceRate')}</AttendanceRateLabel>
+              <AttendanceRateLabel>Total Attendance Rate:</AttendanceRateLabel>
               <AttendanceRate $percentage={subject.attendance.percentage}>
                 {subject.attendance.percentage}%
               </AttendanceRate>
@@ -174,7 +172,7 @@ const GradeDetails: React.FC = () => {
         <SectionContainer variants={itemVariants}>
           <SectionTitle>
             <FiBarChart2 size={20} />
-            {t('student.gradeDetails.attendanceBreakdown')}
+            Attendance Breakdown
           </SectionTitle>
           <ChartContainer>
             <ResponsiveContainer width="100%" height={250}>
@@ -193,7 +191,7 @@ const GradeDetails: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`${value} ${t('student.gradeDetails.attendance.days')}`, 'Count']} />
+                <Tooltip formatter={(value) => [`${value} days`, 'Count']} />
               </PieChart>
             </ResponsiveContainer>
           </ChartContainer>
@@ -204,7 +202,7 @@ const GradeDetails: React.FC = () => {
         <SectionHeaderWithToggle>
           <SectionTitle>
             <FiBarChart2 size={20} />
-            {t('student.gradeDetails.gradeDetails')}
+            Grade Details
           </SectionTitle>
           {/* View Toggle Buttons */}
           <ViewToggle>
@@ -212,13 +210,13 @@ const GradeDetails: React.FC = () => {
               $active={viewMode === 'quarterly'} 
               onClick={() => setViewMode('quarterly')}
             >
-              {t('student.gradeDetails.viewMode.quarterly')}
+              Quarterly
             </ToggleButton>
             <ToggleButton 
               $active={viewMode === 'daily'} 
               onClick={() => setViewMode('daily')}
             >
-              {t('student.gradeDetails.viewMode.daily')}
+              Daily
             </ToggleButton>
           </ViewToggle>
         </SectionHeaderWithToggle>
@@ -228,16 +226,16 @@ const GradeDetails: React.FC = () => {
           <thead>
             {viewMode === 'quarterly' ? (
               <tr>
-                <th>{t('student.gradeDetails.table.quarter')}</th>
-                <th>{t('student.gradeDetails.table.score')}</th>
-                <th>{t('student.gradeDetails.table.letterGrade')}</th>
-                <th>{t('student.gradeDetails.table.status')}</th>
+                <th>Quarter</th>
+                <th>Score</th>
+                <th>Letter Grade</th>
+                <th>Status</th>
               </tr>
             ) : (
               <tr>
-                <th>{t('student.gradeDetails.table.lesson')}</th>
-                <th>{t('student.gradeDetails.table.date')}</th>
-                <th>{t('student.gradeDetails.table.score')}</th>
+                <th>Lesson</th>
+                <th>Date</th>
+                <th>Score</th>
                 {/* Optional: Add Letter Grade/Status for daily if needed */}
               </tr>
             )}
@@ -260,7 +258,7 @@ const GradeDetails: React.FC = () => {
                   </td>
                   <td>
                     <GradeStatus $score={grade.score}>
-                      {grade.score >= 60 ? t('student.gradeDetails.table.passing') : t('student.gradeDetails.table.failing')}
+                      {grade.score >= 60 ? 'Passing' : 'Failing'}
                     </GradeStatus>
                   </td>
                 </tr>
@@ -282,7 +280,7 @@ const GradeDetails: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={3}>{t('student.gradeDetails.table.noDailyScores')}</td>
+                  <td colSpan={3}>No daily scores available.</td>
                 </tr>
               )
             )}

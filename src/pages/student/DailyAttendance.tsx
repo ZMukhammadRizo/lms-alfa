@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'react-feather'
 import styled from 'styled-components'
-import { useTranslation } from 'react-i18next'
 import { PageTitle } from '../../components/common'
 import supabase from '../../config/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
@@ -22,7 +21,6 @@ interface DailyAttendance {
 }
 
 const DailyAttendance: React.FC = () => {
-	const { t } = useTranslation()
 	const { user } = useAuth()
 	const [currentMonth, setCurrentMonth] = useState(new Date())
 	const [attendanceData, setAttendanceData] = useState<DailyAttendance[]>([])
@@ -146,7 +144,7 @@ const DailyAttendance: React.FC = () => {
 
 	return (
 		<Container>
-			<PageTitle>{t('student.attendance.title')}</PageTitle>
+			<PageTitle>Daily Attendance</PageTitle>
 
 			<CardWrapper>
 				<CalendarCard>
@@ -155,7 +153,7 @@ const DailyAttendance: React.FC = () => {
 							<ChevronLeft size={20} />
 						</MonthNavButton>
 						<MonthYearDisplay>
-							{currentMonth.toLocaleDateString(t('student.attendance.locale'), { month: 'long', year: 'numeric' })}
+							{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
 						</MonthYearDisplay>
 						<MonthNavButton onClick={handleNextMonth}>
 							<ChevronRight size={20} />
@@ -163,19 +161,19 @@ const DailyAttendance: React.FC = () => {
 					</CalendarHeader>
 
 					<WeekdayHeader>
-						<Weekday>{t('student.attendance.weekdays.mon')}</Weekday>
-						<Weekday>{t('student.attendance.weekdays.tue')}</Weekday>
-						<Weekday>{t('student.attendance.weekdays.wed')}</Weekday>
-						<Weekday>{t('student.attendance.weekdays.thu')}</Weekday>
-						<Weekday>{t('student.attendance.weekdays.fri')}</Weekday>
-						<Weekday>{t('student.attendance.weekdays.sat')}</Weekday>
-						<Weekday>{t('student.attendance.weekdays.sun')}</Weekday>
+						<Weekday>Mon</Weekday>
+						<Weekday>Tue</Weekday>
+						<Weekday>Wed</Weekday>
+						<Weekday>Thu</Weekday>
+						<Weekday>Fri</Weekday>
+						<Weekday>Sat</Weekday>
+						<Weekday>Sun</Weekday>
 					</WeekdayHeader>
 
 					<CalendarGrid>
 						{loading ? (
 							<LoadingContainer>
-								<p>{t('student.attendance.loading')}</p>
+								<p>Loading attendance data...</p>
 							</LoadingContainer>
 						) : (
 							renderCalendarDays()
@@ -185,19 +183,19 @@ const DailyAttendance: React.FC = () => {
 					<CalendarLegend>
 						<LegendItem>
 							<LegendColor status='present' />
-							<span>{t('student.attendance.statuses.present')}</span>
+							<span>Present</span>
 						</LegendItem>
 						<LegendItem>
 							<LegendColor status='late' />
-							<span>{t('student.attendance.statuses.late')}</span>
+							<span>Late</span>
 						</LegendItem>
 						<LegendItem>
 							<LegendColor status='excused' />
-							<span>{t('student.attendance.statuses.excused')}</span>
+							<span>Excused</span>
 						</LegendItem>
 						<LegendItem>
 							<LegendColor status='absent' />
-							<span>{t('student.attendance.statuses.absent')}</span>
+							<span>Absent</span>
 						</LegendItem>
 					</CalendarLegend>
 				</CalendarCard>

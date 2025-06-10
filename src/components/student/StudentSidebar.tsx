@@ -3,8 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { FiChevronLeft, FiChevronRight, FiMenu } from 'react-icons/fi'
 import { NavLink, useLocation } from 'react-router-dom'
 import styled, { css } from 'styled-components'
-import { useTranslation } from 'react-i18next'
-import { getSystemMenu, getStudentMenu } from '../../constants/menuItems'
+import { getSystemMenu, studentMenu } from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
 import { getUserRole } from '../../utils/authUtils'
 import LogoutButton from '../common/LogoutButton'
@@ -71,7 +70,6 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 	const [isMobile, setIsMobile] = useState(false)
 	const [isMobileOpen, setIsMobileOpen] = useState(false)
 	const { user } = useAuth()
-	const { t } = useTranslation()
 
 	// Handle window resize
 	useEffect(() => {
@@ -115,11 +113,8 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 		return user?.fullName || user?.username || 'User'
 	}
 
-	// Get translated menu items
-	const mainMenu = getStudentMenu(t)
-	
 	// Get system menu items for the current role
-	const systemMenu = getSystemMenu('student', t)
+	const systemMenu = getSystemMenu('student')
 
 	// Get user role from utils instead of local implementation
 	const role = getUserRole()
@@ -216,7 +211,7 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 
 						<MenuContainer>
 							<MenuSection>
-								{mainMenu.map(item => (
+								{studentMenu.map(item => (
 									<PermissionMenuItem
 										key={item.path}
 										icon={item.icon}
@@ -237,7 +232,7 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 											exit={{ opacity: 0 }}
 											transition={{ delay: 0.2 }}
 										>
-											{t('navigation.system')}
+											System
 										</SectionLabel>
 									)}
 								</AnimatePresence>
@@ -266,7 +261,7 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 										transition={{ duration: 0.2 }}
 									>
 										<ProfileName>{getFullName()}</ProfileName>
-										<ProfileRole>{t('navigation.student')}</ProfileRole>
+										<ProfileRole>Student</ProfileRole>
 									</ProfileInfo>
 								)}
 							</AnimatePresence>

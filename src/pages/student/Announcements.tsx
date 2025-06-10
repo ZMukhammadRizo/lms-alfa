@@ -1,7 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 import { FiBell, FiCalendar, FiChevronDown, FiFilter, FiSearch, FiX } from 'react-icons/fi'
-import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAnnouncements } from '../../stores/useAnnouncementStore'
@@ -29,7 +28,6 @@ interface FilterOptions {
 }
 
 const Announcements: React.FC = () => {
-	const { t } = useTranslation()
 	const {
 		announcements,
 		isLoading,
@@ -157,14 +155,14 @@ const Announcements: React.FC = () => {
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.3, delay: 0.1 }}
 					>
-						{t('student.announcements.title')}
+						Announcements
 					</motion.h1>
 					<motion.p
 						initial={{ opacity: 0, y: -10 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.3, delay: 0.2 }}
 					>
-						{t('student.announcements.subtitle')}
+						Stay updated with important information
 					</motion.p>
 				</HeaderContent>
 				<SearchAndFilterContainer>
@@ -174,7 +172,7 @@ const Announcements: React.FC = () => {
 						</SearchIcon>
 						<SearchInput
 							type='text'
-							placeholder={t('student.announcements.searchPlaceholder')}
+							placeholder='Search announcements...'
 							value={searchTerm}
 							onChange={e => setSearchTerm(e.target.value)}
 						/>
@@ -186,7 +184,7 @@ const Announcements: React.FC = () => {
 					</SearchBar>
 					<FilterButton onClick={() => setShowFilters(!showFilters)}>
 						<FiFilter />
-						<span>{t('student.announcements.filter')}</span>
+						<span>Filter</span>
 						<FiChevronDown
 							style={{
 								transform: showFilters ? 'rotate(180deg)' : 'rotate(0)',
@@ -196,7 +194,7 @@ const Announcements: React.FC = () => {
 					</FilterButton>
 					{/* Add Mark All as Read button */}
 					{announcements.filter(a => !a.isRead).length > 0 && (
-						<MarkAllReadButton onClick={handleMarkAllAsRead}>{t('student.announcements.markAllRead')}</MarkAllReadButton>
+						<MarkAllReadButton onClick={handleMarkAllAsRead}>Mark All as Read</MarkAllReadButton>
 					)}
 				</SearchAndFilterContainer>
 			</PageHeader>
@@ -211,7 +209,7 @@ const Announcements: React.FC = () => {
 						transition={{ duration: 0.3 }}
 					>
 						<FilterSection>
-							<FilterTitle>{t('student.announcements.filters.category')}</FilterTitle>
+							<FilterTitle>Category</FilterTitle>
 							<FilterOptions>
 								<FilterCheckbox>
 									<input
@@ -220,7 +218,7 @@ const Announcements: React.FC = () => {
 										checked={filters.category.includes('general')}
 										onChange={() => toggleFilter('category', 'general')}
 									/>
-									<label htmlFor='general'>{t('student.announcements.filters.general')}</label>
+									<label htmlFor='general'>General</label>
 								</FilterCheckbox>
 								<FilterCheckbox>
 									<input
@@ -229,7 +227,7 @@ const Announcements: React.FC = () => {
 										checked={filters.category.includes('course')}
 										onChange={() => toggleFilter('category', 'course')}
 									/>
-									<label htmlFor='course'>{t('student.announcements.filters.course')}</label>
+									<label htmlFor='course'>Course</label>
 								</FilterCheckbox>
 								<FilterCheckbox>
 									<input
@@ -238,7 +236,7 @@ const Announcements: React.FC = () => {
 										checked={filters.category.includes('event')}
 										onChange={() => toggleFilter('category', 'event')}
 									/>
-									<label htmlFor='event'>{t('student.announcements.filters.events')}</label>
+									<label htmlFor='event'>Events</label>
 								</FilterCheckbox>
 								<FilterCheckbox>
 									<input
@@ -247,13 +245,13 @@ const Announcements: React.FC = () => {
 										checked={filters.category.includes('administrative')}
 										onChange={() => toggleFilter('category', 'administrative')}
 									/>
-									<label htmlFor='administrative'>{t('student.announcements.filters.administrative')}</label>
+									<label htmlFor='administrative'>Administrative</label>
 								</FilterCheckbox>
 							</FilterOptions>
 						</FilterSection>
 
 						<FilterSection>
-							<FilterTitle>{t('student.announcements.filters.priority')}</FilterTitle>
+							<FilterTitle>Priority</FilterTitle>
 							<FilterOptions>
 								<FilterCheckbox>
 									<input
@@ -262,7 +260,7 @@ const Announcements: React.FC = () => {
 										checked={filters.priority.includes('urgent')}
 										onChange={() => toggleFilter('priority', 'urgent')}
 									/>
-									<label htmlFor='urgent'>{t('student.announcements.filters.urgent')}</label>
+									<label htmlFor='urgent'>Urgent</label>
 								</FilterCheckbox>
 								<FilterCheckbox>
 									<input
@@ -271,7 +269,7 @@ const Announcements: React.FC = () => {
 										checked={filters.priority.includes('important')}
 										onChange={() => toggleFilter('priority', 'important')}
 									/>
-									<label htmlFor='important'>{t('student.announcements.filters.important')}</label>
+									<label htmlFor='important'>Important</label>
 								</FilterCheckbox>
 								<FilterCheckbox>
 									<input
@@ -280,13 +278,13 @@ const Announcements: React.FC = () => {
 										checked={filters.priority.includes('normal')}
 										onChange={() => toggleFilter('priority', 'normal')}
 									/>
-									<label htmlFor='normal'>{t('student.announcements.filters.normal')}</label>
+									<label htmlFor='normal'>Normal</label>
 								</FilterCheckbox>
 							</FilterOptions>
 						</FilterSection>
 
 						<FilterSection>
-							<FilterTitle>{t('student.announcements.filters.status')}</FilterTitle>
+							<FilterTitle>Status</FilterTitle>
 							<FilterOptions>
 								<FilterCheckbox>
 									<input
@@ -295,7 +293,7 @@ const Announcements: React.FC = () => {
 										checked={filters.readStatus.includes('read')}
 										onChange={() => toggleFilter('readStatus', 'read')}
 									/>
-									<label htmlFor='read'>{t('student.announcements.filters.read')}</label>
+									<label htmlFor='read'>Read</label>
 								</FilterCheckbox>
 								<FilterCheckbox>
 									<input
@@ -304,12 +302,12 @@ const Announcements: React.FC = () => {
 										checked={filters.readStatus.includes('unread')}
 										onChange={() => toggleFilter('readStatus', 'unread')}
 									/>
-									<label htmlFor='unread'>{t('student.announcements.filters.unread')}</label>
+									<label htmlFor='unread'>Unread</label>
 								</FilterCheckbox>
 							</FilterOptions>
 						</FilterSection>
 
-						<ClearFiltersButton onClick={clearFilters}>{t('student.announcements.filters.clearAll')}</ClearFiltersButton>
+						<ClearFiltersButton onClick={clearFilters}>Clear All Filters</ClearFiltersButton>
 					</FiltersContainer>
 				)}
 			</AnimatePresence>
@@ -363,8 +361,8 @@ const Announcements: React.FC = () => {
 					) : (
 						<NoAnnouncements>
 							<FiBell size={40} />
-							<p>{t('student.announcements.noResults')}</p>
-							<ClearFiltersButton onClick={clearFilters}>{t('student.announcements.clearFilters')}</ClearFiltersButton>
+							<p>No announcements found matching your filters</p>
+							<ClearFiltersButton onClick={clearFilters}>Clear Filters</ClearFiltersButton>
 						</NoAnnouncements>
 					)}
 				</AnnouncementsList>
