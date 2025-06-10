@@ -15,7 +15,6 @@ import supabase from '../../config/supabaseClient'
 import { useTeacherStore } from '../../stores/teacherStore'
 import { Subject } from '../../types/Subject'
 import { Class, ClassType } from '../../types/teacher'
-import { useTranslation } from 'react-i18next'
 
 const PageContainer = styled.div`
 	padding: clamp(1.5rem, 4vw, 3rem);
@@ -237,7 +236,6 @@ const EmptyState = styled.div`
 type ViewState = 'class-types' | 'classes' | 'subjects'
 
 const TeacherClasses: React.FC = () => {
-	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const { classes, loading: loadingClasses, error, loadClasses } = useTeacherStore()
 	const [searchQuery, setSearchQuery] = useState('')
@@ -546,28 +544,28 @@ const TeacherClasses: React.FC = () => {
 	const renderTitle = () => {
 		switch (currentView) {
 			case 'class-types':
-				return t('teacher.classes.title')
+				return 'My Classes'
 			case 'classes':
-				return selectedClassType ? `${selectedClassType.name} ${t('navigation.classes')}` : t('navigation.classes')
+				return selectedClassType ? `${selectedClassType.name} Classes` : 'Classes'
 			case 'subjects':
-				return selectedClassName ? `${selectedClassName} - ${t('navigation.subjects')}` : t('navigation.subjects')
+				return selectedClassName ? `${selectedClassName} - Subjects` : 'Subjects'
 			default:
-				return t('teacher.classes.title')
+				return 'My Classes'
 		}
 	}
 
 	const renderSubtitle = () => {
 		switch (currentView) {
 			case 'class-types':
-				return t('teacher.classes.description')
+				return 'Select a class type to manage your classes'
 			case 'classes':
 				return selectedClassType
 					? `View your ${selectedClassType.name.toLowerCase()} classes`
-					: t('teacher.classes.description')
+					: 'Manage your classes'
 			case 'subjects':
-				return t('teacher.subjects.description')
+				return 'Manage subjects and lessons for this class'
 			default:
-				return t('teacher.classes.description')
+				return 'Manage your classes, subjects, and lessons'
 		}
 	}
 
@@ -576,13 +574,13 @@ const TeacherClasses: React.FC = () => {
 			case 'classes':
 				return (
 					<StyledBackButton onClick={handleBackToClassTypes}>
-						<FiArrowLeft /> {t('common.backTo')} {t('navigation.classes')}
+						<FiArrowLeft /> Back to Class Types
 					</StyledBackButton>
 				)
 			case 'subjects':
 				return (
 					<StyledBackButton onClick={handleBackToClasses}>
-						<FiArrowLeft /> {t('common.backTo')} {t('navigation.classes')}
+						<FiArrowLeft /> Back to Classes
 					</StyledBackButton>
 				)
 			default:
@@ -603,7 +601,7 @@ const TeacherClasses: React.FC = () => {
 						<FiSearch size={18} />
 						<SearchInputStyled
 								type='text'
-								placeholder={t('teacher.classes.searchClasses')}
+								placeholder='Search classes...'
 							value={searchQuery}
 							onChange={handleSearchChange}
 						/>
@@ -624,7 +622,7 @@ const TeacherClasses: React.FC = () => {
 						transition={{ duration: 0.3 }}
 					>
 						{loadingClassTypes ? (
-							<LoadingState>{t('teacher.classes.loading')}</LoadingState>
+							<LoadingState>Loading class types...</LoadingState>
 						) : classTypes.length > 0 ? (
 							<ContentGrid variants={containerVariants} initial='hidden' animate='visible'>
 								{classTypes.map(classType => {
@@ -639,15 +637,15 @@ const TeacherClasses: React.FC = () => {
 											<CardBody>
 												<CardTitle>{classType.name}</CardTitle>
 												<CardDescription>
-													{t('common.manageAll')} {classType.name.toLowerCase()} {t('navigation.classes')}
+													Manage all your {classType.name.toLowerCase()} classes
 												</CardDescription>
 												<CardFooter>
 													<CardStat>
 														<FiFolder />
-														<span>{classCounts[classType.id] || 0} {t('navigation.classes')}</span>
+														<span>{classCounts[classType.id] || 0} Classes</span>
 													</CardStat>
 													<ViewDetailsButton>
-														{t('teacher.classes.viewSubjects')} <FiChevronRight />
+														View Classes <FiChevronRight />
 													</ViewDetailsButton>
 												</CardFooter>
 											</CardBody>
@@ -661,9 +659,9 @@ const TeacherClasses: React.FC = () => {
 									size={48}
 									style={{ marginBottom: '1rem', color: theme.colors.text.tertiary }}
 								/>
-								<PageTitle style={{ fontSize: '1.2rem' }}>{t('teacher.classes.noClasses')}</PageTitle>
+								<PageTitle style={{ fontSize: '1.2rem' }}>No class types found</PageTitle>
 								<PageSubtitle style={{ maxWidth: '300px', margin: '0 auto' }}>
-									{t('common.noItemsConfigured')}
+									There are no class types configured in the system.
 								</PageSubtitle>
 							</EmptyState>
 						)}
@@ -679,7 +677,7 @@ const TeacherClasses: React.FC = () => {
 						transition={{ duration: 0.3 }}
 					>
 						{loadingClasses || loadingCounts || loadingFilteredClasses ? (
-							<LoadingState>{t('teacher.classes.loading')}</LoadingState>
+							<LoadingState>Loading classes...</LoadingState>
 						) : filteredClasses.length > 0 ? (
 							<ContentGrid variants={containerVariants} initial='hidden' animate='visible'>
 								{filteredClasses.map(classItem => (
@@ -692,19 +690,21 @@ const TeacherClasses: React.FC = () => {
 										<CardBody>
 											<CardTitle>{classItem.classname}</CardTitle>
 											<CardDescription>
-												{classItem.description || t('common.noDescription')}
+												{classItem.description || 'No description provided.'}
 											</CardDescription>
 											<CardFooter>
 												<CardStat>
 													<FiUsers />
 													<span>
 														{studentCounts[classItem.id] === null
-															? t('common.loading')
-															: `${studentCounts[classItem.id]} ${t('teacher.classes.students')}`}
+															? 'Loading...'
+															: `${studentCounts[classItem.id]} Student${
+																	studentCounts[classItem.id] !== 1 ? 's' : ''
+															  }`}
 													</span>
 												</CardStat>
 												<ViewDetailsButton>
-													{t('teacher.classes.viewSubjects')} <FiChevronRight />
+													View Subjects <FiChevronRight />
 												</ViewDetailsButton>
 											</CardFooter>
 										</CardBody>
@@ -717,13 +717,13 @@ const TeacherClasses: React.FC = () => {
 									size={48}
 									style={{ marginBottom: '1rem', color: theme.colors.text.tertiary }}
 								/>
-								<PageTitle style={{ fontSize: '1.2rem' }}>{t('teacher.classes.noClasses')}</PageTitle>
+								<PageTitle style={{ fontSize: '1.2rem' }}>No classes found</PageTitle>
 								<PageSubtitle style={{ maxWidth: '300px', margin: '0 auto' }}>
 									{searchQuery
-										? t('common.noSearchResults', { query: searchQuery })
+										? `No classes match your search "${searchQuery}".`
 										: selectedClassType
-										? t('teacher.classes.noClassesAssigned', { type: selectedClassType.name.toLowerCase() })
-										: t('teacher.classes.noClasses')}
+										? `You don't have any ${selectedClassType.name.toLowerCase()} classes assigned.`
+										: 'You are not currently assigned to any classes.'}
 								</PageSubtitle>
 							</EmptyState>
 						)}
@@ -739,7 +739,7 @@ const TeacherClasses: React.FC = () => {
 						transition={{ duration: 0.3 }}
 					>
 						{loadingSubjects ? (
-							<LoadingState>{t('teacher.subjects.loading')}</LoadingState>
+							<LoadingState>Loading subjects...</LoadingState>
 						) : subjects.length > 0 ? (
 							<ContentGrid variants={containerVariants} initial='hidden' animate='visible'>
 								{subjects.map(subject => (
@@ -753,15 +753,15 @@ const TeacherClasses: React.FC = () => {
 											<CardTitle>{subject.subjectname}</CardTitle>
 											<CardSubtitle>{subject.code}</CardSubtitle>
 											<CardDescription>
-												{subject.description || t('common.noDescription')}
+												{subject.description || 'No description available.'}
 											</CardDescription>
 											<CardFooter>
 												<CardStat>
 													<FiBookOpen />
-													<span>{lessonCounts[subject.id] ?? '...'} {t('teacher.subjects.lessons')}</span>
+													<span>{lessonCounts[subject.id] ?? '...'} Lessons</span>
 												</CardStat>
 												<ViewDetailsButton>
-													{t('teacher.classes.classDetails')} <FiChevronRight />
+													View Details <FiChevronRight />
 												</ViewDetailsButton>
 											</CardFooter>
 										</CardBody>
@@ -769,7 +769,7 @@ const TeacherClasses: React.FC = () => {
 								))}
 							</ContentGrid>
 						) : (
-							<EmptyState>{t('teacher.subjects.noSubjects')}</EmptyState>
+							<EmptyState>No subjects found for this class.</EmptyState>
 						)}
 					</motion.div>
 				)}

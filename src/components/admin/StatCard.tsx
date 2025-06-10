@@ -13,6 +13,7 @@ interface StatCardProps {
 	value: string | number
 	change: string
 	color: ColorType
+	importantTextColor: string
 	isLoading?: boolean
 }
 
@@ -116,6 +117,24 @@ const Title = styled.div`
   margin-bottom: ${props => props.theme.spacing[2]};
 `;
 
+interface ChangeProps {
+  $isPositive: boolean;
+  $importantTextColor: string;
+}
+
+const Change = styled.div<ChangeProps>`
+  display: inline-flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing[1]};
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: ${props =>  props.$importantTextColor ? props.$importantTextColor : props.$isPositive ? props.theme.colors.success[500] : props.theme.colors.danger[500]};
+
+  svg {
+    font-size: 1rem;
+  }
+`;
+
 // Loading skeleton elements
 const Skeleton = styled.div`
   background-color: ${props => props.theme.colors.border.light};
@@ -140,7 +159,7 @@ const ChangeSkeleton = styled(Skeleton)`
   width: 40%;
 `;
 
-const StatCard: React.FC<StatCardProps> = ({ icon, title, value, color, isLoading = false }) => {
+const StatCard: React.FC<StatCardProps> = ({ icon,importantTextColor, title, value,  color, isLoading = false }) => {
 	
 
   return (

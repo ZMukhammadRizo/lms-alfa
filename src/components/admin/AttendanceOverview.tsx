@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { ExternalLink, Loader, AlertCircle } from 'react-feather';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabaseClient';
@@ -247,6 +247,37 @@ const CenterLabel = styled.div`
   color: ${props => props.theme.colors.text.secondary};
   font-weight: 500;
 `;
+
+// Custom label component for the pie chart
+const renderCustomLabel = ({
+  cx,
+  cy,
+  midAngle,
+  innerRadius,
+  outerRadius,
+  percent,
+}: any) => {
+  if (percent < 0.05) return null; // Don't show labels for very small slices
+  
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="white"
+      textAnchor={x > cx ? 'start' : 'end'}
+      dominantBaseline="central"
+      fontSize="12"
+      fontWeight="bold"
+    >
+      {`${(percent * 100).toFixed(0)}%`}
+    </text>
+  );
+};
 
 // Function to translate attendance status
 const getTranslatedStatus = (status: string, t: any): string => {

@@ -37,6 +37,7 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 	const [selectedClasses, setSelectedClasses] = useState<ClassSelection[]>([
 		{ levelId: '', classId: '' },
 	])
+	const [loadingLevels, setLoadingLevels] = useState(true)
 	const [loadingClasses, setLoadingClasses] = useState<Record<string, boolean>>({})
 	const [reportType, setReportType] = useState<'monthly' | 'weekly' | null>(null)
 	const [step, setStep] = useState(1) // 1 = class selection, 2 = report type selection
@@ -50,6 +51,7 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 
 	const fetchLevels = async () => {
 		try {
+			setLoadingLevels(true)
 			const { data, error } = await supabase.from('levels').select('id, name').order('name')
 
 			if (error) throw error
@@ -57,6 +59,8 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 		} catch (error) {
 			console.error('Error fetching levels:', error)
 			toast.error(t('errors.loadingFailed'))
+		} finally {
+			setLoadingLevels(false)
 		}
 	}
 
@@ -335,6 +339,22 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 			)}
 		</AnimatePresence>
 	)
+}
+
+// Helper function to get the suffix for ordinal numbers
+const getSuffix = (num: number): string => {
+	if (num >= 11 && num <= 13) return 'th'
+
+	switch (num % 10) {
+		case 1:
+			return 'st'
+		case 2:
+			return 'nd'
+		case 3:
+			return 'rd'
+		default:
+			return 'th'
+	}
 }
 
 const Overlay = styled(motion.div)`

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import supabase from '../config/supabaseClient'
+import { supabase } from '../services/supabaseClient'
 
 export interface Attendance {
 	id: string

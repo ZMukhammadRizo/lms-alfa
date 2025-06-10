@@ -2,17 +2,17 @@ import React, { ReactNode } from 'react';
 import styled from 'styled-components';
 
 // Admin Input Component
-interface AdminInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'prefix'> {
-  prefixIcon?: ReactNode;
-  suffixIcon?: ReactNode;
+interface AdminInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  prefix?: ReactNode;
+  suffix?: ReactNode;
 }
 
-export const AdminInput: React.FC<AdminInputProps> = ({ prefixIcon, suffixIcon, ...props }) => {
+export const AdminInput: React.FC<AdminInputProps> = ({ prefix, suffix, ...props }) => {
   return (
     <InputWrapper>
-      {prefixIcon && <InputAdornment>{prefixIcon}</InputAdornment>}
-      <StyledInput hasPrefix={!!prefixIcon} hasSuffix={!!suffixIcon} {...props} />
-      {suffixIcon && <InputAdornment>{suffixIcon}</InputAdornment>}
+      {prefix && <InputAdornment>{prefix}</InputAdornment>}
+      <StyledInput hasPrefix={!!prefix} hasSuffix={!!suffix} {...props} />
+      {suffix && <InputAdornment>{suffix}</InputAdornment>}
     </InputWrapper>
   );
 };

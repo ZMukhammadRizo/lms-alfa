@@ -3,7 +3,7 @@
  * Please use the functions from dashboardService instead.
  */
 
-import supabase from '../config/supabaseClient';
+import supabase, { supabaseAdmin } from '../config/supabaseClient';
 
 interface DashboardStats {
   totalUsers: number;

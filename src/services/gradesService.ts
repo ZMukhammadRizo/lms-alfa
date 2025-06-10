@@ -5,6 +5,7 @@ import {
 	GradeLevelOverview,
 	JournalTable,
 	LevelCategoryOverview,
+	Subject,
 } from '../types/grades'
 import supabase from '../config/supabaseClient'
 import { toast } from 'react-toastify'
@@ -308,10 +309,10 @@ export async function getStudentGrades(studentId: string): Promise<SubjectGrade[
 		// ... rest of function remains the same
 
 		// --- Fetch Teacher Information --- 
-		// Extract unique teacher IDs from fetchedClassesData
-		const teacherIds = fetchedClassesData
-			.map((c: any) => c.teacherid)
-			.filter((id: any, index: number, self: any[]) => id && self.indexOf(id) === index); 
+		// Extract unique teacher IDs from classesData
+		const teacherIds = classesData
+			.map(c => c.teacherid)
+			.filter((id, index, self) => id && self.indexOf(id) === index); 
 		
 		let teachersData: any[] | null = null;
 		if (teacherIds.length > 0) {
@@ -345,7 +346,7 @@ export async function getStudentGrades(studentId: string): Promise<SubjectGrade[
 		// Combine the data to create the subject list
 		const combinedSubjects = classSubjectsData.map(classSubject => {
 			const subject = subjectsData.find(s => s.id === classSubject.subjectid);
-			const classInfo = fetchedClassesData?.find((c: any) => c.id === classSubject.classid);
+			const classInfo = classesData?.find(c => c.id === classSubject.classid);
 			
 			if (!subject || !classInfo) return null; // Ensure we have both subject and class info
 

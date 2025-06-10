@@ -69,19 +69,7 @@ export const announcementsSubItems: MenuItem[] = [
 	},
 ]
 
-// Function to get translated teacher menu items
-export const getTeacherMenu = (t: (key: string) => string): MenuItem[] => [
-	{ path: '/teacher/dashboard', icon: <FiHome />, label: t('navigation.dashboard') },
-	{ path: '/teacher/classes', icon: <FiBook />, label: t('navigation.myClasses') },
-	{ path: '/teacher/assignments', icon: <FiClipboard />, label: t('navigation.assignments') },
-	{ path: '/teacher/submissions', icon: <FiFileText />, label: t('navigation.submissions') },
-	{ path: '/teacher/grades', icon: <FiCheckSquare />, label: t('navigation.grades') },
-	{ path: '/teacher/daily-attendance', icon: <FiCheckSquare />, label: t('navigation.dailyAttendance') },
-	{ path: '/teacher/schedule', icon: <FiCalendar />, label: t('navigation.schedule') },
-	{ path: '/teacher/messages', icon: <FiMessageSquare />, label: t('navigation.messages') },
-]
-
-// Teacher menu items (kept for backward compatibility)
+// Teacher menu items
 export const teacherMenu: MenuItem[] = [
 	{ path: '/teacher/dashboard', icon: <FiHome />, label: 'Dashboard' },
 	{ path: '/teacher/classes', icon: <FiBook />, label: 'My Classes' },

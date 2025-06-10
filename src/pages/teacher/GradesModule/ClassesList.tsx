@@ -2,7 +2,6 @@ import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 import { FiAward, FiBookOpen, FiChevronRight, FiSearch, FiUsers } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 import { PageTitle } from '../../../components/common'
 import { Badge, Card, Container, Input } from '../../../components/ui'
@@ -22,7 +21,6 @@ interface TeacherClassInfo {
 }
 
 const ClassesList: React.FC = () => {
-	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const [searchTerm, setSearchTerm] = useState('')
 	const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -76,7 +74,7 @@ const ClassesList: React.FC = () => {
 				setClassesWithCounts(updatedClasses)
 			} catch (err) {
 				console.error('Error fetching classes:', err)
-				setError(t('teacherGrades.failedToLoadClasses'))
+				setError('Failed to load classes. Please try again later.')
 			} finally {
 				setLoading(false)
 			}
@@ -116,7 +114,7 @@ const ClassesList: React.FC = () => {
 	if (loading || isLoadingClasses) {
 		return (
 			<PageContainer>
-				<LoadingMessage>{t('teacherGrades.loadingYourClasses')}</LoadingMessage>
+				<LoadingMessage>Loading your classes...</LoadingMessage>
 			</PageContainer>
 		)
 	}
@@ -144,14 +142,14 @@ const ClassesList: React.FC = () => {
 			<PageHeaderWrapper>
 				<PageHeader>
 					<HeaderContent>
-						<PageTitle>{t('teacherGrades.myClasses')}</PageTitle>
-						<SubTitle>{t('teacherGrades.viewAndManageAllClasses')}</SubTitle>
+						<PageTitle>My Classes</PageTitle>
+						<SubTitle>View and manage grades for all your assigned classes</SubTitle>
 					</HeaderContent>
 					<HeaderRight>
 						<SearchWrapper>
 							<StyledInput
 								prefix={<FiSearch />}
-								placeholder={t('teacherGrades.searchClasses')}
+								placeholder='Search classes...'
 								value={searchTerm}
 								onChange={e => setSearchTerm(e.target.value)}
 							/>
@@ -181,7 +179,7 @@ const ClassesList: React.FC = () => {
 											<FiUsers />
 										</ClassIcon>
 										<ClassName>{classItem.classname}</ClassName>
-										<LevelBadge>{classItem.levelName}{t('teacherGrades.thGrade')}</LevelBadge>
+										<LevelBadge>{classItem.levelName}th Grade</LevelBadge>
 									</CardHeader>
 									<CardContent>
 										<MetricRow>
@@ -191,7 +189,7 @@ const ClassesList: React.FC = () => {
 												</MetricIcon>
 												<MetricContent>
 													<MetricValue>{classItem.actualStudentCount !== undefined ? classItem.actualStudentCount : classItem.studentCount}</MetricValue>
-													<MetricLabel>{t('teacherGrades.students')}</MetricLabel>
+													<MetricLabel>Students</MetricLabel>
 												</MetricContent>
 											</Metric>
 											<Metric>
@@ -200,13 +198,13 @@ const ClassesList: React.FC = () => {
 												</MetricIcon>
 												<MetricContent>
 													<MetricValue>{classItem.subjectCount}</MetricValue>
-													<MetricLabel>{t('teacherGrades.subjects')}</MetricLabel>
+													<MetricLabel>Subjects</MetricLabel>
 												</MetricContent>
 											</Metric>
 										</MetricRow>
 										<CardArrow $isHovered={hoveredCard === classItem.classId}>
 											<FiChevronRight />
-											<span>{t('teacherGrades.viewSubjects')}</span>
+											<span>View Subjects</span>
 										</CardArrow>
 									</CardContent>
 								</ClassCard>
@@ -220,9 +218,9 @@ const ClassesList: React.FC = () => {
 									<LevelIcon>
 										<FiAward />
 									</LevelIcon>
-									<LevelName>{levelName}{t('teacherGrades.thGrade')}</LevelName>
+									<LevelName>{levelName}th Grade</LevelName>
 									<LevelClassCount>
-										{levelClasses.length} {t('teacherGrades.classCount', { count: levelClasses.length })}
+										{levelClasses.length} {levelClasses.length === 1 ? 'class' : 'classes'}
 									</LevelClassCount>
 								</LevelHeader>
 								<ClassGrid
@@ -256,7 +254,7 @@ const ClassesList: React.FC = () => {
 														</MetricIcon>
 														<MetricContent>
 															<MetricValue>{classItem.actualStudentCount !== undefined ? classItem.actualStudentCount : classItem.studentCount}</MetricValue>
-															<MetricLabel>{t('teacherGrades.students')}</MetricLabel>
+															<MetricLabel>Students</MetricLabel>
 														</MetricContent>
 													</Metric>
 													<Metric>
@@ -265,13 +263,13 @@ const ClassesList: React.FC = () => {
 														</MetricIcon>
 														<MetricContent>
 															<MetricValue>{classItem.subjectCount}</MetricValue>
-															<MetricLabel>{t('teacherGrades.subjects')}</MetricLabel>
+															<MetricLabel>Subjects</MetricLabel>
 														</MetricContent>
 													</Metric>
 												</MetricRow>
 												<CardArrow $isHovered={hoveredCard === classItem.classId}>
 													<FiChevronRight />
-													<span>{t('teacherGrades.viewSubjects')}</span>
+													<span>View Subjects</span>
 												</CardArrow>
 											</CardContent>
 										</ClassCard>
@@ -283,8 +281,8 @@ const ClassesList: React.FC = () => {
 				) : (
 					<NoResults>
 						{classesWithCounts.length === 0
-							? t('teacherGrades.noClassesAssigned')
-							: t('teacherGrades.noClassesFound', { searchTerm })}
+							? 'No classes assigned to you yet.'
+							: `No classes found matching "${searchTerm}"`}
 					</NoResults>
 				)}
 			</ContentContainer>
