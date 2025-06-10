@@ -16,6 +16,7 @@ import {
 	FiSearch,
 } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
 import supabase from '../../config/supabaseClient'
@@ -70,6 +71,7 @@ interface Class {
 
 const TeacherAssignments = () => {
 	const { user } = useAuth()
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const [searchTerm, setSearchTerm] = useState('')
 	const [filter, setFilter] = useState('all')
@@ -140,7 +142,7 @@ const TeacherAssignments = () => {
 				setAssignments([])
 				setClasses([])
 				setIsLoading(false)
-				toast.info('You are not assigned to any subjects. Please contact an administrator.')
+				toast.info(t('teacherPanel.assignments.noAssignmentsForSubjects'))
 				return
 			}
 
@@ -554,14 +556,14 @@ const TeacherAssignments = () => {
 		>
 			<PageHeader>
 				<div>
-					<PageTitle>Assignments</PageTitle>
-					<PageDescription>View and manage assignments for your classes</PageDescription>
+					<PageTitle>{t('teacherPanel.assignments.title')}</PageTitle>
+					<PageDescription>{t('teacherPanel.assignments.description')}</PageDescription>
 				</div>
 
 				<HeaderActions>
 					<ExportButton>
 						<FiDownload />
-						<span>Export</span>
+						<span>{t('teacherPanel.assignments.export')}</span>
 					</ExportButton>
 				</HeaderActions>
 			</PageHeader>
@@ -573,7 +575,7 @@ const TeacherAssignments = () => {
 					</SearchIcon>
 					<SearchInput
 						type='text'
-						placeholder='Search assignments...'
+						placeholder={t('teacherPanel.assignments.searchPlaceholder')}
 						value={searchTerm}
 						onChange={handleSearchChange}
 					/>
@@ -582,43 +584,43 @@ const TeacherAssignments = () => {
 				<FilterContainer>
 					<FilterButton onClick={() => setShowFilters(!showFilters)}>
 						<FiFilter />
-						<span>Filter</span>
+						<span>{t('teacherPanel.assignments.filter')}</span>
 					</FilterButton>
 
 					{showFilters && (
 						<FilterDropdown>
 							<FilterOption onClick={() => handleFilterChange('all')} $isActive={filter === 'all'}>
-								All Assignments
+								{t('teacherPanel.assignments.filters.all')}
 							</FilterOption>
 							<FilterOption
 								onClick={() => handleFilterChange('upcoming')}
 								$isActive={filter === 'upcoming'}
 							>
-								Upcoming
+								{t('teacherPanel.assignments.filters.upcoming')}
 							</FilterOption>
 							<FilterOption
 								onClick={() => handleFilterChange('published')}
 								$isActive={filter === 'published'}
 							>
-								Published
+								{t('teacherPanel.assignments.filters.published')}
 							</FilterOption>
 							<FilterOption
 								onClick={() => handleFilterChange('grading')}
 								$isActive={filter === 'grading'}
 							>
-								Needs Grading
+								{t('teacherPanel.assignments.filters.grading')}
 							</FilterOption>
 							<FilterOption
 								onClick={() => handleFilterChange('completed')}
 								$isActive={filter === 'completed'}
 							>
-								Completed
+								{t('teacherPanel.assignments.filters.completed')}
 							</FilterOption>
 							<FilterOption
 								onClick={() => handleFilterChange('draft')}
 								$isActive={filter === 'draft'}
 							>
-								Drafts
+								{t('teacherPanel.assignments.filters.draft')}
 							</FilterOption>
 						</FilterDropdown>
 					)}
@@ -629,8 +631,8 @@ const TeacherAssignments = () => {
 						<FiBook />
 						<span>
 							{selectedCourse
-								? classes.find(c => c.id === String(selectedCourse))?.classname || 'All Courses'
-								: 'All Courses'}
+								? classes.find(c => c.id === String(selectedCourse))?.classname || t('teacherPanel.assignments.allCourses')
+								: t('teacherPanel.assignments.allCourses')}
 						</span>
 						<FiChevronDown
 							style={{
@@ -646,7 +648,7 @@ const TeacherAssignments = () => {
 								onClick={() => handleCourseSelect(null)}
 								$isActive={selectedCourse === null}
 							>
-								All Courses
+								{t('teacherPanel.assignments.allCourses')}
 							</CourseOption>
 							{classes.map(course => (
 								<CourseOption
@@ -666,7 +668,7 @@ const TeacherAssignments = () => {
 				<thead>
 					<tr>
 						<TableHeader onClick={() => handleSort('title')}>
-							<span>Assignment</span>
+							<span>{t('teacherPanel.assignments.table.assignment')}</span>
 							{sortBy === 'title' && (
 								<SortIcon $direction={sortDirection}>
 									<FiChevronDown />
@@ -674,7 +676,7 @@ const TeacherAssignments = () => {
 							)}
 						</TableHeader>
 						<TableHeader onClick={() => handleSort('course')}>
-							<span>Course</span>
+							<span>{t('teacherPanel.assignments.table.course')}</span>
 							{sortBy === 'course' && (
 								<SortIcon $direction={sortDirection}>
 									<FiChevronDown />
@@ -682,7 +684,7 @@ const TeacherAssignments = () => {
 							)}
 						</TableHeader>
 						<TableHeader onClick={() => handleSort('subject')}>
-							<span>Subject</span>
+							<span>{t('teacherPanel.assignments.table.subject')}</span>
 							{sortBy === 'subject' && (
 								<SortIcon $direction={sortDirection}>
 									<FiChevronDown />
@@ -690,7 +692,7 @@ const TeacherAssignments = () => {
 							)}
 						</TableHeader>
 						<TableHeader onClick={() => handleSort('dueDate')}>
-							<span>Due Date</span>
+							<span>{t('teacherPanel.assignments.table.dueDate')}</span>
 							{sortBy === 'dueDate' && (
 								<SortIcon $direction={sortDirection}>
 									<FiChevronDown />
@@ -698,14 +700,14 @@ const TeacherAssignments = () => {
 							)}
 						</TableHeader>
 						<TableHeader onClick={() => handleSort('status')}>
-							<span>Creator Email</span>
+							<span>{t('teacherPanel.assignments.table.creator')}</span>
 							{sortBy === 'status' && (
 								<SortIcon $direction={sortDirection}>
 									<FiChevronDown />
 								</SortIcon>
 							)}
 						</TableHeader>
-						<TableHeader>Actions</TableHeader>
+						<TableHeader>{t('teacherPanel.assignments.table.actions')}</TableHeader>
 					</tr>
 				</thead>
 				<tbody>
@@ -714,7 +716,7 @@ const TeacherAssignments = () => {
 							<EmptyCell colSpan={5}>
 								<LoadingContainer>
 									<LoadingSpinner />
-									<p>Loading assignments...</p>
+									<p>{t('teacherPanel.assignments.loadingAssignments')}</p>
 								</LoadingContainer>
 							</EmptyCell>
 						</tr>
@@ -725,11 +727,11 @@ const TeacherAssignments = () => {
 									<EmptyStateIcon>
 										<FiClock size={40} />
 									</EmptyStateIcon>
-									<EmptyStateTitle>No Assignments Found</EmptyStateTitle>
+									<EmptyStateTitle>{t('teacherPanel.assignments.noAssignments')}</EmptyStateTitle>
 									<EmptyStateDescription>
 										{searchTerm
-											? 'No assignments match your search criteria.'
-											: 'There are no assignments for your classes yet.'}
+											? t('teacherPanel.assignments.noMatchingAssignments')
+											: t('teacherPanel.assignments.noAssignmentsYet')}
 									</EmptyStateDescription>
 								</EmptyState>
 							</EmptyCell>

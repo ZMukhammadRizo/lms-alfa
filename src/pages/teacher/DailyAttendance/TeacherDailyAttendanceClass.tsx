@@ -9,6 +9,7 @@ import AttendanceCalendarModal from '../../../components/common/AttendanceCalend
 import PageHeader from '../../../components/common/PageHeader'
 import supabase from '../../../config/supabaseClient'
 import { useAuth } from '../../../contexts/AuthContext'
+import { useTranslation } from 'react-i18next'
 
 interface Student {
 	id: string
@@ -43,6 +44,7 @@ type ViewMode = 'grid' | 'table'
 type ExportPeriod = 'weekly' | 'monthly' | null
 
 const TeacherDailyAttendanceClass: React.FC = () => {
+	const { t } = useTranslation()
 	const { levelId, classId } = useParams<{ levelId: string; classId: string }>()
 	const [students, setStudents] = useState<Student[]>([])
 	const [filteredStudents, setFilteredStudents] = useState<Student[]>([])
@@ -116,7 +118,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 				.single()
 
 			if (error || !data) {
-				toast.error('You do not have access to this class')
+				toast.error(t('dailyAttendance.noClassesAvailable'))
 				return
 			}
 
@@ -125,7 +127,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 			fetchCurrentQuarter()
 		} catch (error) {
 			console.error('Error verifying teacher access:', error)
-			toast.error('Failed to verify access')
+			toast.error(t('errors.loadingFailed'))
 		}
 	}
 
@@ -184,7 +186,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 			setStudents(students)
 		} catch (error) {
 			console.error('Error fetching class and students:', error)
-			toast.error('Failed to load students')
+			toast.error(t('dailyAttendance.loadingStudents'))
 		} finally {
 			setLoading(false)
 		}
@@ -372,7 +374,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 						</StudentInfo>
 						<ActionButton onClick={() => handleStudentClick(student)}>
 							<Calendar size={16} />
-							<span>Attendance</span>
+							<span>{t('dailyAttendance.attendance')}</span>
 						</ActionButton>
 					</StudentCard>
 				))}
@@ -385,9 +387,9 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 			<StudentTable>
 				<thead>
 					<tr>
-						<TableHeader>Student</TableHeader>
-						<TableHeader>Email</TableHeader>
-						<TableHeader>Actions</TableHeader>
+						<TableHeader>{t('userProfile.fullName')}</TableHeader>
+						<TableHeader>{t('dailyAttendance.email')}</TableHeader>
+						<TableHeader>{t('dailyAttendance.actions')}</TableHeader>
 					</tr>
 				</thead>
 				<tbody>
@@ -403,7 +405,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 							<TableCell>
 								<TableActionButton onClick={() => handleStudentClick(student)}>
 									<Calendar size={16} />
-									<span>Attendance</span>
+									<span>{t('dailyAttendance.attendance')}</span>
 								</TableActionButton>
 							</TableCell>
 						</TableRow>
@@ -417,41 +419,41 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 		<Container>
 			<BackLink to={`/teacher/daily-attendance/${levelId}`}>
 				<ArrowLeft size={16} />
-				<span>Back to Classes</span>
+				<span>{t('dailyAttendance.backToClasses')}</span>
 			</BackLink>
 
 			<PageHeader
-				title={classData ? `${classData.classname} - Daily Attendance` : 'Daily Attendance'}
-				subtitle={level ? `${level.name} - Manage student attendance` : 'Manage student attendance'}
+				title={classData ? `${classData.classname} - ${t('dailyAttendance.title')}` : t('dailyAttendance.title')}
+				subtitle={level ? `${level.name} - ${t('dailyAttendance.manageAttendance')}` : t('dailyAttendance.manageAttendance')}
 			/>
 
 			{loading ? (
 				<LoadingContainer>
 					<LoadingSpinner />
-					<p>Loading students...</p>
+					<p>{t('dailyAttendance.loadingStudents')}</p>
 				</LoadingContainer>
 			) : students.length === 0 ? (
 				<EmptyState>
-					<h3>No students found</h3>
-					<p>There are no students enrolled in this class.</p>
+					<h3>{t('dailyAttendance.noStudentsFound')}</h3>
+					<p>{t('dailyAttendance.noStudentsEnrolled')}</p>
 				</EmptyState>
 			) : (
 				<TableWrapper>
 					<SearchContainer>
 						<LeftSection>
-							<StudentCount>{students.length} Students</StudentCount>
+							<StudentCount>{students.length} {t('dailyAttendance.students')}</StudentCount>
 							<ViewToggle>
 								<ViewToggleButton
 									isActive={viewMode === 'grid'}
 									onClick={() => setViewMode('grid')}
-									aria-label='Grid view'
+									aria-label={t('dailyAttendance.gridView')}
 								>
 									<Grid size={18} />
 								</ViewToggleButton>
 								<ViewToggleButton
 									isActive={viewMode === 'table'}
 									onClick={() => setViewMode('table')}
-									aria-label='Table view'
+									aria-label={t('dailyAttendance.tableView')}
 								>
 									<List size={18} />
 								</ViewToggleButton>
@@ -460,7 +462,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 						<ActionContainer>
 							<ExportButton onClick={handleExportClick}>
 								<FileText size={16} />
-								<span>Export Attendance</span>
+								<span>{t('dailyAttendance.exportAttendance')}</span>
 							</ExportButton>
 							<SearchInputWrapper>
 								<SearchIcon>
@@ -468,7 +470,7 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 								</SearchIcon>
 								<SearchInput
 									type='text'
-									placeholder='Search students...'
+									placeholder={t('dailyAttendance.searchStudents')}
 									value={searchQuery}
 									onChange={handleSearchChange}
 								/>
@@ -478,8 +480,8 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 
 					{filteredStudents.length === 0 ? (
 						<EmptyState>
-							<h3>No matching students</h3>
-							<p>No students match your search criteria.</p>
+							<h3>{t('dailyAttendance.noMatchingStudents')}</h3>
+							<p>{t('dailyAttendance.noStudentsMatchSearch')}</p>
 						</EmptyState>
 					) : viewMode === 'grid' ? (
 						renderGridView()
@@ -895,14 +897,14 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onExport, lo
 				onClick={e => e.stopPropagation()}
 			>
 				<ModalHeader>
-					<h3>Export Attendance Data</h3>
+					<h3>{t('dailyAttendance.exportAttendanceData')}</h3>
 					<CloseButton onClick={onClose}>
 						<ArrowLeft size={20} />
 					</CloseButton>
 				</ModalHeader>
 
 				<ModalBody>
-					<p>Select the period for which you want to export attendance data:</p>
+					<p>{t('dailyAttendance.selectPeriodForExport')}</p>
 
 					<RadioGroup>
 						<RadioOption>
@@ -915,7 +917,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onExport, lo
 							/>
 							<RadioLabel htmlFor='weekly'>
 								<RadioButton />
-								Weekly (Current Week)
+								{t('dailyAttendance.weekly')}
 							</RadioLabel>
 						</RadioOption>
 						<RadioOption>
@@ -928,7 +930,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onExport, lo
 							/>
 							<RadioLabel htmlFor='monthly'>
 								<RadioButton />
-								Monthly (Current Month)
+								{t('dailyAttendance.monthly')}
 							</RadioLabel>
 						</RadioOption>
 					</RadioGroup>
@@ -936,10 +938,10 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onExport, lo
 
 				<ModalFooter>
 					<CancelButton onClick={onClose} disabled={loading}>
-						Cancel
+						{t('dailyAttendance.cancel')}
 					</CancelButton>
 					<ExportActionButton onClick={handleExport} disabled={!selectedPeriod || loading}>
-						{loading ? 'Exporting...' : 'Export'}
+						{loading ? t('dailyAttendance.exporting') : t('dailyAttendance.export')}
 					</ExportActionButton>
 				</ModalFooter>
 			</ModalContent>

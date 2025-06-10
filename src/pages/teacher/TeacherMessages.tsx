@@ -7,6 +7,7 @@ import {
    FiUsers, FiMessageSquare, FiChevronLeft,
   FiPhone, FiVideo, FiInfo
 } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 // import { useAuth } from '../../contexts/AuthContext';
 
 // Types
@@ -52,6 +53,7 @@ interface MessageTimeProps {
 
 const TeacherMessages: React.FC = () => {
   // const { user } = useAuth();
+  const { t } = useTranslation();
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [messageText, setMessageText] = useState('');
@@ -387,14 +389,14 @@ const TeacherMessages: React.FC = () => {
     >
       <PageHeader>
         <div>
-          <PageTitle>Messages</PageTitle>
-          <PageDescription>Chat with students and groups</PageDescription>
+          <PageTitle>{t('teacherPanel.messages.title')}</PageTitle>
+          <PageDescription>{t('teacherPanel.messages.description')}</PageDescription>
         </div>
         
         <HeaderActions>
           <NewMessageButton onClick={() => console.log('New message')}>
             <FiPlus size={16} />
-            <span>New Message</span>
+            <span>{t('teacherPanel.messages.newMessage')}</span>
           </NewMessageButton>
         </HeaderActions>
       </PageHeader>
@@ -414,7 +416,7 @@ const TeacherMessages: React.FC = () => {
             </SearchIconWrapper>
             <SearchInput
               type="text"
-              placeholder="Search messages..."
+              placeholder={t('teacherPanel.messages.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -530,8 +532,8 @@ const TeacherMessages: React.FC = () => {
                         </ChatHeaderName>
                         <ChatHeaderStatus>
                           {otherParticipant?.status === 'online' 
-                              ? 'Online'
-                            : `Last seen ${Math.floor(Math.random() * 60)} min ago`}
+                              ? t('teacherPanel.messages.online')
+                            : t('teacherPanel.messages.lastSeen', { time: `${Math.floor(Math.random() * 60)} min` })}
                         </ChatHeaderStatus>
                       </ChatHeaderInfo>
                     </ChatHeaderContent>

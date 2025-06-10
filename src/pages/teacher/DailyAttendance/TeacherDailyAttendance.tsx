@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Book, Calendar, ChevronRight, FileText, Search, Users } from 'react-feather'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
 import FilterReportModal from '../../../components/admin/FilterReportModal'
@@ -23,6 +24,7 @@ const TeacherDailyAttendance: React.FC = () => {
 	const [isReportModalOpen, setIsReportModalOpen] = useState(false)
 	const navigate = useNavigate()
 	const { user } = useAuth()
+	const { t } = useTranslation()
 
 	useEffect(() => {
 		if (user?.id) {
@@ -111,8 +113,8 @@ const TeacherDailyAttendance: React.FC = () => {
 	return (
 		<Container>
 			<PageHeader
-				title='Daily Attendance'
-				subtitle='Manage daily attendance records for your classes'
+				title={t('teacherPanel.dailyAttendance.title')}
+				subtitle={t('teacherPanel.dailyAttendance.description')}
 			/>
 
 			<HeaderInfo>
@@ -122,7 +124,7 @@ const TeacherDailyAttendance: React.FC = () => {
 					</InfoCardIcon>
 					<InfoCardContent>
 						<InfoCardValue>{levels.length}</InfoCardValue>
-						<InfoCardLabel>Assigned Levels</InfoCardLabel>
+						<InfoCardLabel>{t('teacherPanel.dashboard.assignedLevels')}</InfoCardLabel>
 					</InfoCardContent>
 				</InfoCard>
 
@@ -134,7 +136,7 @@ const TeacherDailyAttendance: React.FC = () => {
 						<InfoCardValue>
 							{levels.reduce((sum, level) => sum + level.class_count, 0)}
 						</InfoCardValue>
-						<InfoCardLabel>Your Classes</InfoCardLabel>
+						<InfoCardLabel>{t('teacherPanel.dashboard.yourClasses')}</InfoCardLabel>
 					</InfoCardContent>
 				</InfoCard>
 
@@ -146,7 +148,7 @@ const TeacherDailyAttendance: React.FC = () => {
 						<InfoCardValue>
 							{levels.reduce((sum, level) => sum + (level.student_count || 0), 0)}
 						</InfoCardValue>
-						<InfoCardLabel>Total Students</InfoCardLabel>
+						<InfoCardLabel>{t('teacherPanel.dashboard.totalStudents')}</InfoCardLabel>
 					</InfoCardContent>
 				</InfoCard>
 			</HeaderInfo>
@@ -154,21 +156,21 @@ const TeacherDailyAttendance: React.FC = () => {
 			{loading ? (
 				<LoadingContainer>
 					<LoadingSpinner />
-					<p>Loading levels...</p>
+					<p>{t('teacherPanel.common.loading')}</p>
 				</LoadingContainer>
 			) : levels.length === 0 ? (
 				<EmptyState>
-					<h3>No classes assigned</h3>
-					<p>You don't have any classes assigned to you.</p>
+					<h3>{t('teacherPanel.classes.noClasses')}</h3>
+					<p>{t('teacherPanel.classes.noClasses')}</p>
 				</EmptyState>
 			) : (
 				<>
 					<SearchContainer>
-						<SectionTitle>Select a Level</SectionTitle>
+						<SectionTitle>{t('teacherPanel.dailyAttendance.selectLevel')}</SectionTitle>
 						<ActionContainer>
 							<ReportButton onClick={() => setIsReportModalOpen(true)}>
 								<FileText size={16} />
-								<span>Filter & Report</span>
+								<span>{t('teacherPanel.dailyAttendance.viewReports')}</span>
 							</ReportButton>
 							<SearchInputWrapper>
 								<SearchIcon>
@@ -176,7 +178,7 @@ const TeacherDailyAttendance: React.FC = () => {
 								</SearchIcon>
 								<SearchInput
 									type='text'
-									placeholder='Search levels...'
+									placeholder={t('teacherPanel.common.search')}
 									value={searchQuery}
 									onChange={handleSearchChange}
 								/>
@@ -186,8 +188,8 @@ const TeacherDailyAttendance: React.FC = () => {
 
 					{filteredLevels.length === 0 ? (
 						<EmptyState>
-							<h3>No matching levels</h3>
-							<p>No levels match your search criteria.</p>
+							<h3>{t('teacherPanel.common.noData')}</h3>
+							<p>{t('teacherPanel.common.noData')}</p>
 						</EmptyState>
 					) : (
 						<LevelsGrid>
@@ -197,11 +199,11 @@ const TeacherDailyAttendance: React.FC = () => {
 									<LevelStats>
 										<StatItem>
 											<Book size={16} />
-											<span>{level.class_count} Classes</span>
+											<span>{level.class_count} {t('teacherPanel.classes.title')}</span>
 										</StatItem>
 										<StatItem>
 											<Users size={16} />
-											<span>{level.student_count || 0} Students</span>
+											<span>{level.student_count || 0} {t('teacherPanel.dashboard.students')}</span>
 										</StatItem>
 									</LevelStats>
 									<GoButton>
