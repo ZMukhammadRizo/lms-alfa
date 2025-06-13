@@ -1,20 +1,19 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
 	FiCalendar,
 	FiCheck,
-	FiLock,
 	FiMail,
+	FiSearch,
 	FiShield,
 	FiUser,
 	FiUserPlus,
 	FiUsers,
 	FiX,
-	FiSearch,
 } from 'react-icons/fi'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
-import { useTranslation } from 'react-i18next'
 import supabase, { supabaseAdmin } from '../../config/supabaseClient'
 import { canCreateUserWithRole } from '../../utils/permissions'
 
@@ -38,7 +37,7 @@ interface User {
 interface UserFormProps {
 	isOpen: boolean
 	onClose: () => void
-	onSubmit: (user: Partial<User>) => void
+	onSubmit: (user: Partial<User>) => Promise<void>
 	initialData?: Partial<User>
 	formTitle: string
 	currentUserRole?: string
@@ -287,13 +286,17 @@ const UserForm: React.FC<UserFormProps> = ({
 					firstName,
 					lastName,
 					// Format the birthday for the date input if it exists
-					birthday: initialData.birthday ? new Date(initialData.birthday).toISOString().split('T')[0] : '',
+					birthday: initialData.birthday
+						? new Date(initialData.birthday).toISOString().split('T')[0]
+						: '',
 				})
 			} else {
 				setFormData({
 					...initialData,
 					// Format the birthday for the date input if it exists
-					birthday: initialData.birthday ? new Date(initialData.birthday).toISOString().split('T')[0] : '',
+					birthday: initialData.birthday
+						? new Date(initialData.birthday).toISOString().split('T')[0]
+						: '',
 				})
 			}
 
@@ -364,7 +367,7 @@ const UserForm: React.FC<UserFormProps> = ({
 			const fullName = `${student.firstName} ${student.lastName}`.toLowerCase()
 			const email = student.email.toLowerCase()
 			const search = childSearchTerm.toLowerCase()
-			
+
 			return fullName.includes(search) || email.includes(search)
 		})
 
@@ -372,18 +375,18 @@ const UserForm: React.FC<UserFormProps> = ({
 		return filtered.sort((a, b) => {
 			const aSelected = selectedChildren.includes(a.id)
 			const bSelected = selectedChildren.includes(b.id)
-			
+
 			// If one is selected and the other isn't, the selected one comes first
 			if (aSelected && !bSelected) return -1
 			if (!aSelected && bSelected) return 1
-			
+
 			// If both are selected or both are unselected, sort alphabetically
 			const aName = `${a.firstName} ${a.lastName}`.toLowerCase()
 			const bName = `${b.firstName} ${b.lastName}`.toLowerCase()
 			return aName.localeCompare(bName)
 		})
 	}, [availableStudents, selectedChildren, childSearchTerm])
-      
+
 	// Fetch all roles from Supabase
 	const fetchAllRoles = async () => {
 		setIsLoadingRoles(true)
@@ -475,7 +478,7 @@ const UserForm: React.FC<UserFormProps> = ({
 		if (!formData.status) {
 			newErrors.status = 'Status is required'
 		}
-			
+
 		// Add validation for parent-child relationship
 		if (formData.role === 'Parent' && selectedChildren.length === 0) {
 			newErrors.children = 'Please select at least one child'
@@ -485,12 +488,12 @@ const UserForm: React.FC<UserFormProps> = ({
 		if (formData.birthday) {
 			const birthdayDate = new Date(formData.birthday)
 			const today = new Date()
-			
+
 			// Check if birthday is in the future
 			if (birthdayDate > today) {
 				newErrors.birthday = 'Date of birth cannot be in the future'
 			}
-			
+
 			// Check if person is too old (over 120 years)
 			const maxAge = new Date()
 			maxAge.setFullYear(today.getFullYear() - 120)
@@ -504,13 +507,6 @@ const UserForm: React.FC<UserFormProps> = ({
 			newErrors.email = 'This email is already registered'
 		}
 
-		// Validate password for new user
-		if (!initialData?.id && !formData.password?.trim()) {
-			newErrors.password = 'Password is required for new users'
-		} else if (formData.password && formData.password.length < 8) {
-			newErrors.password = 'Password must be at least 8 characters'
-		}
-
 		setErrors(newErrors)
 		return Object.keys(newErrors).length === 0
 	}
@@ -518,8 +514,14 @@ const UserForm: React.FC<UserFormProps> = ({
 	// Handle form submission
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
+		console.log('Form submission started')
+		console.log('Form data:', formData)
 
-		if (!validateForm()) {
+		const isValid = validateForm()
+		console.log('Form validation result:', isValid, 'Errors:', errors)
+
+		if (!isValid) {
+			console.log('Form validation failed, stopping submission')
 			// Scroll to the first error for better UX
 			const firstErrorElement = document.querySelector('.error-message')
 			if (firstErrorElement) {
@@ -528,6 +530,7 @@ const UserForm: React.FC<UserFormProps> = ({
 			return
 		}
 
+		console.log('Form validation passed, proceeding with submission')
 		setIsSubmitting(true)
 		// Clear any previous submission errors
 		setErrors(prev => ({ ...prev, submit: '' }))
@@ -535,20 +538,29 @@ const UserForm: React.FC<UserFormProps> = ({
 		try {
 			// First submit the user data normally
 			const userData: Partial<User> = { ...formData }
+			console.log('Preparing user data for submission:', userData)
 
 			// When creating/updating a user who is a parent, include the selected children
 			if (formData.role === 'Parent') {
 				userData.childrenIds = selectedChildren
+				console.log('Adding selected children to parent user:', selectedChildren)
 			}
 
 			// For new users, set default password
 			if (!initialData?.id) {
-				userData.password = '12345678' // Set default password
+				userData.password = '12345678' // Always set default password
+				console.log('Setting default password for new user')
 				toast.info('New user will be created with default password: 12345678')
 			}
 
+			// Remove the database field mappings since we're using camelCase in the database
+			// userData.first_name = userData.firstName
+			// userData.last_name = userData.lastName
+			console.log('Final user data being submitted:', userData)
+
 			// Submit the updated user data
 			await onSubmit(userData)
+			console.log('User data submitted successfully')
 
 			// Close the form on success
 			onClose()
@@ -611,15 +623,15 @@ const UserForm: React.FC<UserFormProps> = ({
 			// Assign parent_id to new children
 			if (childrenToAdd.length > 0) {
 				const addPromise = supabase
-				.from('users')
-				.update({ parent_id: parentId })
+					.from('users')
+					.update({ parent_id: parentId })
 					.in('id', childrenToAdd)
 				updatePromises.push(addPromise)
 			}
 
 			// Execute all updates
 			const results = await Promise.all(updatePromises)
-			
+
 			// Check for errors
 			for (const result of results) {
 				if (result.error) {
@@ -884,9 +896,9 @@ const UserForm: React.FC<UserFormProps> = ({
 										<FiSearch />
 									</SearchIcon>
 									<SearchInput
-										placeholder="Search children by name or email..."
+										placeholder='Search children by name or email...'
 										value={childSearchTerm}
-										onChange={(e) => setChildSearchTerm(e.target.value)}
+										onChange={e => setChildSearchTerm(e.target.value)}
 									/>
 									{childSearchTerm && (
 										<ClearSearchButton onClick={() => setChildSearchTerm('')}>
@@ -952,7 +964,11 @@ const UserForm: React.FC<UserFormProps> = ({
 							{t('userForm.cancel')}
 						</CancelButton>
 						<SubmitButton type='submit' disabled={isSubmitting}>
-							{isSubmitting ? t('userForm.saving') : initialData?.id ? t('userForm.updateUser') : t('userForm.createUser')}
+							{isSubmitting
+								? t('userForm.saving')
+								: initialData?.id
+								? t('userForm.updateUser')
+								: t('userForm.createUser')}
 						</SubmitButton>
 					</ButtonGroup>
 				</form>
@@ -1208,14 +1224,8 @@ const StatusOption = styled.div<StatusOptionProps>`
 	padding: ${props => props.theme.spacing[3]} ${props => props.theme.spacing[4]};
 	border-radius: ${props => props.theme.borderRadius.md};
 	border: 2px solid
-		${props =>
-			props.$active
-					? props.theme.colors.success[500]
-				: props.theme.colors.neutral[300]};
-	background-color: ${props =>
-		props.$active
-				? props.theme.colors.success[50]
-			: 'transparent'};
+		${props => (props.$active ? props.theme.colors.success[500] : props.theme.colors.neutral[300])};
+	background-color: ${props => (props.$active ? props.theme.colors.success[50] : 'transparent')};
 	box-shadow: ${props => (props.$active ? '0 2px 4px rgba(0, 0, 0, 0.05)' : 'none')};
 	cursor: pointer;
 	transition: all 0.2s ease;
@@ -1271,8 +1281,7 @@ const StatusIndicator = styled.div<StatusIndicatorProps>`
 	height: 22px;
 	border-radius: ${props => props.theme.borderRadius.full};
 	border: 2px solid
-		${props =>
-			props.$active ? props.theme.colors.primary[500] : props.theme.colors.text.tertiary};
+		${props => (props.$active ? props.theme.colors.primary[500] : props.theme.colors.text.tertiary)};
 	color: white;
 	background-color: ${props => (props.$active ? props.theme.colors.primary[500] : 'transparent')};
 	transition: all ${props => props.theme.transition.fast};
@@ -1384,6 +1393,41 @@ const SubmitButton = styled.button`
 		order: 1;
 		margin-bottom: ${props => props.theme.spacing[2]};
 	}
+`
+
+// Form error display components
+const FormErrorContainer = styled.div`
+	margin-bottom: ${props => props.theme.spacing[4]};
+	padding: ${props => props.theme.spacing[4]};
+	background-color: ${props => `${props.theme.colors.danger[50]}`};
+	border-left: 4px solid ${props => props.theme.colors.danger[500]};
+	border-radius: ${props => props.theme.borderRadius.md};
+	display: flex;
+	align-items: flex-start;
+	gap: ${props => props.theme.spacing[3]};
+`
+
+const FormErrorIcon = styled.div`
+	font-size: 1.2rem;
+	line-height: 1;
+`
+
+const FormErrorMessage = styled.div`
+	color: ${props => props.theme.colors.danger[700]};
+	font-size: 0.95rem;
+	line-height: 1.5;
+`
+
+// New styled component for form note
+const FormNote = styled.div`
+	padding: 0.75rem;
+	background-color: ${props => props.theme.colors.primary[50]};
+	border: 1px solid ${props => props.theme.colors.primary[100]};
+	border-radius: 0.375rem;
+	color: ${props => props.theme.colors.primary[700]};
+	font-size: 0.9rem;
+	width: 100%;
+	margin: 0.5rem 0;
 `
 
 // New styled component for help text
@@ -1515,41 +1559,6 @@ const EmptyChildrenMessage = styled.div`
 	margin-top: ${props => props.theme.spacing[2]};
 `
 
-// Form error display components
-const FormErrorContainer = styled.div`
-	margin-bottom: ${props => props.theme.spacing[4]};
-	padding: ${props => props.theme.spacing[4]};
-	background-color: ${props => `${props.theme.colors.danger[50]}`};
-	border-left: 4px solid ${props => props.theme.colors.danger[500]};
-	border-radius: ${props => props.theme.borderRadius.md};
-	display: flex;
-	align-items: flex-start;
-	gap: ${props => props.theme.spacing[3]};
-`
-
-const FormErrorIcon = styled.div`
-	font-size: 1.2rem;
-	line-height: 1;
-`
-
-const FormErrorMessage = styled.div`
-	color: ${props => props.theme.colors.danger[700]};
-	font-size: 0.95rem;
-	line-height: 1.5;
-`
-
-// New styled component for form note
-const FormNote = styled.div`
-	padding: 0.75rem;
-	background-color: ${props => props.theme.colors.primary[50]};
-	border: 1px solid ${props => props.theme.colors.primary[100]};
-	border-radius: 0.375rem;
-	color: ${props => props.theme.colors.primary[700]};
-	font-size: 0.9rem;
-	width: 100%;
-	margin: 0.5rem 0;
-`
-
 // Add these new styled components at the appropriate location in the styled components section
 const ChildSearchContainer = styled.div`
 	position: relative;
@@ -1567,7 +1576,8 @@ const SearchIcon = styled.div`
 
 const SearchInput = styled.input`
 	width: 100%;
-	padding: ${props => props.theme.spacing[3]} ${props => props.theme.spacing[3]} ${props => props.theme.spacing[3]} ${props => props.theme.spacing[9]};
+	padding: ${props => props.theme.spacing[3]} ${props => props.theme.spacing[3]}
+		${props => props.theme.spacing[3]} ${props => props.theme.spacing[9]};
 	border: 1px solid ${props => props.theme.colors.neutral[300]};
 	border-radius: ${props => props.theme.borderRadius.md};
 	font-size: 0.95rem;
