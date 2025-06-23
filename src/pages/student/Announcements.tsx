@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FiBell, FiCalendar, FiChevronDown, FiFilter, FiSearch, FiX } from 'react-icons/fi'
 import styled from 'styled-components'
 import { useAuth } from '../../contexts/AuthContext'
@@ -28,6 +29,7 @@ interface FilterOptions {
 }
 
 const Announcements: React.FC = () => {
+	const { t } = useTranslation()
 	const {
 		announcements,
 		isLoading,
@@ -155,14 +157,14 @@ const Announcements: React.FC = () => {
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.3, delay: 0.1 }}
 					>
-						Announcements
+						{t('studentPanel.announcements.title')}
 					</motion.h1>
 					<motion.p
 						initial={{ opacity: 0, y: -10 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.3, delay: 0.2 }}
 					>
-						Stay updated with important information
+						{t('studentPanel.announcements.description')}
 					</motion.p>
 				</HeaderContent>
 				<SearchAndFilterContainer>
@@ -172,7 +174,7 @@ const Announcements: React.FC = () => {
 						</SearchIcon>
 						<SearchInput
 							type='text'
-							placeholder='Search announcements...'
+							placeholder={t('studentPanel.announcements.searchPlaceholder')}
 							value={searchTerm}
 							onChange={e => setSearchTerm(e.target.value)}
 						/>
@@ -184,7 +186,7 @@ const Announcements: React.FC = () => {
 					</SearchBar>
 					<FilterButton onClick={() => setShowFilters(!showFilters)}>
 						<FiFilter />
-						<span>Filter</span>
+						<span>{t('studentPanel.announcements.filter')}</span>
 						<FiChevronDown
 							style={{
 								transform: showFilters ? 'rotate(180deg)' : 'rotate(0)',
@@ -194,7 +196,7 @@ const Announcements: React.FC = () => {
 					</FilterButton>
 					{/* Add Mark All as Read button */}
 					{announcements.filter(a => !a.isRead).length > 0 && (
-						<MarkAllReadButton onClick={handleMarkAllAsRead}>Mark All as Read</MarkAllReadButton>
+						<MarkAllReadButton onClick={handleMarkAllAsRead}>{t('studentPanel.announcements.markAllAsRead')}</MarkAllReadButton>
 					)}
 				</SearchAndFilterContainer>
 			</PageHeader>

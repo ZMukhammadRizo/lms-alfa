@@ -1,9 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FiChevronLeft, FiChevronRight, FiMenu } from 'react-icons/fi'
 import { NavLink, useLocation } from 'react-router-dom'
 import styled, { css } from 'styled-components'
-import { getSystemMenu, studentMenu } from '../../constants/menuItems'
+import { getStudentMenu, getSystemMenu } from '../../constants/menuItems'
 import { useAuth } from '../../contexts/AuthContext'
 import { getUserRole } from '../../utils/authUtils'
 import LogoutButton from '../common/LogoutButton'
@@ -70,6 +71,7 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 	const [isMobile, setIsMobile] = useState(false)
 	const [isMobileOpen, setIsMobileOpen] = useState(false)
 	const { user } = useAuth()
+	const { t } = useTranslation()
 
 	// Handle window resize
 	useEffect(() => {
@@ -114,7 +116,10 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 	}
 
 	// Get system menu items for the current role
-	const systemMenu = getSystemMenu('student')
+	const systemMenu = getSystemMenu('student', t)
+	
+	// Get translated student menu items
+	const studentMenuItems = getStudentMenu(t)
 
 	// Get user role from utils instead of local implementation
 	const role = getUserRole()
@@ -211,7 +216,7 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 
 						<MenuContainer>
 							<MenuSection>
-								{studentMenu.map(item => (
+								{studentMenuItems.map(item => (
 									<PermissionMenuItem
 										key={item.path}
 										icon={item.icon}
@@ -232,7 +237,7 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 											exit={{ opacity: 0 }}
 											transition={{ delay: 0.2 }}
 										>
-											System
+											{t('navigation.system')}
 										</SectionLabel>
 									)}
 								</AnimatePresence>
@@ -261,7 +266,7 @@ const StudentSidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar, on
 										transition={{ duration: 0.2 }}
 									>
 										<ProfileName>{getFullName()}</ProfileName>
-										<ProfileRole>Student</ProfileRole>
+										<ProfileRole>{t('common.student')}</ProfileRole>
 									</ProfileInfo>
 								)}
 							</AnimatePresence>

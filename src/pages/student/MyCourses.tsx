@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
 	FiAlertCircle,
 	FiArrowLeft,
@@ -57,6 +58,7 @@ interface Subject {
 }
 
 const MyCourses: React.FC = () => {
+	const { t } = useTranslation()
 	const [searchTerm, setSearchTerm] = useState('')
 	const [classTypeSearchTerm, setClassTypeSearchTerm] = useState('')
 	const [classSearchTerm, setClassSearchTerm] = useState('')
@@ -85,11 +87,11 @@ const MyCourses: React.FC = () => {
 	// Fetch class types from Supabase
 	useEffect(() => {
 		const fetchClassTypes = async () => {
-			if (!user?.id) {
-				setError('User not authenticated')
-				setLoadingClassTypes(false)
-				return
-			}
+					if (!user?.id) {
+			setError(t('studentPanel.courses.errors.userNotAuthenticated'))
+			setLoadingClassTypes(false)
+			return
+		}
 
 			try {
 				setLoadingClassTypes(true)
@@ -102,7 +104,7 @@ const MyCourses: React.FC = () => {
 
 				if (classTypesError) {
 					console.error('Error fetching class types:', classTypesError)
-					throw new Error('Failed to fetch class types')
+					throw new Error(t('studentPanel.courses.errors.fetchingClassTypes'))
 				}
 
 				if (data && data.length > 0) {
@@ -112,8 +114,8 @@ const MyCourses: React.FC = () => {
 				}
 			} catch (error) {
 				console.error('Error fetching class types data:', error)
-				setError('Failed to load class types. Please try again later.')
-				toast.error('Failed to load class types')
+				setError(t('studentPanel.courses.errors.loadingClassTypes'))
+				toast.error(t('studentPanel.courses.errors.loadingClassTypesFailed'))
 			} finally {
 				setLoadingClassTypes(false)
 			}
@@ -273,8 +275,8 @@ const MyCourses: React.FC = () => {
 			}
 		} catch (error) {
 			console.error('Error fetching subject data:', error)
-			setError('Failed to load courses. Please try again later.')
-			toast.error('Failed to load your courses')
+			setError(t('studentPanel.courses.errors.loadingCourses'))
+			toast.error(t('studentPanel.courses.errors.loadingCoursesFailed'))
 		} finally {
 			setLoadingSubjects(false)
 		}
@@ -316,13 +318,13 @@ const MyCourses: React.FC = () => {
 	const getStatusLabel = (status: string) => {
 		switch (status) {
 			case 'inProgress':
-				return 'In Progress'
+				return t('studentPanel.courses.statusInProgress')
 			case 'completed':
-				return 'Completed'
+				return t('studentPanel.courses.statusCompleted')
 			case 'notStarted':
-				return 'Not Started'
+				return t('studentPanel.courses.statusNotStarted')
 			default:
-				return 'Unknown'
+				return t('studentPanel.courses.statusUnknown')
 		}
 	}
 
@@ -349,18 +351,18 @@ const MyCourses: React.FC = () => {
 
 	// Get the page title based on current view
 	const getPageTitle = () => {
-		if (currentView === 'class-types') return 'My Classes'
-		if (currentView === 'classes' && selectedClassType) return `${selectedClassType.name} Classes`
-		if (currentView === 'subjects' && selectedClass) return `${selectedClass.classname} Subjects`
-		return 'My Courses'
+		if (currentView === 'class-types') return t('studentPanel.courses.myClasses')
+		if (currentView === 'classes' && selectedClassType) return t('studentPanel.courses.classTypeClasses', { className: selectedClassType.name })
+		if (currentView === 'subjects' && selectedClass) return t('studentPanel.courses.classSubjects', { className: selectedClass.classname })
+		return t('studentPanel.courses.title')
 	}
 
 	// Get the page description based on current view
 	const getPageDescription = () => {
-		if (currentView === 'class-types') return 'Select a class type to view your classes'
-		if (currentView === 'classes') return 'Select a class to view its subjects'
-		if (currentView === 'subjects') return 'View and manage your enrolled subjects'
-		return 'View and manage your enrolled courses'
+		if (currentView === 'class-types') return t('studentPanel.courses.selectClassType')
+		if (currentView === 'classes') return t('studentPanel.courses.selectClass')
+		if (currentView === 'subjects') return t('studentPanel.courses.viewSubjects')
+		return t('studentPanel.courses.description')
 	}
 
 	// Show loading spinner based on current view
@@ -382,7 +384,7 @@ const MyCourses: React.FC = () => {
 				<HeaderContent>
 					{currentView !== 'class-types' && (
 						<BackButton onClick={handleBack}>
-							<FiArrowLeft /> Back
+							<FiArrowLeft /> {t('studentPanel.courses.back')}
 						</BackButton>
 					)}
 					<motion.div
@@ -408,7 +410,7 @@ const MyCourses: React.FC = () => {
 							{currentView === 'class-types' && (
 								<SearchInput
 									type='text'
-									placeholder='Search class types...'
+									placeholder={t('studentPanel.courses.searchClassTypes')}
 									value={classTypeSearchTerm}
 									onChange={e => setClassTypeSearchTerm(e.target.value)}
 								/>
@@ -416,7 +418,7 @@ const MyCourses: React.FC = () => {
 							{currentView === 'classes' && (
 								<SearchInput
 									type='text'
-									placeholder='Search classes...'
+									placeholder={t('studentPanel.courses.searchClasses')}
 									value={classSearchTerm}
 									onChange={e => setClassSearchTerm(e.target.value)}
 								/>
@@ -424,7 +426,7 @@ const MyCourses: React.FC = () => {
 							{currentView === 'subjects' && (
 								<SearchInput
 									type='text'
-									placeholder='Search subjects...'
+									placeholder={t('studentPanel.courses.searchSubjects')}
 									value={searchTerm}
 									onChange={e => setSearchTerm(e.target.value)}
 								/>
@@ -439,10 +441,10 @@ const MyCourses: React.FC = () => {
 					<LoadingSpinner />
 					<LoadingText>
 						{currentView === 'class-types'
-							? 'Loading class types...'
+							? t('studentPanel.courses.loadingClassTypes')
 							: currentView === 'classes'
-							? 'Loading classes...'
-							: 'Loading subjects...'}
+							? t('studentPanel.courses.loadingClasses')
+							: t('studentPanel.courses.loadingSubjects')}
 					</LoadingText>
 				</LoadingContainer>
 			) : error ? (
@@ -451,7 +453,7 @@ const MyCourses: React.FC = () => {
 						<FiAlertCircle />
 					</ErrorIcon>
 					<ErrorMessage>{error}</ErrorMessage>
-					<RetryButton onClick={() => window.location.reload()}>Try Again</RetryButton>
+					<RetryButton onClick={() => window.location.reload()}>{t('studentPanel.courses.tryAgain')}</RetryButton>
 				</ErrorContainer>
 			) : currentView === 'class-types' ? (
 				<>
@@ -460,9 +462,9 @@ const MyCourses: React.FC = () => {
 							<EmptyIcon>
 								<FiFolder size={50} />
 							</EmptyIcon>
-							<EmptyTitle>No Class Types Available</EmptyTitle>
+							<EmptyTitle>{t('studentPanel.courses.noClassTypesAvailable')}</EmptyTitle>
 							<EmptyDescription>
-								There are no class types configured in the system.
+								{t('studentPanel.courses.noClassTypesMessage')}
 							</EmptyDescription>
 						</EmptyStateContainer>
 					) : filteredClassTypes.length === 0 ? (
@@ -470,16 +472,18 @@ const MyCourses: React.FC = () => {
 							<EmptyIcon>
 								<FiFolder size={50} />
 							</EmptyIcon>
-							<EmptyTitle>No Class Types Found</EmptyTitle>
+							<EmptyTitle>{t('studentPanel.courses.noClassTypesFound')}</EmptyTitle>
 							<EmptyDescription>
-								No class types matching "{classTypeSearchTerm}" were found.
+								{t('studentPanel.courses.noClassTypesSearchMessage', { searchTerm: classTypeSearchTerm })}
 							</EmptyDescription>
 						</EmptyStateContainer>
 					) : (
 						<>
 							<ResultCount>
-								Showing {filteredClassTypes.length}{' '}
-								{filteredClassTypes.length === 1 ? 'class type' : 'class types'}
+								{t('studentPanel.courses.showingResults', { 
+									count: filteredClassTypes.length,
+									type: filteredClassTypes.length === 1 ? t('studentPanel.courses.classType') : t('studentPanel.courses.classTypes')
+								})}
 							</ResultCount>
 							<ClassTypeGrid>
 								{filteredClassTypes.map((classType, index) => (
@@ -499,13 +503,13 @@ const MyCourses: React.FC = () => {
 										<ClassTypeCardTop $color={getClassTypeColor(classType.id)}>
 											<ClassTypeName>{classType.name}</ClassTypeName>
 											<ClassTypeDescription>
-												View your {classType.name.toLowerCase()} classes
+												{t('studentPanel.courses.viewYourClasses', { className: classType.name.toLowerCase() })}
 											</ClassTypeDescription>
 										</ClassTypeCardTop>
 										<ClassTypeCardBody>
 											<ClassTypeCardFooter>
 												<ClassTypeButton $color={getClassTypeColor(classType.id)}>
-													View Classes <FiChevronRight />
+													{t('studentPanel.courses.viewClasses')} <FiChevronRight />
 												</ClassTypeButton>
 											</ClassTypeCardFooter>
 										</ClassTypeCardBody>
@@ -522,9 +526,9 @@ const MyCourses: React.FC = () => {
 							<EmptyIcon>
 								<FiBook size={50} />
 							</EmptyIcon>
-							<EmptyTitle>No Classes Found</EmptyTitle>
+							<EmptyTitle>{t('studentPanel.courses.noClassesFound')}</EmptyTitle>
 							<EmptyDescription>
-								You're not enrolled in any {selectedClassType?.name.toLowerCase()} classes.
+								{t('studentPanel.courses.notEnrolledInClasses', { className: selectedClassType?.name.toLowerCase() })}
 							</EmptyDescription>
 						</EmptyStateContainer>
 					) : filteredClasses.length === 0 ? (
@@ -532,16 +536,18 @@ const MyCourses: React.FC = () => {
 							<EmptyIcon>
 								<FiBook size={50} />
 							</EmptyIcon>
-							<EmptyTitle>No Classes Found</EmptyTitle>
+							<EmptyTitle>{t('studentPanel.courses.noClassesFound')}</EmptyTitle>
 							<EmptyDescription>
-								No classes matching "{classSearchTerm}" were found.
+								{t('studentPanel.courses.noClassesSearchMessage', { searchTerm: classSearchTerm })}
 							</EmptyDescription>
 						</EmptyStateContainer>
 					) : (
 						<>
 							<ResultCount>
-								Showing {filteredClasses.length}{' '}
-								{filteredClasses.length === 1 ? 'class' : 'classes'}
+								{t('studentPanel.courses.showingResults', { 
+									count: filteredClasses.length,
+									type: filteredClasses.length === 1 ? t('studentPanel.courses.class') : t('studentPanel.courses.classes')
+								})}
 							</ResultCount>
 							<ClassGrid>
 								{filteredClasses.map((classItem, index) => (
@@ -562,20 +568,20 @@ const MyCourses: React.FC = () => {
 											<ClassName>{classItem.classname}</ClassName>
 											<BadgeContainer>
 												{classItem.levelName && (
-													<LevelBadge>Level: {classItem.levelName}</LevelBadge>
+													<LevelBadge>{t('studentPanel.courses.level')}: {classItem.levelName}</LevelBadge>
 												)}
 												{getClassTypeName(classItem) && (
 													<TypeBadge>{getClassTypeName(classItem)}</TypeBadge>
 												)}
 											</BadgeContainer>
 											<ClassDescription>
-												{classItem.description || `View subjects for ${classItem.classname}`}
+												{classItem.description || t('studentPanel.courses.viewSubjectsFor', { className: classItem.classname })}
 											</ClassDescription>
 										</ClassCardTop>
 										<ClassCardBody>
 											<ClassCardFooter>
 												<ClassButton $color={getClassColor(classItem.id)}>
-													View Subjects <FiChevronRight />
+													{t('studentPanel.courses.viewSubjects')} <FiChevronRight />
 												</ClassButton>
 											</ClassCardFooter>
 										</ClassCardBody>
@@ -590,22 +596,24 @@ const MyCourses: React.FC = () => {
 					<EmptyIcon>
 						<FiBook size={50} />
 					</EmptyIcon>
-					<EmptyTitle>No Subjects Found</EmptyTitle>
+					<EmptyTitle>{t('studentPanel.courses.noSubjectsFound')}</EmptyTitle>
 					<EmptyDescription>
 						{searchTerm
-							? `No subjects matching "${searchTerm}" were found.`
+							? t('studentPanel.courses.noSubjectsSearchMessage', { searchTerm })
 							: activeTab !== 'all'
-							? `You don't have any ${
-									activeTab === 'inProgress' ? 'in-progress' : 'completed'
-							  } subjects.`
-							: "This class doesn't have any subjects yet."}
+							? t('studentPanel.courses.noSubjectsForStatus', { 
+									status: activeTab === 'inProgress' ? t('studentPanel.courses.inProgress') : t('studentPanel.courses.completed')
+							  })
+							: t('studentPanel.courses.noSubjectsInClass')}
 					</EmptyDescription>
 				</EmptyStateContainer>
 			) : (
 				<>
 					<ResultCount>
-						Showing {filteredSubjects.length}{' '}
-						{filteredSubjects.length === 1 ? 'subject' : 'subjects'}
+						{t('studentPanel.courses.showingResults', { 
+							count: filteredSubjects.length,
+							type: filteredSubjects.length === 1 ? t('studentPanel.courses.subject') : t('studentPanel.courses.subjects')
+						})}
 					</ResultCount>
 
 					<CourseGrid>
@@ -629,7 +637,7 @@ const MyCourses: React.FC = () => {
 									<CourseCardTop $color={color}>
 										<CourseName>{subject.subjectname}</CourseName>
 										<CourseDescription>
-											{subject.description || `${subject.subjectname} curriculum and materials.`}
+											{subject.description || t('studentPanel.courses.subjectCurriculum', { subjectName: subject.subjectname })}
 										</CourseDescription>
 									</CourseCardTop>
 
@@ -649,12 +657,12 @@ const MyCourses: React.FC = () => {
 											<CourseMetadata>
 												<MetadataItem>
 													<FiClock />
-													<span>{subject.code || 'No Code'}</span>
+													<span>{subject.code || t('studentPanel.courses.noCode')}</span>
 												</MetadataItem>
 											</CourseMetadata>
 
 											<ViewCourseLink to={`/student/course/${subject.id}`} $color={color}>
-												View Course <FiChevronRight />
+												{t('studentPanel.courses.viewCourse')} <FiChevronRight />
 											</ViewCourseLink>
 										</CourseFooter>
 									</CourseCardBody>

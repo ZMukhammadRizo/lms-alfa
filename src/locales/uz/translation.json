@@ -29,7 +29,11 @@
     "notSet": "Belgilanmagan",
     "notAssigned": "Tayinlanmagan",
     "notAvailable": "Mavjud emas",
-    "all": "Hammasi"
+    "all": "Hammasi",
+    "notSpecified": "Belgilanmagan",
+    "unknown": "Noma'lum",
+    "unknownSubject": "Noma'lum fan",
+    "student": "O'quvchi"
   },
   "navigation": {
     "dashboard": "Bosh sahifa",
@@ -1798,6 +1802,588 @@
       "teacher": "O'qituvchi",
       "moduleLeader": "MODUL RAHBARI",
       "system": "TIZIM"
+    }
+  },
+
+  "studentPanel": {
+    "dashboard": {
+      "title": "O'quvchi paneli",
+      "welcomeBack": "Xush kelibsiz",
+      "academicProgress": "Mana sizning akademik jarayoningiz xulosasi",
+      "overviewCard": "Umumiy ma'lumot",
+      "statsCards": {
+        "subjects": "Fanlar",
+        "pendingAssignments": "Kutilayotgan topshiriqlar",
+        "completedAssignments": "Tugallangan topshiriqlar",
+        "averageGrade": "O'rtacha baho",
+        "attendance": "Davomat",
+        "upcomingEvents": "Kelayotgan voqealar"
+      },
+      "sections": {
+        "recentGrades": "So'nggi baholar",
+        "upcomingAssignments": "Kelayotgan topshiriqlar",
+        "dailyAttendance": "Kunlik davomat",
+        "todaySchedule": "Bugungi jadval",
+        "announcements": "So'nggi e'lonlar"
+      },
+      "quickActions": {
+        "title": "Tez amallar",
+        "viewAllGrades": "Barcha baholarni ko'rish",
+        "viewAllAssignments": "Barcha topshiriqlarni ko'rish",
+        "viewSchedule": "Jadvalni ko'rish",
+        "viewAttendance": "Davomatni ko'rish"
+      },
+      "emptyStates": {
+        "noRecentGrades": "So'nggi baholar yo'q",
+        "noPendingAssignments": "Kutilayotgan topshiriqlar yo'q",
+        "noAttendanceRecords": "Davomat yozuvlari topilmadi",
+        "noUpcomingClasses": "Bugun darslar yo'q",
+        "noAnnouncements": "So'nggi e'lonlar yo'q"
+      },
+      "loading": {
+        "dashboardData": "Panel ma'lumotlari yuklanmoqda...",
+        "grades": "Baholar yuklanmoqda...",
+        "assignments": "Topshiriqlar yuklanmoqda...",
+        "attendance": "Davomat yozuvlari yuklanmoqda...",
+        "schedule": "Jadval yuklanmoqda..."
+      }
+    },
+    "navigation": {
+      "dashboard": "Boshqaruv paneli",
+      "courses": "Mening kurslarim",
+      "assignments": "Topshiriqlar",
+      "grades": "Baholar",
+      "schedule": "Jadval",
+      "attendance": "Davomat",
+      "messages": "Xabarlar",
+      "announcements": "E'lonlar",
+      "profile": "Profil",
+      "settings": "Sozlamalar",
+      "dailyAttendance":"Kundalik davomat",
+      "tests":"Testlar",
+      "flashcards":"Flash kartalar"
+    },
+    "assignments": {
+      "title": "Topshiriqlar",
+      "description": "Kurs topshiriqlarini ko'rish va boshqarish",
+      "loading": "Topshiriqlar yuklanmoqda...",
+      "defaultFileName": "Topshiriq hujjati",
+      "searchPlaceholder": "Topshiriqlarni qidirish...",
+      "filters": {
+        "allCourses": "Barcha kurslar",
+        "selectCourse": "Kursni tanlang",
+        "tabs": {
+          "all": "Barchasi",
+          "pending": "Kutilayotgan",
+          "inProgress": "Jarayonda",
+          "completed": "Tugallangan",
+          "overdue": "Muddati o'tgan",
+          "upcoming": "Kelayotgan",
+          "submitted": "Topshirilgan",
+          "resubmitted": "Qayta topshirilgan",
+          "dueSoon": "Muddat yaqin"
+        }
+      },
+      "assignmentCard": {
+        "dueDate": "Topshirish muddati",
+        "subject": "Fan",
+        "points": "Balllar",
+        "status": "Holati",
+        "viewDetails": "Tafsilotlar",
+        "downloadMaterials": "Materiallarni yuklab olish",
+        "assigned": "Berilgan",
+        "due": "Muddat",
+        "at": "soat"
+      },
+      "status": {
+        "pending": "Kutilayotgan",
+        "inProgress": "Jarayonda",
+        "completed": "Tugallangan",
+        "overdue": "Muddati o'tgan",
+        "upcoming": "Kelayotgan",
+        "submitted": "Topshirilgan",
+        "graded": "Baholangan",
+        "accepted": "Qabul qilingan",
+        "rejected": "Rad etilgan",
+        "resubmitted": "Qayta topshirilgan",
+        "dueSoon": "Muddat yaqin"
+      },
+      "modal": {
+        "title": "Topshiriq tafsilotlari",
+        "description": "Tavsif",
+        "noDescription": "Tavsif berilmagan",
+        "dueDate": "Topshirish muddati",
+        "subject": "Fan",
+        "points": "Jami balllar",
+        "materials": "Topshiriq materiallari",
+        "submissions": "Mening ishlarim",
+        "feedback": "O'qituvchi fikr-mulohazasi",
+        "grade": "Baho",
+        "submitAssignment": "Topshiriqni topshirish",
+        "viewSubmission": "Ishni ko'rish",
+        "resubmit": "Qayta topshirish",
+        "downloadMaterial": "Yuklab olish",
+        "close": "Yopish"
+      },
+      "general": "Umumiy",
+      "attachments": "Ilovalar",
+      "submittedOn": "{{date}} da topshirilgan",
+      "completedOn": "{{date}} da tugallangan",
+      "grade": "Baho",
+      "feedback": "Fikr-mulohaza",
+      "notSubmittedYet": "Hali topshirilmagan",
+      "notGradedYet": "Hali baholanmagan",
+      "feedbackAfterSubmission": "Topshirilgandan keyin fikr-mulohaza beriladi",
+      "viewDetails": "Tafsilotlar",
+      "emptyStates": {
+        "noAssignments": "Topshiriqlar topilmadi",
+        "noAssignmentsForFilters": "Topshiriqlarni topish uchun qidiruv yoki filtrlarni o'zgartirib ko'ring",
+        "noMaterials": "Bu topshiriq uchun materiallar yo'q"
+      },
+      "loading": {
+        "assignments": "Topshiriqlar yuklanmoqda...",
+        "assignmentDetails": "Topshiriq tafsilotlari yuklanmoqda..."
+      },
+      "messages": {
+        "loadingError": "Topshiriqlar ma'lumotlarini yuklashda xatolik",
+        "fileUrlMissing": "Fayl URL manzili yo'q",
+        "downloadingFile": "{{fileName}} yuklab olinmoqda...",
+        "downloadError": "Faylni yuklab olishda xatolik"
+      }
+    },
+    "assignmentDetail": {
+      "title": "Topshiriq tafsilotlari",
+      "backToAssignments": "Topshiriqlarga qaytish",
+      "description": "Tavsif",
+      "dueDates": "Topshirish muddatlari",
+      "assigned": "Berilgan",
+      "due": "Muddat",
+      "at": "soat",
+      "assignmentMaterials": "Topshiriq materiallari",
+      "materialFromTeacher": "O'qituvchingizdan topshiriq materiali",
+      "view": "Ko'rish",
+      "download": "Yuklab olish",
+      "yourSubmission": "Sizning ishingiz",
+      "submittedOn": "{{date}} da {{time}} da topshirilgan",
+      "submissionRejected": "Sizning ishingiz rad etildi. Iltimos, yangi versiyani topshiring.",
+      "submissionAccepted": "Sizning ishingiz qabul qilindi.",
+      "submissionUnderReview": "Sizning ishingiz ko'rib chiqilmoqda.",
+      "grade": "Baho",
+      "teacherFeedback": "O'qituvchi fikr-mulohazasi",
+      "submissionAttempts": "Topshirish urinishlari",
+      "maxAttemptsReached": "Siz topshirish urinishlarining maksimal soniga yetdingiz",
+      "notSubmittedYet": "Hali topshirilmagan",
+      "noFilesUploaded": "Fayllar yuklanmagan",
+      "submissionWithoutFiles": "Ish bajarildi (faylsiz)",
+      "useFormBelow": "Topshiriqni topshirish uchun quyidagi formadan foydalaning",
+      "notGradedYet": "Hali baholanmagan",
+      "feedbackAfterSubmission": "Topshirilgandan keyin fikr-mulohaza beriladi",
+      "dropFileHere": "Faylni shu yerga tashlang...",
+      "dragDropFile": "Faylni shu yerga sudrab tashlang yoki tanlash uchun bosing",
+      "supportedFileTypes": "Qo'llab-quvvatlanadigan fayl turlari: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, JPG, PNG",
+      "uploadProgress": "{{progress}}% yuklandi",
+      "uploading": "Yuklanmoqda... {{progress}}%",
+      "submitAssignment": "Topshiriqni topshirish",
+      "resubmitAssignment": "Topshiriqni qayta topshirish",
+      "submissionAcceptedMessage": "Sizning ishingiz o'qituvchingiz tomonidan qabul qilindi.",
+      "submissionUnderReviewMessage": "Sizning ishingiz hozirda o'qituvchingiz tomonidan ko'rib chiqilmoqda. Agar rad etilsa, qayta topshirishingiz mumkin.",
+      "maxAttemptsMessage": "Sizning ishingiz rad etildi va siz barcha mavjud topshirish urinishlarini ishlatdingiz. Iltimos, qo'shimcha yordam uchun o'qituvchingizga murojaat qiling.",
+      "assignmentDocument": "Topshiriq hujjati",
+      "loading": "Topshiriq tafsilotlari yuklanmoqda...",
+      "errors": {
+        "missingId": "Topshiriq ID si yo'q",
+        "notFound": "Topshiriq topilmadi",
+        "noAccess": "Siz qidirayotgan topshiriq mavjud emas yoki unga kirish huquqingiz yo'q.",
+        "loadingFailed": "Topshiriq tafsilotlarini yuklashda xatolik"
+      }
+    },
+    "grades": {
+      "title": "Mening baholarim",
+      "description": "Akademik muvaffaqiyat va davomatni ko'rish",
+      "loading": "Baholar yuklanmoqda...",
+      "searchPlaceholder": "Fanlar yoki o'qituvchilarni qidirish...",
+      "viewFullDetails": "To'liq ma'lumotni ko'rish",
+      "noSubjectsFound": "Fanlar topilmadi",
+      "noSubjectsMessage": "Sizga hali fanlar biriktirilmagan yoki qidiruvingiz hech qanday fanga mos kelmadi",
+      "messages": {
+        "loadingError": "Baholash ma'lumotlarini yuklashda xatolik. Misol ma'lumotlar ishlatilmoqda."
+      },
+      "diagnostics": {
+        "title": "Ma'lumotlar bazasi diagnostikasi",
+        "loginRequired": "Diagnostika ishga tushirish uchun tizimga kirish kerak",
+        "setupVerified": "Ma'lumotlar bazasi sozlamalari muvaffaqiyatli tekshirildi!",
+        "issuesFound": "Ma'lumotlar bazasida muammolar topildi: {{message}}",
+        "failed": "Diagnostikani ishga tushirishda xatolik",
+        "tablesStatus": "Jadvallar holati",
+        "userData": "Foydalanuvchi ma'lumotlari",
+        "classes": "Sinflar",
+        "subjects": "Fanlar",
+        "noInfo": "Diagnostika ma'lumotlari mavjud emas. Ma'lumotlar bazasi sozlamalarini tekshirish uchun tekshirishni ishga tushiring."
+      },
+      "overallPerformance": "Umumiy natija",
+      "subjectGrades": "Fanlar bo'yicha baholar",
+      "recentGrades": "So'nggi baholar",
+      "gradeHistory": "Baholar tarixi",
+      "filters": {
+        "allSubjects": "Barcha fanlar",
+        "selectSubject": "Fanni tanlang",
+        "selectQuarter": "Chorakni tanlang",
+        "allQuarters": "Barcha choraklar"
+      },
+      "gradeCard": {
+        "subject": "Fan",
+        "lesson": "Dars",
+        "grade": "Baho",
+        "date": "Sana",
+        "quarter": "Chorak",
+        "teacher": "O'qituvchi",
+        "feedback": "Fikr-mulohaza",
+        "viewDetails": "Tafsilotlar"
+      },
+      "statistics": {
+        "averageGrade": "O'rtacha baho",
+        "highestGrade": "Eng yuqori baho",
+        "lowestGrade": "Eng past baho",
+        "totalAssignments": "Jami topshiriqlar",
+        "completedAssignments": "Tugallangan",
+        "pendingAssignments": "Kutilayotgan"
+      },
+      "performance": {
+        "excellent": "A'lo",
+        "good": "Yaxshi",
+        "satisfactory": "Qoniqarli",
+        "needsImprovement": "Yaxshilash talab qilinadi",
+        "unsatisfactory": "Qoniqarsiz"
+      },
+      "emptyStates": {
+        "noGrades": "Baholar hali mavjud emas",
+        "noGradesForSubject": "Bu fan bo'yicha baholar topilmadi",
+        "noGradesForQuarter": "Bu chorak uchun baholar yozilmagan"
+      }
+    },
+    "dailyAttendance": {
+      "title": "Kunlik davomat",
+      "loading": "Davomat ma'lumotlari yuklanmoqda...",
+      "weekdays": {
+        "monday": "Du",
+        "tuesday": "Se",
+        "wednesday": "Ch",
+        "thursday": "Pa",
+        "friday": "Ju",
+        "saturday": "Sh",
+        "sunday": "Ya"
+      },
+      "status": {
+        "present": "Hozir",
+        "late": "Kechikish",
+        "excused": "Uzrli",
+        "absent": "Yo'q"
+      }
+    },
+    "announcements": {
+      "title": "E'lonlar",
+      "description": "Muhim ma'lumotlar bilan tanishib turing",
+      "searchPlaceholder": "E'lonlarni qidirish...",
+      "filter": "Filter",
+      "markAllAsRead": "Barchasini o'qilgan deb belgilash"
+    },
+    "courses": {
+      "title": "Mening kurslarim",
+      "description": "Ro'yxatdan o'tgan kurslaringizni ko'ring va ularga kiring",
+      "myClasses": "Mening sinflarim",
+      "classTypeClasses": "{{className}} sinflari",
+      "classSubjects": "{{className}} fanlari",
+      "selectClassType": "Sinflaringizni ko'rish uchun sinf turini tanlang",
+      "selectClass": "Fanlarini ko'rish uchun sinfni tanlang",
+      "viewSubjects": "Ro'yxatdan o'tgan fanlaringizni ko'ring va boshqaring",
+      "back": "Orqaga",
+      "searchClassTypes": "Sinf turlarini qidirish...",
+      "searchClasses": "Sinflarni qidirish...",
+      "searchSubjects": "Fanlarni qidirish...",
+      "loadingClassTypes": "Sinf turlari yuklanmoqda...",
+      "loadingClasses": "Sinflar yuklanmoqda...",
+      "loadingSubjects": "Fanlar yuklanmoqda...",
+      "tryAgain": "Qayta urinish",
+      "noClassTypesAvailable": "Sinf turlari mavjud emas",
+      "noClassTypesMessage": "Tizimda sinf turlari sozlanmagan.",
+      "noClassTypesFound": "Sinf turlari topilmadi",
+      "noClassTypesSearchMessage": "\"{{searchTerm}}\" ga mos sinf turlari topilmadi.",
+      "showingResults": "{{count}} {{type}} ko'rsatilmoqda",
+      "classType": "sinf turi",
+      "classTypes": "sinf turlari",
+      "class": "sinf",
+      "classes": "sinflar",
+      "subject": "fan",
+      "subjects": "fanlar",
+      "viewYourClasses": "{{className}} sinflaringizni ko'rish",
+      "viewClasses": "Sinflarni ko'rish",
+      "noClassesFound": "Sinflar topilmadi",
+      "notEnrolledInClasses": "Siz hech qanday {{className}} sinfiga ro'yxatdan o'tmagansiz.",
+      "noClassesSearchMessage": "\"{{searchTerm}}\" ga mos sinflar topilmadi.",
+      "level": "Daraja",
+      "viewSubjectsFor": "{{className}} uchun fanlarni ko'rish",
+      "noSubjectsFound": "Fanlar topilmadi",
+      "noSubjectsSearchMessage": "\"{{searchTerm}}\" ga mos fanlar topilmadi.",
+      "noSubjectsForStatus": "Sizda {{status}} fanlar yo'q.",
+      "noSubjectsInClass": "Bu sinfda hali fanlar mavjud emas.",
+      "inProgress": "jarayonda",
+      "completed": "tugallangan",
+      "subjectCurriculum": "{{subjectName}} o'quv dasturi va materiallari.",
+      "noCode": "Kod yo'q",
+      "viewCourse": "Kursni ko'rish",
+      "statusInProgress": "Jarayonda",
+      "statusCompleted": "Tugallangan",
+      "statusNotStarted": "Boshlanmagan",
+      "statusUnknown": "Noma'lum",
+      "errors": {
+        "userNotAuthenticated": "Foydalanuvchi autentifikatsiya qilinmagan",
+        "fetchingClassTypes": "Sinf turlarini olishda xatolik",
+        "loadingClassTypes": "Sinf turlarini yuklashda xatolik. Iltimos, qayta urinib ko'ring.",
+        "loadingClassTypesFailed": "Sinf turlarini yuklashda xatolik",
+        "loadingCourses": "Kurslarni yuklashda xatolik. Iltimos, qayta urinib ko'ring.",
+        "loadingCoursesFailed": "Kurslaringizni yuklashda xatolik"
+      },
+      "enrolledCourses": "Ro'yxatdan o'tgan kurslar",
+      "courseDetails": "Kurs tafsilotlari",
+      "searchPlaceholder": "Kurslarni qidirish...",
+      "courseCard": {
+        "teacher": "O'qituvchi",
+        "schedule": "Jadval",
+        "room": "Xona",
+        "students": "O'quvchilar",
+        "lessons": "Darslar",
+        "assignments": "Topshiriqlar",
+        "viewCourse": "Kursni ko'rish",
+        "viewLessons": "Darslarni ko'rish",
+        "viewAssignments": "Topshiriqlarni ko'rish"
+      },
+      "courseInfo": {
+        "description": "Tavsif",
+        "objectives": "O'rganish maqsadlari",
+        "syllabus": "Dastur",
+        "materials": "Kurs materiallari",
+        "announcements": "Kurs e'lonlari"
+      },
+      "emptyStates": {
+        "noCourses": "Siz hali hech qanday kursga ro'yxatdan o'tmagansiz",
+        "noCoursesForSearch": "Qidiruvga mos kurslar yo'q",
+        "noMaterials": "Kurs materiallari yo'q",
+        "noAnnouncements": "Kurs e'lonlari yo'q"
+      },
+      "loading": {
+        "courses": "Kurslar yuklanmoqda...",
+        "courseDetails": "Kurs tafsilotlari yuklanmoqda..."
+      }
+    },
+    "schedule": {
+      "title": "Mening jadvalam",
+      "description": "Sinf jadvali va darslari jadvalini ko'rish",
+      "todaySchedule": "Bugungi jadval",
+      "weeklySchedule": "Haftalik jadval",
+      "upcomingClasses": "Kelayotgan darslar",
+      "filters": {
+        "today": "Bugun",
+        "thisWeek": "Bu hafta",
+        "nextWeek": "Keyingi hafta",
+        "allSubjects": "Barcha fanlar",
+        "selectSubject": "Fanni tanlang"
+      },
+      "scheduleCard": {
+        "time": "Vaqt",
+        "subject": "Fan",
+        "teacher": "O'qituvchi",
+        "room": "Xona",
+        "duration": "Davomiyligi",
+        "type": "Turi",
+        "joinClass": "Darsga qo'shilish",
+        "viewDetails": "Tafsilotlar"
+      },
+      "timeSlots": {
+        "morning": "Ertalab",
+        "afternoon": "Kunduzi",
+        "evening": "Kechqurun"
+      },
+      "classTypes": {
+        "lecture": "Ma'ruza",
+        "practical": "Amaliy",
+        "seminar": "Seminar",
+        "lab": "Laboratoriya",
+        "exam": "Imtihon"
+      },
+      "emptyStates": {
+        "noSchedule": "Jadval mavjud emas",
+        "noClassesToday": "Bugun darslar yo'q",
+        "noClassesThisWeek": "Bu hafta darslar yo'q",
+        "noUpcomingClasses": "Kelayotgan darslar yo'q"
+      },
+      "loading": {
+        "schedule": "Jadval yuklanmoqda...",
+        "classDetails": "Dars tafsilotlari yuklanmoqda..."
+      }
+    },
+    "attendance": {
+      "title": "Mening davomatim",
+      "description": "Davomat yozuvlari va statistikalarini ko'rish",
+      "attendanceOverview": "Davomat xulosasi",
+      "attendanceHistory": "Davomat tarixi",
+      "monthlyAttendance": "Oylik davomat",
+      "filters": {
+        "allSubjects": "Barcha fanlar",
+        "selectSubject": "Fanni tanlang",
+        "selectMonth": "Oyni tanlang",
+        "allMonths": "Barcha oylar"
+      },
+      "statistics": {
+        "attendanceRate": "Davomat darajasi",
+        "totalClasses": "Jami darslar",
+        "attendedClasses": "Qatnashgan",
+        "missedClasses": "O'tkazib yuborilgan",
+        "lateArrivals": "Kechikishlar",
+        "excusedAbsences": "Uzrli sabablar"
+      },
+      "status": {
+        "present": "Hozir",
+        "absent": "Yo'q",
+        "late": "Kech",
+        "excused": "Uzrli"
+      },
+      "attendanceRecord": {
+        "date": "Sana",
+        "subject": "Fan",
+        "lesson": "Dars",
+        "status": "Holati",
+        "time": "Vaqt",
+        "notes": "Eslatmalar"
+      },
+      "emptyStates": {
+        "noAttendanceRecords": "Davomat yozuvlari topilmadi",
+        "noRecordsForSubject": "Bu fan bo'yicha davomat yozuvlari yo'q",
+        "noRecordsForMonth": "Bu oy uchun davomat yozuvlari yo'q"
+      },
+      "loading": {
+        "attendance": "Davomat yozuvlari yuklanmoqda...",
+        "attendanceDetails": "Davomat tafsilotlari yuklanmoqda..."
+      }
+    },
+    "messages": {
+      "title": "Xabarlar",
+      "description": "O'qituvchilar va sinfdoshlar bilan muloqot",
+      "inbox": "Kiruvchi",
+      "sent": "Yuborilgan",
+      "compose": "Xabar yozish",
+      "newMessage": "Yangi xabar",
+      "messageActions": {
+        "reply": "Javob berish",
+        "forward": "Yo'naltirish",
+        "delete": "O'chirish",
+        "markAsRead": "O'qilgan deb belgilash",
+        "markAsUnread": "O'qilmagan deb belgilash"
+      },
+      "messageForm": {
+        "recipient": "Qabul qiluvchi",
+        "subject": "Mavzu",
+        "message": "Xabar",
+        "send": "Yuborish",
+        "cancel": "Bekor qilish",
+        "selectRecipient": "Qabul qiluvchini tanlang...",
+        "enterSubject": "Mavzuni kiriting...",
+        "enterMessage": "Xabaringizni kiriting..."
+      },
+      "validation": {
+        "recipientRequired": "Qabul qiluvchi talab qilinadi",
+        "subjectRequired": "Mavzu talab qilinadi",
+        "messageRequired": "Xabar mazmuni talab qilinadi"
+      },
+      "emptyStates": {
+        "noMessages": "Xabarlar topilmadi",
+        "noMessageSelected": "Ko'rish uchun xabarni tanlang",
+        "emptyInbox": "Sizning kiruvchi xabarlaringiz bo'sh",
+        "emptySent": "Yuborilgan xabarlar yo'q"
+      },
+      "loading": {
+        "messages": "Xabarlar yuklanmoqda...",
+        "sending": "Xabar yuborilmoqda..."
+      },
+      "success": {
+        "messageSent": "Xabar muvaffaqiyatli yuborildi",
+        "messageDeleted": "Xabar muvaffaqiyatli o'chirildi"
+      },
+      "errors": {
+        "failedToSend": "Xabarni yuborish muvaffaqiyatsiz",
+        "failedToDelete": "Xabarni o'chirish muvaffaqiyatsiz",
+        "failedToLoad": "Xabarlarni yuklash muvaffaqiyatsiz"
+      }
+    },
+    "profile": {
+      "title": "Mening profilim",
+      "description": "Profil ma'lumotlarini ko'rish va boshqarish",
+      "personalInfo": "Shaxsiy ma'lumotlar",
+      "academicInfo": "Akademik ma'lumotlar",
+      "contactInfo": "Aloqa ma'lumotlari",
+      "securitySettings": "Xavfsizlik sozlamalari",
+      "fields": {
+        "fullName": "To'liq ism",
+        "email": "Email",
+        "phone": "Telefon raqami",
+        "dateOfBirth": "Tug'ilgan sana",
+        "address": "Manzil",
+        "studentId": "O'quvchi ID",
+        "grade": "Sinf darajasi",
+        "class": "Sinf",
+        "enrollmentDate": "Ro'yxatga olingan sana",
+        "guardian": "Vasiy/Ota-ona"
+      },
+      "actions": {
+        "edit": "Profilni tahrirlash",
+        "save": "O'zgarishlarni saqlash",
+        "cancel": "Bekor qilish",
+        "changePassword": "Parolni o'zgartirish",
+        "uploadPhoto": "Rasm yuklash"
+      },
+      "validation": {
+        "nameRequired": "To'liq ism talab qilinadi",
+        "emailRequired": "Email talab qilinadi",
+        "emailInvalid": "Iltimos, haqiqiy email kiriting",
+        "phoneInvalid": "Iltimos, haqiqiy telefon raqami kiriting"
+      },
+      "success": {
+        "profileUpdated": "Profil muvaffaqiyatli yangilandi",
+        "passwordChanged": "Parol muvaffaqiyatli o'zgartirildi",
+        "photoUploaded": "Profil rasmi muvaffaqiyatli yuklandi"
+      },
+      "errors": {
+        "updateFailed": "Profilni yangilash muvaffaqiyatsiz",
+        "passwordChangeFailed": "Parolni o'zgartirish muvaffaqiyatsiz",
+        "photoUploadFailed": "Rasm yuklash muvaffaqiyatsiz"
+      }
+    },
+    "common": {
+      "loading": "Yuklanmoqda...",
+      "error": "Xatolik yuz berdi",
+      "success": "Muvaffaqiyat",
+      "save": "Saqlash",
+      "cancel": "Bekor qilish",
+      "edit": "Tahrirlash",
+      "delete": "O'chirish",
+      "view": "Ko'rish",
+      "download": "Yuklab olish",
+      "upload": "Yuklash",
+      "search": "Qidirish",
+      "filter": "Filtr",
+      "sort": "Saralash",
+      "refresh": "Yangilash",
+      "viewAll": "Barchasini ko'rish",
+      "showMore": "Ko'proq ko'rsatish",
+      "showLess": "Kamroq ko'rsatish",
+      "noData": "Ma'lumot mavjud emas",
+      "tryAgain": "Qayta urinib ko'ring",
+      "back": "Orqaga",
+      "next": "Keyingi",
+      "previous": "Oldingi",
+      "close": "Yopish",
+      "confirm": "Tasdiqlash",
+      "yes": "Ha",
+      "no": "Yo'q"
     }
   }
 }
