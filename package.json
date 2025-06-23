@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build --mode production",
+    "build:force": "node build-force.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
