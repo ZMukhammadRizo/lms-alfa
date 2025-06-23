@@ -283,6 +283,10 @@ const UserProfile: React.FC = () => {
 	const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false)
 	const [isResettingPassword, setIsResettingPassword] = useState(false)
 
+	// Add state for delete confirmation modal
+	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+	const [isDeleting, setIsDeleting] = useState(false)
+
 	useEffect(() => {
 		if (userId) {
 			fetchUser()
@@ -670,8 +674,65 @@ const UserProfile: React.FC = () => {
 	}
 
 	const handleDeleteUser = () => {
-		// This would handle user deletion - implement as needed
-		toast.info('Delete functionality would be implemented here')
+		if (!user) return
+		setIsDeleteModalOpen(true)
+	}
+
+	// Function to handle closing delete modal
+	const handleCancelDelete = () => {
+		setIsDeleteModalOpen(false)
+	}
+
+	// User deletion helper function
+	const deleteUserFromAuth = async (userId: string) => {
+		const { data, error } = await supabaseAdmin.auth.admin.deleteUser(userId)
+		if (error) {
+			console.error('Error deleting user from auth:', error)
+			throw error
+		} else {
+			console.log('User successfully deleted from auth:', data)
+			return data
+		}
+	}
+
+	// Function to confirm and execute deletion
+	const handleConfirmDelete = async () => {
+		if (!user) return
+
+		setIsDeleting(true)
+
+		try {
+			console.log('Deleting user:', user.id)
+
+			// Delete from auth system using Admin API
+			try {
+				await deleteUserFromAuth(user.id)
+			} catch (authErr) {
+				console.log('Auth deletion attempt failed:', authErr)
+				// Continue with public.users deletion even if auth deletion fails
+			}
+
+			// Delete from Supabase public.users table
+			const { error } = await supabase.from('users').delete().eq('id', user.id)
+
+			if (error) {
+				console.error('Error deleting user from public.users:', error)
+				toast.error(`Error: ${error.message}`)
+				return
+			}
+
+			// Show success message
+			toast.success(`User ${user.firstName} ${user.lastName} was successfully deleted`)
+
+			// Navigate back to users list
+			navigate('/admin/users')
+		} catch (err) {
+			console.error('Unexpected error during deletion:', err)
+			toast.error('An unexpected error occurred during deletion')
+		} finally {
+			setIsDeleting(false)
+			setIsDeleteModalOpen(false)
+		}
 	}
 
 	const handleUserFormSubmit = async (userData: Partial<User>) => {
@@ -852,6 +913,58 @@ const UserProfile: React.FC = () => {
 						<ResetButton onClick={handleConfirmResetPassword} disabled={isResettingPassword}>
 							{isResettingPassword ? t('userProfile.resetting') : t('userProfile.resetPasswordAction')}
 						</ResetButton>
+					</ModalFooter>
+				</ModalContent>
+			</ModalOverlay>
+		)
+	}
+
+	// Add Delete Confirmation Modal component
+	const DeleteConfirmationModal = () => {
+		if (!isDeleteModalOpen || !user) return null
+
+		return (
+			<ModalOverlay>
+				<ModalContent>
+					<ModalHeader>
+						<ModalTitle>Delete User</ModalTitle>
+						<ModalCloseButton onClick={handleCancelDelete}>×</ModalCloseButton>
+					</ModalHeader>
+					<ModalBody>
+						<div
+							style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}
+						>
+							<div
+								style={{
+									width: '48px',
+									height: '48px',
+									borderRadius: '50%',
+									backgroundColor: '#ef444420',
+									color: '#ef4444',
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'center',
+									flexShrink: 0,
+								}}
+							>
+								<FiTrash2 size={24} />
+							</div>
+							<div>
+								<h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: 600 }}>
+									Are you sure you want to delete this user?
+								</h4>
+								<p style={{ margin: '0', color: '#4b5563' }}>
+									<strong>{user.firstName} {user.lastName}</strong> will be permanently removed
+									from the system. This action cannot be undone.
+								</p>
+							</div>
+						</div>
+					</ModalBody>
+					<ModalFooter>
+						<CancelButton onClick={handleCancelDelete}>Cancel</CancelButton>
+						<ConfirmDeleteButton onClick={handleConfirmDelete} disabled={isDeleting}>
+							{isDeleting ? 'Deleting...' : 'Delete User'}
+						</ConfirmDeleteButton>
 					</ModalFooter>
 				</ModalContent>
 			</ModalOverlay>
@@ -1225,6 +1338,9 @@ const UserProfile: React.FC = () => {
 
 			{/* Add the Reset Password Modal */}
 			<ResetPasswordModal />
+
+			{/* Add the Delete Confirmation Modal */}
+			<DeleteConfirmationModal />
 		</PageContainer>
 	)
 }
@@ -1945,6 +2061,27 @@ const ResetButton = styled.button`
 
 	&:hover {
 		background-color: #d97706;
+	}
+
+	&:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+`
+
+// Add styled components for the delete modal
+const ConfirmDeleteButton = styled.button`
+	padding: 0.5rem 1rem;
+	border-radius: 0.375rem;
+	border: none;
+	background-color: #ef4444;
+	color: white;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+
+	&:hover {
+		background-color: #dc2626;
 	}
 
 	&:disabled {

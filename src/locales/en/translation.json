@@ -33,7 +33,11 @@
     "clickToEdit": "Click to edit",
     "notAssigned": "Not assigned",
     "notAvailable": "N/A",
-    "all": "All"
+    "all": "All",
+    "notSpecified": "Not specified",
+    "unknown": "Unknown",
+    "unknownSubject": "Unknown Subject",
+    "student": "Student"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -1500,5 +1504,587 @@
     "downloadFile": "Download File",
     "deleteFile": "Delete File",
     "confirmDelete": "Are you sure you want to delete this file?"
+  },
+
+  "studentPanel": {
+    "dashboard": {
+      "title": "Student Dashboard",
+      "welcomeBack": "Welcome back",
+      "academicProgress": "Here's an overview of your academic progress",
+      "overviewCard": "Overview",
+      "statsCards": {
+        "subjects": "Subjects",
+        "pendingAssignments": "Pending Assignments",
+        "completedAssignments": "Completed Assignments",
+        "averageGrade": "Average Grade",
+        "attendance": "Attendance Rate",
+        "upcomingEvents": "Upcoming Events"
+      },
+      "sections": {
+        "recentGrades": "Recent Grades",
+        "upcomingAssignments": "Upcoming Assignments",
+        "dailyAttendance": "Daily Attendance",
+        "todaySchedule": "Today's Schedule",
+        "announcements": "Recent Announcements"
+      },
+      "quickActions": {
+        "title": "Quick Actions",
+        "viewAllGrades": "View All Grades",
+        "viewAllAssignments": "View All Assignments", 
+        "viewSchedule": "View Schedule",
+        "viewAttendance": "View Attendance"
+      },
+      "emptyStates": {
+        "noRecentGrades": "No recent grades available",
+        "noPendingAssignments": "No pending assignments",
+        "noAttendanceRecords": "No attendance records found",
+        "noUpcomingClasses": "No upcoming classes today",
+        "noAnnouncements": "No recent announcements"
+      },
+      "loading": {
+        "dashboardData": "Loading dashboard data...",
+        "grades": "Loading grades...",
+        "assignments": "Loading assignments...",
+        "attendance": "Loading attendance records...",
+        "schedule": "Loading schedule..."
+      }
+    },
+    "navigation": {
+      "dashboard": "Dashboard",
+      "courses": "My Courses",
+      "assignments": "Assignments",
+      "grades": "Grades",
+      "schedule": "Schedule",
+      "attendance": "Attendance",
+      "messages": "Messages",
+      "announcements": "Announcements",
+      "profile": "Profile",
+      "settings": "Settings",
+      "dailyAttendance":"Daily Attendance",
+      "tests": "Tests",
+      "flashcards":"Flashcards"
+    },
+    "assignments": {
+      "title": "Assignments",
+      "description": "View and manage your course assignments",
+      "loading": "Loading assignments...",
+      "defaultFileName": "Assignment Document",
+      "searchPlaceholder": "Search assignments...",
+      "filters": {
+        "allCourses": "All Courses",
+        "selectCourse": "Select Course",
+        "tabs": {
+          "all": "All",
+          "pending": "Pending",
+          "inProgress": "In Progress",
+          "completed": "Completed",
+          "overdue": "Overdue",
+          "upcoming": "Upcoming",
+          "submitted": "Submitted",
+          "resubmitted": "Resubmitted",
+          "dueSoon": "Due Soon"
+        }
+      },
+      "assignmentCard": {
+        "dueDate": "Due Date",
+        "subject": "Subject",
+        "points": "Points",
+        "status": "Status",
+        "viewDetails": "View Details",
+        "downloadMaterials": "Download Materials",
+        "assigned": "Assigned",
+        "due": "Due",
+        "at": "at"
+      },
+      "status": {
+        "pending": "Pending",
+        "inProgress": "In Progress",
+        "completed": "Completed",
+        "overdue": "Overdue",
+        "upcoming": "Upcoming",
+        "submitted": "Submitted",
+        "graded": "Graded",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "resubmitted": "Resubmitted",
+        "dueSoon": "Due Soon"
+      },
+      "modal": {
+        "title": "Assignment Details",
+        "description": "Description",
+        "noDescription": "No description provided",
+        "dueDate": "Due Date",
+        "subject": "Subject",
+        "points": "Total Points",
+        "materials": "Assignment Materials",
+        "submissions": "My Submissions",
+        "feedback": "Teacher Feedback",
+        "grade": "Grade",
+        "submitAssignment": "Submit Assignment",
+        "viewSubmission": "View Submission",
+        "resubmit": "Resubmit",
+        "downloadMaterial": "Download",
+        "close": "Close"
+      },
+      "emptyStates": {
+        "noAssignments": "No assignments found",
+        "noAssignmentsForFilters": "No assignments match your current filters",
+        "noMaterials": "No materials available for this assignment"
+      },
+      "general": "General",
+      "attachments": "Attachments",
+      "submittedOn": "Submitted on {{date}}",
+      "completedOn": "Completed on {{date}}",
+      "grade": "Grade",
+      "feedback": "Feedback",
+      "notSubmittedYet": "Not submitted yet",
+      "notGradedYet": "Not graded yet",
+      "feedbackAfterSubmission": "Feedback will be provided after submission",
+      "viewDetails": "View Details",
+      "loading": {
+        "assignments": "Loading assignments...",
+        "assignmentDetails": "Loading assignment details..."
+      },
+      "messages": {
+        "loadingError": "Failed to load assignments data",
+        "fileUrlMissing": "File URL is missing",
+        "downloadingFile": "Downloading {{fileName}}...",
+        "downloadError": "Failed to download file"
+      }
+    },
+    "assignmentDetail": {
+      "title": "Assignment Details",
+      "backToAssignments": "Back to Assignments",
+      "description": "Description",
+      "dueDates": "Due Dates",
+      "assigned": "Assigned",
+      "due": "Due",
+      "at": "at",
+      "assignmentMaterials": "Assignment Materials",
+      "materialFromTeacher": "Assignment material from your teacher",
+      "view": "View",
+      "download": "Download",
+      "yourSubmission": "Your Submission",
+      "submittedOn": "Submitted on {{date}} at {{time}}",
+      "submissionRejected": "Your submission was rejected. Please submit a new version.",
+      "submissionAccepted": "Your submission was accepted.",
+      "submissionUnderReview": "Your submission is under review.",
+      "grade": "Grade",
+      "teacherFeedback": "Teacher Feedback",
+      "submissionAttempts": "Submission attempts",
+      "maxAttemptsReached": "You have reached the maximum number of submission attempts",
+      "notSubmittedYet": "Not submitted yet",
+      "noFilesUploaded": "No files uploaded",
+      "submissionWithoutFiles": "Submission completed (no files)",
+      "useFormBelow": "Use the form below to submit your assignment",
+      "notGradedYet": "Not graded yet",
+      "feedbackAfterSubmission": "Feedback will be provided after submission",
+      "dropFileHere": "Drop the file here...",
+      "dragDropFile": "Drag and drop a file here, or click to select a file",
+      "supportedFileTypes": "Supported file types: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, JPG, PNG",
+      "uploadProgress": "{{progress}}% uploaded",
+      "uploading": "Uploading... {{progress}}%",
+      "submitAssignment": "Submit Assignment",
+      "resubmitAssignment": "Resubmit Assignment",
+      "submissionAcceptedMessage": "Your submission has been accepted by your teacher.",
+      "submissionUnderReviewMessage": "Your submission is currently under review by your teacher. You will be able to resubmit if it gets rejected.",
+      "maxAttemptsMessage": "Your submission was rejected and you have used all available submission attempts. Please contact your teacher for further assistance.",
+      "assignmentDocument": "Assignment Document",
+      "loading": "Loading assignment details...",
+      "errors": {
+        "missingId": "Missing assignment ID",
+        "notFound": "Assignment not found",
+        "noAccess": "The assignment you're looking for doesn't exist or you don't have access to it.",
+        "loadingFailed": "Failed to load assignment details"
+      }
+    },
+    "grades": {
+      "title": "My Grades",
+      "description": "View your academic progress and attendance",
+      "loading": "Loading grades...",
+      "searchPlaceholder": "Search subjects or teachers...",
+      "viewFullDetails": "View Full Details",
+      "noSubjectsFound": "No subjects found",
+      "noSubjectsMessage": "You don't have any subjects assigned yet or your search didn't match any subjects",
+      "messages": {
+        "loadingError": "Failed to load grades data. Using example data instead."
+      },
+      "diagnostics": {
+        "title": "Database Diagnostics",
+        "loginRequired": "You need to be logged in to run diagnostics",
+        "setupVerified": "Database setup verified successfully!",
+        "issuesFound": "Database issues found: {{message}}",
+        "failed": "Failed to run diagnostics",
+        "tablesStatus": "Tables Status",
+        "userData": "User Data",
+        "classes": "Classes",
+        "subjects": "Subjects",
+        "noInfo": "No diagnostic information available. Run the check to verify your database setup."
+      },
+      "overallPerformance": "Overall Performance",
+      "subjectGrades": "Subject Grades",
+      "recentGrades": "Recent Grades",
+      "gradeHistory": "Grade History",
+      "filters": {
+        "allSubjects": "All Subjects",
+        "selectSubject": "Select Subject",
+        "selectQuarter": "Select Quarter",
+        "allQuarters": "All Quarters"
+      },
+      "gradeCard": {
+        "subject": "Subject",
+        "lesson": "Lesson",
+        "grade": "Grade",
+        "date": "Date",
+        "quarter": "Quarter",
+        "teacher": "Teacher",
+        "feedback": "Feedback",
+        "viewDetails": "View Details"
+      },
+      "statistics": {
+        "averageGrade": "Average Grade",
+        "highestGrade": "Highest Grade",
+        "lowestGrade": "Lowest Grade",
+        "totalAssignments": "Total Assignments",
+        "completedAssignments": "Completed",
+        "pendingAssignments": "Pending"
+      },
+      "performance": {
+        "excellent": "Excellent",
+        "good": "Good",
+        "satisfactory": "Satisfactory",
+        "needsImprovement": "Needs Improvement",
+        "unsatisfactory": "Unsatisfactory"
+      },
+      "emptyStates": {
+        "noGrades": "No grades available yet",
+        "noGradesForSubject": "No grades found for this subject",
+        "noGradesForQuarter": "No grades recorded for this quarter"
+      }
+    },
+    "dailyAttendance": {
+      "title": "Daily Attendance",
+      "loading": "Loading attendance data...",
+      "weekdays": {
+        "monday": "Mon",
+        "tuesday": "Tue",
+        "wednesday": "Wed",
+        "thursday": "Thu",
+        "friday": "Fri",
+        "saturday": "Sat",
+        "sunday": "Sun"
+      },
+      "status": {
+        "present": "Present",
+        "late": "Late",
+        "excused": "Excused",
+        "absent": "Absent"
+      }
+    },
+    "announcements": {
+      "title": "Announcements",
+      "description": "Stay updated with important information",
+      "searchPlaceholder": "Search announcements...",
+      "filter": "Filter",
+      "markAllAsRead": "Mark All as Read"
+    },
+    "courses": {
+      "title": "My Courses",
+      "description": "Browse and access your enrolled courses",
+      "myClasses": "My Classes",
+      "classTypeClasses": "{{className}} Classes",
+      "classSubjects": "{{className}} Subjects",
+      "selectClassType": "Select a class type to view your classes",
+      "selectClass": "Select a class to view its subjects",
+      "viewSubjects": "View and manage your enrolled subjects",
+      "back": "Back",
+      "searchClassTypes": "Search class types...",
+      "searchClasses": "Search classes...",
+      "searchSubjects": "Search subjects...",
+      "loadingClassTypes": "Loading class types...",
+      "loadingClasses": "Loading classes...",
+      "loadingSubjects": "Loading subjects...",
+      "tryAgain": "Try Again",
+      "noClassTypesAvailable": "No Class Types Available",
+      "noClassTypesMessage": "There are no class types configured in the system.",
+      "noClassTypesFound": "No Class Types Found",
+      "noClassTypesSearchMessage": "No class types matching \"{{searchTerm}}\" were found.",
+      "showingResults": "Showing {{count}} {{type}}",
+      "classType": "class type",
+      "classTypes": "class types",
+      "class": "class",
+      "classes": "classes",
+      "subject": "subject",
+      "subjects": "subjects",
+      "viewYourClasses": "View your {{className}} classes",
+      "viewClasses": "View Classes",
+      "noClassesFound": "No Classes Found",
+      "notEnrolledInClasses": "You're not enrolled in any {{className}} classes.",
+      "noClassesSearchMessage": "No classes matching \"{{searchTerm}}\" were found.",
+      "level": "Level",
+      "viewSubjectsFor": "View subjects for {{className}}",
+      "noSubjectsFound": "No Subjects Found",
+      "noSubjectsSearchMessage": "No subjects matching \"{{searchTerm}}\" were found.",
+      "noSubjectsForStatus": "You don't have any {{status}} subjects.",
+      "noSubjectsInClass": "This class doesn't have any subjects yet.",
+      "inProgress": "in-progress",
+      "completed": "completed",
+      "subjectCurriculum": "{{subjectName}} curriculum and materials.",
+      "noCode": "No Code",
+      "viewCourse": "View Course",
+      "statusInProgress": "In Progress",
+      "statusCompleted": "Completed",
+      "statusNotStarted": "Not Started",
+      "statusUnknown": "Unknown",
+      "errors": {
+        "userNotAuthenticated": "User not authenticated",
+        "fetchingClassTypes": "Failed to fetch class types",
+        "loadingClassTypes": "Failed to load class types. Please try again later.",
+        "loadingClassTypesFailed": "Failed to load class types",
+        "loadingCourses": "Failed to load courses. Please try again later.",
+        "loadingCoursesFailed": "Failed to load your courses"
+      },
+      "enrolledCourses": "Enrolled Courses",
+      "courseDetails": "Course Details",
+      "searchPlaceholder": "Search courses...",
+      "courseCard": {
+        "teacher": "Teacher",
+        "schedule": "Schedule",
+        "room": "Room",
+        "students": "Students",
+        "lessons": "Lessons",
+        "assignments": "Assignments",
+        "viewCourse": "View Course",
+        "viewLessons": "View Lessons",
+        "viewAssignments": "View Assignments"
+      },
+      "courseInfo": {
+        "description": "Description",
+        "objectives": "Learning Objectives",
+        "syllabus": "Syllabus",
+        "materials": "Course Materials",
+        "announcements": "Course Announcements"
+      },
+      "emptyStates": {
+        "noCourses": "You are not enrolled in any courses yet",
+        "noCoursesForSearch": "No courses match your search",
+        "noMaterials": "No course materials available",
+        "noAnnouncements": "No course announcements"
+      },
+      "loading": {
+        "courses": "Loading courses...",
+        "courseDetails": "Loading course details..."
+      }
+    },
+    "schedule": {
+      "title": "My Schedule",
+      "description": "View your class schedule and timetable",
+      "todaySchedule": "Today's Schedule",
+      "weeklySchedule": "Weekly Schedule",
+      "upcomingClasses": "Upcoming Classes",
+      "filters": {
+        "today": "Today",
+        "thisWeek": "This Week",
+        "nextWeek": "Next Week",
+        "allSubjects": "All Subjects",
+        "selectSubject": "Select Subject"
+      },
+      "scheduleCard": {
+        "time": "Time",
+        "subject": "Subject",
+        "teacher": "Teacher",
+        "room": "Room",
+        "duration": "Duration",
+        "type": "Type",
+        "joinClass": "Join Class",
+        "viewDetails": "View Details"
+      },
+      "timeSlots": {
+        "morning": "Morning",
+        "afternoon": "Afternoon",
+        "evening": "Evening"
+      },
+      "classTypes": {
+        "lecture": "Lecture",
+        "practical": "Practical",
+        "seminar": "Seminar",
+        "lab": "Laboratory",
+        "exam": "Exam"
+      },
+      "emptyStates": {
+        "noSchedule": "No schedule available",
+        "noClassesToday": "No classes scheduled for today",
+        "noClassesThisWeek": "No classes scheduled for this week",
+        "noUpcomingClasses": "No upcoming classes"
+      },
+      "loading": {
+        "schedule": "Loading schedule...",
+        "classDetails": "Loading class details..."
+      }
+    },
+    "attendance": {
+      "title": "My Attendance",
+      "description": "View your attendance records and statistics",
+      "attendanceOverview": "Attendance Overview",
+      "attendanceHistory": "Attendance History",
+      "monthlyAttendance": "Monthly Attendance",
+      "filters": {
+        "allSubjects": "All Subjects",
+        "selectSubject": "Select Subject",
+        "selectMonth": "Select Month",
+        "allMonths": "All Months"
+      },
+      "statistics": {
+        "attendanceRate": "Attendance Rate",
+        "totalClasses": "Total Classes",
+        "attendedClasses": "Attended",
+        "missedClasses": "Missed",
+        "lateArrivals": "Late Arrivals",
+        "excusedAbsences": "Excused"
+      },
+      "status": {
+        "present": "Present",
+        "absent": "Absent",
+        "late": "Late",
+        "excused": "Excused"
+      },
+      "attendanceRecord": {
+        "date": "Date",
+        "subject": "Subject",
+        "lesson": "Lesson",
+        "status": "Status",
+        "time": "Time",
+        "notes": "Notes"
+      },
+      "emptyStates": {
+        "noAttendanceRecords": "No attendance records found",
+        "noRecordsForSubject": "No attendance records for this subject",
+        "noRecordsForMonth": "No attendance records for this month"
+      },
+      "loading": {
+        "attendance": "Loading attendance records...",
+        "attendanceDetails": "Loading attendance details..."
+      }
+    },
+    "messages": {
+      "title": "Messages",
+      "description": "Communicate with teachers and classmates",
+      "inbox": "Inbox",
+      "sent": "Sent",
+      "compose": "Compose Message",
+      "newMessage": "New Message",
+      "messageActions": {
+        "reply": "Reply",
+        "forward": "Forward",
+        "delete": "Delete",
+        "markAsRead": "Mark as Read",
+        "markAsUnread": "Mark as Unread"
+      },
+      "messageForm": {
+        "recipient": "Recipient",
+        "subject": "Subject",
+        "message": "Message",
+        "send": "Send",
+        "cancel": "Cancel",
+        "selectRecipient": "Select recipient...",
+        "enterSubject": "Enter subject...",
+        "enterMessage": "Enter your message..."
+      },
+      "validation": {
+        "recipientRequired": "Recipient is required",
+        "subjectRequired": "Subject is required",
+        "messageRequired": "Message content is required"
+      },
+      "emptyStates": {
+        "noMessages": "No messages found",
+        "noMessageSelected": "Select a message to view",
+        "emptyInbox": "Your inbox is empty",
+        "emptySent": "No sent messages"
+      },
+      "loading": {
+        "messages": "Loading messages...",
+        "sending": "Sending message..."
+      },
+      "success": {
+        "messageSent": "Message sent successfully",
+        "messageDeleted": "Message deleted successfully"
+      },
+      "errors": {
+        "failedToSend": "Failed to send message",
+        "failedToDelete": "Failed to delete message",
+        "failedToLoad": "Failed to load messages"
+      }
+    },
+    "profile": {
+      "title": "My Profile",
+      "description": "View and manage your profile information",
+      "personalInfo": "Personal Information",
+      "academicInfo": "Academic Information",
+      "contactInfo": "Contact Information",
+      "securitySettings": "Security Settings",
+      "fields": {
+        "fullName": "Full Name",
+        "email": "Email",
+        "phone": "Phone Number",
+        "dateOfBirth": "Date of Birth",
+        "address": "Address",
+        "studentId": "Student ID",
+        "grade": "Grade Level",
+        "class": "Class",
+        "enrollmentDate": "Enrollment Date",
+        "guardian": "Guardian/Parent"
+      },
+      "actions": {
+        "edit": "Edit Profile",
+        "save": "Save Changes",
+        "cancel": "Cancel",
+        "changePassword": "Change Password",
+        "uploadPhoto": "Upload Photo"
+      },
+      "validation": {
+        "nameRequired": "Full name is required",
+        "emailRequired": "Email is required",
+        "emailInvalid": "Please enter a valid email",
+        "phoneInvalid": "Please enter a valid phone number"
+      },
+      "success": {
+        "profileUpdated": "Profile updated successfully",
+        "passwordChanged": "Password changed successfully",
+        "photoUploaded": "Profile photo uploaded successfully"
+      },
+      "errors": {
+        "updateFailed": "Failed to update profile",
+        "passwordChangeFailed": "Failed to change password",
+        "photoUploadFailed": "Failed to upload photo"
+      }
+    },
+    "common": {
+      "loading": "Loading...",
+      "error": "An error occurred",
+      "success": "Success",
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "view": "View",
+      "download": "Download",
+      "upload": "Upload",
+      "search": "Search",
+      "filter": "Filter",
+      "sort": "Sort",
+      "refresh": "Refresh",
+      "viewAll": "View All",
+      "showMore": "Show More",
+      "showLess": "Show Less",
+      "noData": "No data available",
+      "tryAgain": "Try again",
+      "back": "Back",
+      "next": "Next",
+      "previous": "Previous",
+      "close": "Close",
+      "confirm": "Confirm",
+      "yes": "Yes",
+      "no": "No"
+    }
   }
 }
