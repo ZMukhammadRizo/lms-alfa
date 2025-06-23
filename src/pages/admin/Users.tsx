@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
 	FiDownload,
 	FiEdit2,
@@ -15,16 +16,15 @@ import {
 	FiUsers,
 	FiX,
 } from 'react-icons/fi'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
-import { useTranslation } from 'react-i18next'
 import UserForm from '../../components/admin/UserForm'
 import supabase, { supabaseAdmin } from '../../config/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
 import { User as UserType } from '../../types/User'
 import { formatDateToLocal } from '../../utils/formatDate'
 import { canCreateUserWithRole } from '../../utils/permissions'
-import { useNavigate } from 'react-router-dom'
 
 // User interface
 interface User extends UserType {
@@ -109,32 +109,33 @@ const Users: React.FC = () => {
 	}
 
 	// Roles with icons for tabs
-	const roles: { role: UserRole; icon: React.ReactNode; count: number; translationKey: string }[] = [
-		{
-			role: 'Admin',
-			icon: <FiUserCheck />,
-			count: countUsersByRole('Admin'),
-			translationKey: 'userManagement.admins'
-		},
-		{
-			role: 'Teacher',
-			icon: <FiUser />,
-			count: countUsersByRole('Teacher'),
-			translationKey: 'userManagement.teachers'
-		},
-		{
-			role: 'Student',
-			icon: <FiUsers />,
-			count: countUsersByRole('Student'),
-			translationKey: 'userManagement.students'
-		},
-		{
-			role: 'Parent',
-			icon: <FiHome />,
-			count: countUsersByRole('Parent'),
-			translationKey: 'userManagement.parents'
-		},
-	]
+	const roles: { role: UserRole; icon: React.ReactNode; count: number; translationKey: string }[] =
+		[
+			{
+				role: 'Admin',
+				icon: <FiUserCheck />,
+				count: countUsersByRole('Admin'),
+				translationKey: 'userManagement.admins',
+			},
+			{
+				role: 'Teacher',
+				icon: <FiUser />,
+				count: countUsersByRole('Teacher'),
+				translationKey: 'userManagement.teachers',
+			},
+			{
+				role: 'Student',
+				icon: <FiUsers />,
+				count: countUsersByRole('Student'),
+				translationKey: 'userManagement.students',
+			},
+			{
+				role: 'Parent',
+				icon: <FiHome />,
+				count: countUsersByRole('Parent'),
+				translationKey: 'userManagement.parents',
+			},
+		]
 	// User deletion helper function
 	async function deleteUser(userId: string) {
 		const { data, error } = await supabaseAdmin.auth.admin.deleteUser(userId)
@@ -386,32 +387,31 @@ const Users: React.FC = () => {
 		setDeleteError(null)
 
 		try {
-			// Delete from auth system using Admin API
-			try {
-				console.log('Deleting user from auth system:', userToDelete)
-				await deleteUser(userToDelete)
-			} catch (authDeleteError) {
-				console.log('Error attempting to delete from auth system:', authDeleteError)
-				// Continue with the main deletion even if auth deletion fails
-			}
-
-			// Delete the user from the main users table
-			const { error } = await supabase.from('users').delete().eq('id', userToDelete)
+			// Instead of deleting, update the user's status to 'inactive'
+			const { error } = await supabase
+				.from('users')
+				.update({ status: 'inactive' })
+				.eq('id', userToDelete)
 
 			if (error) {
-				console.error('Error deleting user:', error)
+				console.error('Error deactivating user:', error)
 				setDeleteError(error.message)
 				return
 			}
 
-			// Remove user from local state
-			setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete))
+			// Update user in local state
+			setUsers(prevUsers =>
+				prevUsers.map(user => (user.id === userToDelete ? { ...user, status: 'inactive' } : user))
+			)
 
 			// Close the modal
 			setIsDeleteModalOpen(false)
 			setUserToDelete(null)
+
+			// Show success message
+			toast.success('User has been deactivated successfully')
 		} catch (error) {
-			console.error('Unexpected error during deletion:', error)
+			console.error('Unexpected error during user deactivation:', error)
 			setDeleteError('An unexpected error occurred')
 		} finally {
 			setIsDeleting(false)
@@ -612,7 +612,6 @@ const Users: React.FC = () => {
 					role: userData.role,
 					role_id: roleId, // Include role_id in the insert
 					status: userData.status,
-					password: userData.password,
 				})
 
 				// Then, create the user in our users table
@@ -625,7 +624,6 @@ const Users: React.FC = () => {
 						role: userData.role,
 						role_id: roleId, // Include role_id in the insert
 						status: userData.status,
-						password: userData.password, // Add password field to satisfy NOT NULL constraint
 					})
 
 					if (dbError) {
@@ -639,7 +637,6 @@ const Users: React.FC = () => {
 							role: userData.role,
 							role_id: roleId,
 							status: userData.status,
-							password: userData.password ? '(provided)' : '(missing)',
 						})
 
 						// Don't close the form, show error instead
@@ -808,7 +805,7 @@ const Users: React.FC = () => {
 					transition={{ type: 'spring', damping: 25 }}
 				>
 					<DeleteModalHeader>
-						<DeleteModalTitle>Delete User</DeleteModalTitle>
+						<DeleteModalTitle>Deactivate User</DeleteModalTitle>
 						<CloseButton onClick={handleCloseDeleteModal}>
 							<FiX />
 						</CloseButton>
@@ -832,10 +829,10 @@ const Users: React.FC = () => {
 						</DeleteWarningIcon>
 
 						<DeleteModalText>
-							<DeleteTitle>Are you sure you want to delete this user?</DeleteTitle>
+							<DeleteTitle>Are you sure you want to deactivate this user?</DeleteTitle>
 							<DeleteDescription>
-								<strong>{`${user.firstName} ${user.lastName}`}</strong> will be permanently removed
-								from the system. This action cannot be undone.
+								<strong>{`${user.firstName} ${user.lastName}`}</strong> will be marked as inactive
+								in the system. They will no longer be able to log in.
 							</DeleteDescription>
 
 							{deleteError && <DeleteError>{deleteError}</DeleteError>}
@@ -845,7 +842,7 @@ const Users: React.FC = () => {
 					<DeleteModalFooter>
 						<CancelButton onClick={handleCloseDeleteModal}>Cancel</CancelButton>
 						<ConfirmDeleteButton onClick={handleDeleteUser} disabled={isDeleting}>
-							{isDeleting ? 'Deleting...' : 'Delete User'}
+							{isDeleting ? 'Deactivating...' : 'Deactivate User'}
 						</ConfirmDeleteButton>
 					</DeleteModalFooter>
 				</DeleteModal>
@@ -999,6 +996,31 @@ const Users: React.FC = () => {
 		navigate(`/admin/users/${userId}`)
 	}
 
+	// Add a function to reactivate a user
+	const handleReactivateUser = async (userId: string) => {
+		try {
+			// Update the user's status to 'active'
+			const { error } = await supabase.from('users').update({ status: 'active' }).eq('id', userId)
+
+			if (error) {
+				console.error('Error reactivating user:', error)
+				toast.error(`Failed to reactivate user: ${error.message || 'Unknown error'}`)
+				return
+			}
+
+			// Update user in local state
+			setUsers(prevUsers =>
+				prevUsers.map(user => (user.id === userId ? { ...user, status: 'active' } : user))
+			)
+
+			// Show success message
+			toast.success('User has been reactivated successfully')
+		} catch (error) {
+			console.error('Unexpected error during user reactivation:', error)
+			toast.error('An unexpected error occurred')
+		}
+	}
+
 	return (
 		<UsersContainer
 			as={motion.div}
@@ -1014,7 +1036,7 @@ const Users: React.FC = () => {
 
 				<AddUserButton onClick={handleAddUser}>
 					<FiUserPlus />
-						<span>{t('userManagement.addNewUser')}</span>
+					<span>{t('userManagement.addNewUser')}</span>
 				</AddUserButton>
 			</PageHeader>
 
@@ -1061,7 +1083,9 @@ const Users: React.FC = () => {
 				<ToolbarActions>
 					{selectedUsers.length > 0 && (
 						<>
-							<SelectedCount>{selectedUsers.length} {t('userManagement.selected')}</SelectedCount>
+							<SelectedCount>
+								{selectedUsers.length} {t('userManagement.selected')}
+							</SelectedCount>
 							<ActionsButton onClick={toggleActionsMenu}>
 								<FiMoreVertical />
 								<span>Actions</span>
@@ -1095,7 +1119,9 @@ const Users: React.FC = () => {
 								<HeaderCell>{t('userManagement.status')}</HeaderCell>
 								{(activeRole === 'Student' || activeRole === 'Parent') && (
 									<>
-										{activeRole === 'Student' && <HeaderCell>{t('userManagement.parent')}</HeaderCell>}
+										{activeRole === 'Student' && (
+											<HeaderCell>{t('userManagement.parent')}</HeaderCell>
+										)}
 										{activeRole === 'Parent' && <HeaderCell>{t('profile.children')}</HeaderCell>}
 									</>
 								)}
@@ -1107,7 +1133,11 @@ const Users: React.FC = () => {
 						<TableBody>
 							{filteredUsers.length > 0 ? (
 								filteredUsers.map(user => (
-									<TableRow onClick={() => handleUserClick(user.id)} key={user.id}>
+									<TableRow
+										key={user.id}
+										$inactive={user.status === 'inactive'}
+										onClick={() => handleUserClick(user.id)}
+									>
 										<TableCell>
 											<CheckboxContainer>
 												<Checkbox
@@ -1130,6 +1160,9 @@ const Users: React.FC = () => {
 													<UserDetails>
 														<UserName>
 															{user.firstName} {user.lastName}
+															{user.status === 'inactive' && (
+																<InactiveUserBadge>Inactive</InactiveUserBadge>
+															)}
 														</UserName>
 														<UserEmail>{user.email}</UserEmail>
 													</UserDetails>
@@ -1142,7 +1175,9 @@ const Users: React.FC = () => {
 										</TableCell>
 										<TableCell>
 											<StatusIndicator $status={user.status}>
-												{user.status === 'active' ? t('userManagement.active') : t('userManagement.inactive')}
+												{user.status === 'active'
+													? t('userManagement.active')
+													: t('userManagement.inactive')}
 											</StatusIndicator>
 										</TableCell>
 										{(activeRole === 'Student' || activeRole === 'Parent') && (
@@ -1168,21 +1203,46 @@ const Users: React.FC = () => {
 										<TableCell>{user.lastLogin || t('userManagement.never')}</TableCell>
 										<TableCell>
 											<ActionsContainer>
-												<ActionIconButton onClick={() => handleEditUser(user)} title='Edit user'>
+												<ActionIconButton
+													onClick={e => {
+														e.stopPropagation()
+														handleEditUser(user)
+													}}
+													title='Edit user'
+												>
 													<FiEdit2 />
 												</ActionIconButton>
 												<ActionIconButton
-													onClick={() => handleOpenResetPasswordModal(user.id)}
+													onClick={e => {
+														e.stopPropagation()
+														handleOpenResetPasswordModal(user.id)
+													}}
 													title='Reset password'
 												>
 													<FiKey />
 												</ActionIconButton>
-												<ActionIconButton
-													onClick={() => handleDeleteClick(user.id)}
-													title='Delete user'
-												>
-													<FiTrash2 />
-												</ActionIconButton>
+												{user.status === 'active' ? (
+													<ActionIconButton
+														onClick={e => {
+															e.stopPropagation()
+															handleDeleteClick(user.id)
+														}}
+														title='Deactivate user'
+													>
+														<FiTrash2 />
+													</ActionIconButton>
+												) : (
+													<ActionIconButton
+														onClick={e => {
+															e.stopPropagation()
+															handleReactivateUser(user.id)
+														}}
+														title='Reactivate user'
+														style={{ color: '#10b981' }}
+													>
+														<FiUserCheck />
+													</ActionIconButton>
+												)}
 											</ActionsContainer>
 										</TableCell>
 									</TableRow>
@@ -1200,7 +1260,9 @@ const Users: React.FC = () => {
 													? t('userManagement.noUsersFound')
 													: t('userManagement.noUsersFound')}
 											</EmptyDescription>
-											<EmptyAction onClick={handleAddUser}>{t('userManagement.addNewUser')}</EmptyAction>
+											<EmptyAction onClick={handleAddUser}>
+												{t('userManagement.addNewUser')}
+											</EmptyAction>
 										</EmptyState>
 									</EmptyCell>
 								</EmptyRow>
@@ -1603,9 +1665,17 @@ const TableHeader = styled.thead`
 	background-color: ${props => props.theme.colors.background.tertiary};
 `
 
-const TableRow = styled.tr`
+const TableRow = styled.tr<{ $inactive?: boolean }>`
+	background-color: ${props => (props.$inactive ? '#f9f9f9' : 'white')};
 	border-bottom: 1px solid ${props => props.theme.colors.border.light};
+	transition: background-color 0.2s;
+	opacity: ${props => (props.$inactive ? 0.7 : 1)};
 	cursor: pointer;
+
+	&:hover {
+		background-color: ${props => props.theme.colors.background.hover};
+	}
+
 	&:last-child {
 		border-bottom: none;
 	}
@@ -1928,6 +1998,21 @@ const CloseButton = styled.button`
 		background-color: ${props => props.theme.colors.background.tertiary};
 		color: ${props => props.theme.colors.text.primary};
 	}
+`
+
+// Add this styled component near the other styled components
+const InactiveUserBadge = styled.span`
+	display: inline-block;
+	background-color: #f3f4f6;
+	color: #6b7280;
+	font-size: 0.7rem;
+	font-weight: 500;
+	padding: 0.2rem 0.5rem;
+	border-radius: 0.25rem;
+	margin-left: 0.5rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	border: 1px solid #e5e7eb;
 `
 
 export default Users

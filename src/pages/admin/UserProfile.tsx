@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
 	FiArrowLeft,
 	FiArrowRight,
@@ -15,12 +16,12 @@ import {
 	FiMail,
 	FiTrash2,
 	FiUser,
+	FiUserCheck,
 	FiUsers,
 } from 'react-icons/fi'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
-import { useTranslation } from 'react-i18next'
 import UserForm from '../../components/admin/UserForm'
 import supabase, { supabaseAdmin } from '../../config/supabaseClient'
 import { User as UserType } from '../../types/User'
@@ -119,7 +120,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
 	formatDateFn,
 }) => {
 	const { t } = useTranslation()
-	
+
 	if (!isOpen) return null
 
 	return (
@@ -283,9 +284,10 @@ const UserProfile: React.FC = () => {
 	const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false)
 	const [isResettingPassword, setIsResettingPassword] = useState(false)
 
-	// Add state for delete confirmation modal
-	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-	const [isDeleting, setIsDeleting] = useState(false)
+	// Add state for deactivate modal
+	const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState<boolean>(false)
+	const [isDeactivating, setIsDeactivating] = useState<boolean>(false)
+	const [deactivateError, setDeactivateError] = useState<string | null>(null)
 
 	useEffect(() => {
 		if (userId) {
@@ -674,64 +676,50 @@ const UserProfile: React.FC = () => {
 	}
 
 	const handleDeleteUser = () => {
-		if (!user) return
-		setIsDeleteModalOpen(true)
+		setIsDeactivateModalOpen(true)
 	}
 
-	// Function to handle closing delete modal
-	const handleCancelDelete = () => {
-		setIsDeleteModalOpen(false)
+	const handleCloseDeactivateModal = () => {
+		setIsDeactivateModalOpen(false)
+		setDeactivateError(null)
 	}
 
-	// User deletion helper function
-	const deleteUserFromAuth = async (userId: string) => {
-		const { data, error } = await supabaseAdmin.auth.admin.deleteUser(userId)
-		if (error) {
-			console.error('Error deleting user from auth:', error)
-			throw error
-		} else {
-			console.log('User successfully deleted from auth:', data)
-			return data
-		}
-	}
-
-	// Function to confirm and execute deletion
-	const handleConfirmDelete = async () => {
+	const handleConfirmDeactivate = async () => {
 		if (!user) return
 
-		setIsDeleting(true)
+		setIsDeactivating(true)
+		setDeactivateError(null)
 
 		try {
-			console.log('Deleting user:', user.id)
-
-			// Delete from auth system using Admin API
-			try {
-				await deleteUserFromAuth(user.id)
-			} catch (authErr) {
-				console.log('Auth deletion attempt failed:', authErr)
-				// Continue with public.users deletion even if auth deletion fails
-			}
-
-			// Delete from Supabase public.users table
-			const { error } = await supabase.from('users').delete().eq('id', user.id)
+			// Update the user's status to 'inactive'
+			const { error } = await supabase
+				.from('users')
+				.update({ status: 'inactive' })
+				.eq('id', user.id)
 
 			if (error) {
-				console.error('Error deleting user from public.users:', error)
-				toast.error(`Error: ${error.message}`)
+				console.error('Error deactivating user:', error)
+				setDeactivateError(error.message)
+				setIsDeactivating(false)
 				return
 			}
 
-			// Show success message
-			toast.success(`User ${user.firstName} ${user.lastName} was successfully deleted`)
+			// Update the local state
+			setUser({
+				...user,
+				status: 'inactive',
+			})
 
-			// Navigate back to users list
-			navigate('/admin/users')
-		} catch (err) {
-			console.error('Unexpected error during deletion:', err)
-			toast.error('An unexpected error occurred during deletion')
+			// Close the modal
+			setIsDeactivateModalOpen(false)
+
+			// Show success message
+			toast.success('User has been deactivated successfully')
+		} catch (error: any) {
+			console.error('Unexpected error during user deactivation:', error)
+			setDeactivateError('An unexpected error occurred')
 		} finally {
-			setIsDeleting(false)
-			setIsDeleteModalOpen(false)
+			setIsDeactivating(false)
 		}
 	}
 
@@ -911,7 +899,9 @@ const UserProfile: React.FC = () => {
 					<ModalFooter>
 						<CancelButton onClick={handleCancelResetPassword}>{t('common.cancel')}</CancelButton>
 						<ResetButton onClick={handleConfirmResetPassword} disabled={isResettingPassword}>
-							{isResettingPassword ? t('userProfile.resetting') : t('userProfile.resetPasswordAction')}
+							{isResettingPassword
+								? t('userProfile.resetting')
+								: t('userProfile.resetPasswordAction')}
 						</ResetButton>
 					</ModalFooter>
 				</ModalContent>
@@ -919,16 +909,16 @@ const UserProfile: React.FC = () => {
 		)
 	}
 
-	// Add Delete Confirmation Modal component
-	const DeleteConfirmationModal = () => {
-		if (!isDeleteModalOpen || !user) return null
+	// Add Deactivate User Modal component
+	const DeactivateUserModal = () => {
+		if (!isDeactivateModalOpen || !user) return null
 
 		return (
 			<ModalOverlay>
 				<ModalContent>
 					<ModalHeader>
-						<ModalTitle>Delete User</ModalTitle>
-						<ModalCloseButton onClick={handleCancelDelete}>×</ModalCloseButton>
+						<ModalTitle>Deactivate User</ModalTitle>
+						<ModalCloseButton onClick={handleCloseDeactivateModal}>×</ModalCloseButton>
 					</ModalHeader>
 					<ModalBody>
 						<div
@@ -951,24 +941,83 @@ const UserProfile: React.FC = () => {
 							</div>
 							<div>
 								<h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: 600 }}>
-									Are you sure you want to delete this user?
+									Are you sure you want to deactivate this user?
 								</h4>
 								<p style={{ margin: '0', color: '#4b5563' }}>
-									<strong>{user.firstName} {user.lastName}</strong> will be permanently removed
-									from the system. This action cannot be undone.
+									<strong>{`${user.firstName} ${user.lastName}`}</strong> will be marked as inactive
+									in the system. They will no longer be able to log in.
 								</p>
+								{deactivateError && (
+									<div
+										style={{
+											marginTop: '1rem',
+											padding: '0.75rem',
+											backgroundColor: '#fee2e2',
+											borderLeft: '3px solid #ef4444',
+											color: '#b91c1c',
+											fontSize: '0.9rem',
+											borderRadius: '0.25rem',
+										}}
+									>
+										{deactivateError}
+									</div>
+								)}
 							</div>
 						</div>
 					</ModalBody>
 					<ModalFooter>
-						<CancelButton onClick={handleCancelDelete}>Cancel</CancelButton>
-						<ConfirmDeleteButton onClick={handleConfirmDelete} disabled={isDeleting}>
-							{isDeleting ? 'Deleting...' : 'Delete User'}
-						</ConfirmDeleteButton>
+						<Button
+							onClick={handleCloseDeactivateModal}
+							style={{
+								backgroundColor: 'white',
+								color: '#374151',
+								border: '1px solid #d1d5db',
+								marginRight: '0.75rem',
+							}}
+						>
+							Cancel
+						</Button>
+						<Button
+							onClick={handleConfirmDeactivate}
+							disabled={isDeactivating}
+							style={{
+								backgroundColor: '#ef4444',
+							}}
+						>
+							{isDeactivating ? 'Deactivating...' : 'Deactivate User'}
+						</Button>
 					</ModalFooter>
 				</ModalContent>
 			</ModalOverlay>
 		)
+	}
+
+	// Add a function to reactivate a user
+	const handleReactivateUser = async () => {
+		if (!user) return
+
+		try {
+			// Update the user's status to 'active'
+			const { error } = await supabase.from('users').update({ status: 'active' }).eq('id', user.id)
+
+			if (error) {
+				console.error('Error reactivating user:', error)
+				toast.error(`Failed to reactivate user: ${error.message || 'Unknown error'}`)
+				return
+			}
+
+			// Update the local state
+			setUser({
+				...user,
+				status: 'active',
+			})
+
+			// Show success message
+			toast.success('User has been reactivated successfully')
+		} catch (error) {
+			console.error('Unexpected error during user reactivation:', error)
+			toast.error('An unexpected error occurred')
+		}
 	}
 
 	if (loading) {
@@ -1012,10 +1061,17 @@ const UserProfile: React.FC = () => {
 						<FiKey />
 						<span>{t('userProfile.resetPassword')}</span>
 					</ResetPasswordButton>
-					<DeleteButton onClick={handleDeleteUser}>
-						<FiTrash2 />
-						<span>{t('userProfile.delete')}</span>
-					</DeleteButton>
+					{user.status === 'active' ? (
+						<DeleteButton onClick={handleDeleteUser}>
+							<FiTrash2 />
+							<span>Deactivate User</span>
+						</DeleteButton>
+					) : (
+						<ReactivateButton onClick={handleReactivateUser}>
+							<FiUserCheck />
+							<span>Reactivate User</span>
+						</ReactivateButton>
+					)}
 				</HeaderRight>
 			</HeaderSection>
 
@@ -1031,10 +1087,10 @@ const UserProfile: React.FC = () => {
 					<UserInfo>
 						<UserName>{`${user.firstName} ${user.lastName}`}</UserName>
 						<UserRole>
-							<RoleBadge $role={user.role}>{user.role}</RoleBadge>
-							<StatusIndicator $status={user.status}>
-								{user.status === 'active' ? t('userForm.active') : t('userForm.inactive')}
-							</StatusIndicator>
+							<RoleBadge $role={user.role.toLowerCase()}>{user.role}</RoleBadge>
+							<UserStatus $status={user.status || 'active'}>
+								{user.status === 'active' ? 'Active' : 'Inactive'}
+							</UserStatus>
 						</UserRole>
 					</UserInfo>
 				</ProfileHeader>
@@ -1144,7 +1200,9 @@ const UserProfile: React.FC = () => {
 										<AssignmentHeader>
 											<AssignmentBadge>
 												<FiLayers />
-												<span>{t('userProfile.class')} {assignment.class.classname}</span>
+												<span>
+													{t('userProfile.class')} {assignment.class.classname}
+												</span>
 											</AssignmentBadge>
 											<AssignmentBadge>
 												<FiBook />
@@ -1288,7 +1346,9 @@ const UserProfile: React.FC = () => {
 											</AssignmentDetail>
 											<AssignmentDetail>
 												<FiCalendar />
-												<span>{t('userProfile.due')}: {formatDate(assignment.dueDate)}</span>
+												<span>
+													{t('userProfile.due')}: {formatDate(assignment.dueDate)}
+												</span>
 											</AssignmentDetail>
 											{assignment.quarter && (
 												<AssignmentDetail>
@@ -1299,7 +1359,9 @@ const UserProfile: React.FC = () => {
 											{assignment.grade !== undefined && (
 												<AssignmentDetail>
 													<FiCheckSquare />
-													<span>{t('userProfile.gradeLabel')}: {assignment.grade}</span>
+													<span>
+														{t('userProfile.gradeLabel')}: {assignment.grade}
+													</span>
 												</AssignmentDetail>
 											)}
 										</AssignmentDetails>
@@ -1339,8 +1401,8 @@ const UserProfile: React.FC = () => {
 			{/* Add the Reset Password Modal */}
 			<ResetPasswordModal />
 
-			{/* Add the Delete Confirmation Modal */}
-			<DeleteConfirmationModal />
+			{/* Add the Deactivate User Modal */}
+			<DeactivateUserModal />
 		</PageContainer>
 	)
 }
@@ -1398,37 +1460,36 @@ const EditButton = styled.button`
 	}
 `
 
-const ResetPasswordButton = styled.button`
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.5rem 1rem;
+const ResetPasswordButton = styled(EditButton)`
 	background-color: ${props => props.theme.colors.warning[50]};
-	color: ${props => props.theme.colors.warning[700]};
-	border: 1px solid ${props => props.theme.colors.warning[200]};
-	border-radius: 0.375rem;
-	cursor: pointer;
-	font-weight: 500;
+	color: ${props => props.theme.colors.warning[600]};
+	border-color: ${props => props.theme.colors.warning[200]};
 
 	&:hover {
 		background-color: ${props => props.theme.colors.warning[100]};
+		border-color: ${props => props.theme.colors.warning[300]};
 	}
 `
 
-const DeleteButton = styled.button`
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.5rem 1rem;
+const DeleteButton = styled(EditButton)`
 	background-color: ${props => props.theme.colors.danger[50]};
 	color: ${props => props.theme.colors.danger[600]};
-	border: 1px solid ${props => props.theme.colors.danger[200]};
-	border-radius: 0.375rem;
-	cursor: pointer;
-	font-weight: 500;
+	border-color: ${props => props.theme.colors.danger[200]};
 
 	&:hover {
 		background-color: ${props => props.theme.colors.danger[100]};
+		border-color: ${props => props.theme.colors.danger[300]};
+	}
+`
+
+const ReactivateButton = styled(EditButton)`
+	background-color: ${props => props.theme.colors.success[50]};
+	color: ${props => props.theme.colors.success[600]};
+	border-color: ${props => props.theme.colors.success[200]};
+
+	&:hover {
+		background-color: ${props => props.theme.colors.success[100]};
+		border-color: ${props => props.theme.colors.success[300]};
 	}
 `
 
@@ -1481,6 +1542,32 @@ const UserRole = styled.div`
 	margin-top: 0.5rem;
 `
 
+const UserStatus = styled.span<{ $status: 'active' | 'inactive' }>`
+	padding: 0.25rem 0.75rem;
+	background-color: ${props =>
+		props.$status === 'active' ? props.theme.colors.success[100] : props.theme.colors.neutral[100]};
+	color: ${props =>
+		props.$status === 'active' ? props.theme.colors.success[700] : props.theme.colors.danger[700]};
+	border-radius: 1rem;
+	font-size: 0.75rem;
+	font-weight: 500;
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+
+	&::before {
+		content: '';
+		display: inline-block;
+		width: 0.5rem;
+		height: 0.5rem;
+		border-radius: 50%;
+		background-color: ${props =>
+			props.$status === 'active'
+				? props.theme.colors.success[500]
+				: props.theme.colors.danger[500]};
+	}
+`
+
 const RoleBadge = styled.span<{ $role: string }>`
 	padding: 0.25rem 0.75rem;
 	border-radius: 9999px;
@@ -1514,27 +1601,6 @@ const RoleBadge = styled.span<{ $role: string }>`
 				return props.theme.colors.neutral[700]
 		}
 	}};
-`
-
-const StatusIndicator = styled.span<{ $status: string }>`
-	display: flex;
-	align-items: center;
-	gap: 0.25rem;
-	color: ${props =>
-		props.$status === 'active' ? props.theme.colors.success[600] : props.theme.colors.danger[600]};
-	font-size: 0.875rem;
-
-	&::before {
-		content: '';
-		display: block;
-		width: 0.5rem;
-		height: 0.5rem;
-		border-radius: 50%;
-		background-color: ${props =>
-			props.$status === 'active'
-				? props.theme.colors.success[500]
-				: props.theme.colors.danger[500]};
-	}
 `
 
 const ProfileContent = styled.div`
@@ -2061,27 +2127,6 @@ const ResetButton = styled.button`
 
 	&:hover {
 		background-color: #d97706;
-	}
-
-	&:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-`
-
-// Add styled components for the delete modal
-const ConfirmDeleteButton = styled.button`
-	padding: 0.5rem 1rem;
-	border-radius: 0.375rem;
-	border: none;
-	background-color: #ef4444;
-	color: white;
-	font-weight: 500;
-	cursor: pointer;
-	transition: all 0.2s ease;
-
-	&:hover {
-		background-color: #dc2626;
 	}
 
 	&:disabled {
