@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDropzone } from 'react-dropzone'
 import {
 	FiCalendar,
@@ -38,6 +39,7 @@ const SingleAssignment: React.FC = () => {
 	const { assignmentId } = useParams<{ assignmentId: string }>()
 	const navigate = useNavigate()
 	const { user } = useAuth()
+	const { t, i18n } = useTranslation()
 
 	const [assignment, setAssignment] = useState<ExtendedAssignment | null>(null)
 	const [loading, setLoading] = useState(true)
@@ -49,7 +51,7 @@ const SingleAssignment: React.FC = () => {
 	// Fetch assignment data
 	const fetchAssignmentData = async () => {
 		if (!assignmentId) {
-			toast.error('Missing assignment ID')
+			toast.error(t('studentPanel.assignmentDetail.errors.missingId'))
 			navigate('/student/assignments')
 			return
 		}
@@ -77,7 +79,7 @@ const SingleAssignment: React.FC = () => {
 			if (assignmentError) throw assignmentError
 
 			if (!assignmentData) {
-				toast.error('Assignment not found')
+				toast.error(t('studentPanel.assignmentDetail.errors.notFound'))
 				navigate('/student/assignments')
 				return
 			}
@@ -116,6 +118,20 @@ const SingleAssignment: React.FC = () => {
 
 			// Check for existing submission - only if user is available
 			if (user?.id) {
+				// First, try to restore from cache
+				const cachedSubmission = sessionStorage.getItem(`submission_${assignmentId}`)
+				if (cachedSubmission) {
+					try {
+						const parsedSubmission = JSON.parse(cachedSubmission)
+						console.log('Restored submission from cache:', parsedSubmission)
+						setExistingSubmission(parsedSubmission)
+					} catch (error) {
+						console.error('Failed to parse cached submission:', error)
+						sessionStorage.removeItem(`submission_${assignmentId}`)
+					}
+				}
+
+				// Always fetch fresh data to update cache
 				const { data: submissionData, error: submissionError } = await supabase
 					.from('submissions')
 					.select('*')
@@ -123,25 +139,37 @@ const SingleAssignment: React.FC = () => {
 					.eq('studentid', user.id)
 					.maybeSingle()
 
+				console.log('Fresh submission data from DB:', submissionData)
+
 				if (submissionError) throw submissionError
 
-				if (submissionData && submissionData.fileurl) {
-					setExistingSubmission({
+				if (submissionData) {
+					const processedSubmission = {
 						id: submissionData.id,
-						fileurl: Array.isArray(submissionData.fileurl)
+						fileurl: submissionData.fileurl ? (Array.isArray(submissionData.fileurl)
 							? submissionData.fileurl
-							: [submissionData.fileurl],
+							: [submissionData.fileurl]) : [],
 						submittedat: submissionData.submittedat,
 						grade: submissionData.grade,
 						feedback: submissionData.feedback,
 						status: submissionData.status,
 						attempt_count: submissionData.attempt_count || 1,
-					})
+					}
+					setExistingSubmission(processedSubmission)
+					// Cache the fresh data
+					sessionStorage.setItem(`submission_${assignmentId}`, JSON.stringify(processedSubmission))
+				} else {
+					// Only set to null if no cached data exists
+					if (!cachedSubmission) {
+						setExistingSubmission(null)
+					}
 				}
+			} else {
+				setExistingSubmission(null)
 			}
 		} catch (error) {
 			console.error('Error fetching assignment:', error)
-			toast.error('Failed to load assignment details')
+			toast.error(t('studentPanel.assignmentDetail.errors.loadingFailed'))
 		} finally {
 			setLoading(false)
 		}
@@ -152,46 +180,56 @@ const SingleAssignment: React.FC = () => {
 		fetchAssignmentData()
 	}, [assignmentId, user?.id])
 
+
+
 	// Format date for display
 	const formatDate = (dateString: string | null | undefined): string => {
-		if (!dateString) return 'Not specified'
+		if (!dateString) return t('common.notSpecified')
 
 		try {
 			const date = new Date(dateString)
 
 			if (isNaN(date.getTime())) {
-				return 'Not specified'
+				return t('common.notSpecified')
 			}
 
-			return date.toLocaleDateString('en-US', {
+			// Use current language for date formatting
+			const locale = i18n.language === 'ru' ? 'ru-RU' : 
+						  i18n.language === 'uz' ? 'uz-UZ' : 'en-US'
+
+			return date.toLocaleDateString(locale, {
 				year: 'numeric',
 				month: 'short',
 				day: 'numeric',
 			})
 		} catch (error) {
 			console.error('Error formatting date:', error)
-			return 'Not specified'
+			return t('common.notSpecified')
 		}
 	}
 
 	// Format time for display
 	const formatTime = (dateString: string | null | undefined): string => {
-		if (!dateString) return 'Not specified'
+		if (!dateString) return t('common.notSpecified')
 
 		try {
 			const date = new Date(dateString)
 
 			if (isNaN(date.getTime())) {
-				return 'Not specified'
+				return t('common.notSpecified')
 			}
 
-			return date.toLocaleTimeString('en-US', {
+			// Use current language for time formatting
+			const locale = i18n.language === 'ru' ? 'ru-RU' : 
+						  i18n.language === 'uz' ? 'uz-UZ' : 'en-US'
+
+			return date.toLocaleTimeString(locale, {
 				hour: '2-digit',
 				minute: '2-digit',
 			})
 		} catch (error) {
 			console.error('Error formatting time:', error)
-			return 'Not specified'
+			return t('common.notSpecified')
 		}
 	}
 
@@ -209,7 +247,7 @@ const SingleAssignment: React.FC = () => {
 
 	// Get filename from URL
 	const getFileName = (fileUrl: string | null | undefined): string => {
-		if (!fileUrl) return 'Assignment Document'
+		if (!fileUrl) return t('studentPanel.assignmentDetail.assignmentDocument')
 
 		try {
 			const urlParts = fileUrl.split('/')
@@ -218,7 +256,7 @@ const SingleAssignment: React.FC = () => {
 			fileName = fileName.split('?')[0]
 
 			if (!fileName || fileName.length < 3) {
-				return 'Assignment Document'
+				return t('studentPanel.assignmentDetail.assignmentDocument')
 			}
 
 			let decodedName = decodeURIComponent(fileName)
@@ -231,12 +269,12 @@ const SingleAssignment: React.FC = () => {
 			} else if (
 				/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(decodedName)
 			) {
-				return 'Assignment Document'
+				return t('studentPanel.assignmentDetail.assignmentDocument')
 			}
 
 			return decodedName
 		} catch (e) {
-			return 'Assignment Document'
+			return t('studentPanel.assignmentDetail.assignmentDocument')
 		}
 	}
 
@@ -516,11 +554,11 @@ const SingleAssignment: React.FC = () => {
 		// First check if the submission has an explicit status from teacher
 		if (existingSubmission) {
 			if (existingSubmission.status === 'accepted') {
-				return 'Accepted'
+				return t('studentPanel.assignments.status.accepted')
 			}
 
 			if (existingSubmission.status === 'rejected') {
-				return 'Rejected'
+				return t('studentPanel.assignments.status.rejected')
 			}
 
 			// Check if assignment has been resubmitted (more than one file and null status)
@@ -529,28 +567,28 @@ const SingleAssignment: React.FC = () => {
 				existingSubmission.fileurl &&
 				existingSubmission.fileurl.length > 1
 			) {
-				return 'Resubmitted'
+				return t('studentPanel.assignments.status.resubmitted')
 			}
 
 			// Check if assignment has been submitted and graded
 			if (existingSubmission.grade !== undefined && existingSubmission.grade !== null) {
-				return 'Completed'
+				return t('studentPanel.assignments.status.completed')
 			}
 
 			// Default for any submission without explicit status
-			return 'Submitted'
+			return t('studentPanel.assignments.status.submitted')
 		}
 
 		// If not submitted, check due date
 		const days = getDaysRemaining(dueDate)
 		if (days <= 3 && days > 0) {
-			return 'Due Soon'
+			return t('studentPanel.assignments.status.dueSoon')
 		} else if (days <= 0) {
-			return 'Overdue'
+			return t('studentPanel.assignments.status.overdue')
 		} else if (days <= 7) {
-			return 'In Progress'
+			return t('studentPanel.assignments.status.inProgress')
 		} else {
-			return 'Upcoming'
+			return t('studentPanel.assignments.status.upcoming')
 		}
 	}
 
@@ -558,7 +596,7 @@ const SingleAssignment: React.FC = () => {
 		return (
 			<LoadingContainer>
 				<LoadingSpinner />
-				<p>Loading assignment details...</p>
+				<p>{t('studentPanel.assignmentDetail.loading')}</p>
 			</LoadingContainer>
 		)
 	}
@@ -567,22 +605,32 @@ const SingleAssignment: React.FC = () => {
 		return (
 			<Container>
 				<ErrorMessage>
-					<h2>Assignment not found</h2>
-					<p>The assignment you're looking for doesn't exist or you don't have access to it.</p>
+					<h2>{t('studentPanel.assignmentDetail.errors.notFound')}</h2>
+					<p>{t('studentPanel.assignmentDetail.errors.noAccess')}</p>
 					<BackButton onClick={() => navigate('/student/assignments')}>
-						Back to Assignments
+						{t('studentPanel.assignmentDetail.backToAssignments')}
 					</BackButton>
 				</ErrorMessage>
 			</Container>
 		)
 	}
 
+	// Debug: Log current state for troubleshooting
+	console.log('Debug - Current state:', {
+		assignmentId,
+		language: i18n.language,
+		hasAssignment: !!assignment,
+		hasExistingSubmission: !!existingSubmission,
+		submissionData: existingSubmission,
+		loading
+	})
+
 	return (
 		<Container>
 			<PageHeader>
-				<PageTitle>Assignment Details</PageTitle>
+				<PageTitle>{t('studentPanel.assignmentDetail.title')}</PageTitle>
 				<BackButton onClick={() => navigate('/student/assignments')}>
-					Back to Assignments
+					{t('studentPanel.assignmentDetail.backToAssignments')}
 				</BackButton>
 			</PageHeader>
 
@@ -603,21 +651,21 @@ const SingleAssignment: React.FC = () => {
 				</AssignmentHeader>
 
 				<Section>
-					<SectionTitle>Description</SectionTitle>
+					<SectionTitle>{t('studentPanel.assignmentDetail.description')}</SectionTitle>
 					<Description>{assignment.description}</Description>
 				</Section>
 
 				<Section>
-					<SectionTitle>Due Dates</SectionTitle>
+					<SectionTitle>{t('studentPanel.assignmentDetail.dueDates')}</SectionTitle>
 					<DueDateInfo>
 						<DateItem>
 							<FiCalendar size={16} />
-							<span>Assigned: {formatDate(assignment.created_at)}</span>
+							<span>{t('studentPanel.assignmentDetail.assigned')}: {formatDate(assignment.created_at)}</span>
 						</DateItem>
 						<DateItem>
 							<FiClock size={16} />
 							<span>
-								Due: {formatDate(assignment.due_date)} at {formatTime(assignment.due_date)}
+								{t('studentPanel.assignmentDetail.due')}: {formatDate(assignment.due_date)} {t('studentPanel.assignmentDetail.at')} {formatTime(assignment.due_date)}
 							</span>
 						</DateItem>
 					</DueDateInfo>
@@ -628,13 +676,13 @@ const SingleAssignment: React.FC = () => {
 				Array.isArray(assignment.file_url) &&
 				assignment.file_url.length > 0 ? (
 					<Section>
-						<SectionTitle>Assignment Materials</SectionTitle>
+						<SectionTitle>{t('studentPanel.assignmentDetail.assignmentMaterials')}</SectionTitle>
 						{assignment.file_url.map((file, index) => (
 							<MaterialItem key={index}>
 								<MaterialIcon>{getFileIcon(file.url)}</MaterialIcon>
 								<MaterialInfo>
 									<MaterialName>{file.name}</MaterialName>
-									<MaterialMeta>Assignment material from your teacher</MaterialMeta>
+									<MaterialMeta>{t('studentPanel.assignmentDetail.materialFromTeacher')}</MaterialMeta>
 								</MaterialInfo>
 								<MaterialActions>
 									<ActionButton
@@ -644,7 +692,7 @@ const SingleAssignment: React.FC = () => {
 											}
 										}}
 									>
-										View
+										{t('studentPanel.assignmentDetail.view')}
 									</ActionButton>
 									<ActionButton
 										onClick={() => {
@@ -660,7 +708,7 @@ const SingleAssignment: React.FC = () => {
 										}}
 									>
 										<FiDownload size={16} />
-										<span>Download</span>
+										<span>{t('studentPanel.assignmentDetail.download')}</span>
 									</ActionButton>
 								</MaterialActions>
 							</MaterialItem>
@@ -669,12 +717,12 @@ const SingleAssignment: React.FC = () => {
 				) : assignment && assignment.file_url && typeof assignment.file_url === 'string' ? (
 					// Legacy support for old string format
 					<Section>
-						<SectionTitle>Assignment Materials</SectionTitle>
+						<SectionTitle>{t('studentPanel.assignmentDetail.assignmentMaterials')}</SectionTitle>
 						<MaterialItem>
 							<MaterialIcon>{getFileIcon(assignment.file_url as string)}</MaterialIcon>
 							<MaterialInfo>
 								<MaterialName>{getFileName(assignment.file_url as string)}</MaterialName>
-								<MaterialMeta>Assignment material from your teacher</MaterialMeta>
+								<MaterialMeta>{t('studentPanel.assignmentDetail.materialFromTeacher')}</MaterialMeta>
 							</MaterialInfo>
 							<MaterialActions>
 								<ActionButton
@@ -684,7 +732,7 @@ const SingleAssignment: React.FC = () => {
 										}
 									}}
 								>
-									View
+									{t('studentPanel.assignmentDetail.view')}
 								</ActionButton>
 								<ActionButton
 									onClick={() => {
@@ -700,7 +748,7 @@ const SingleAssignment: React.FC = () => {
 									}}
 								>
 									<FiDownload size={16} />
-									<span>Download</span>
+									<span>{t('studentPanel.assignmentDetail.download')}</span>
 								</ActionButton>
 							</MaterialActions>
 						</MaterialItem>
@@ -708,7 +756,7 @@ const SingleAssignment: React.FC = () => {
 				) : null}
 
 				<Section>
-					<SectionTitle>Your Submission</SectionTitle>
+					<SectionTitle>{t('studentPanel.assignmentDetail.yourSubmission')}</SectionTitle>
 
 					{existingSubmission ? (
 						<ExistingSubmission>
@@ -719,14 +767,16 @@ const SingleAssignment: React.FC = () => {
 										color={existingSubmission.status === 'rejected' ? '#dc2626' : '#4caf50'}
 									/>
 									<span>
-										Submitted on {formatDate(existingSubmission.submittedat)} at{' '}
-										{formatTime(existingSubmission.submittedat)}
+										{t('studentPanel.assignmentDetail.submittedOn', { 
+											date: formatDate(existingSubmission.submittedat),
+											time: formatTime(existingSubmission.submittedat) 
+										})}
 									</span>
 								</div>
 							</SubmissionHeader>
 
-							{/* Display all submitted files */}
-							{existingSubmission.fileurl && existingSubmission.fileurl.length > 0 && (
+							{/* Display all submitted files or placeholder for submissions without files */}
+							{existingSubmission.fileurl && existingSubmission.fileurl.length > 0 ? (
 								<>
 									{existingSubmission.fileurl.map((url, index) => (
 										<ExistingFilePreview key={index}>
@@ -735,19 +785,36 @@ const SingleAssignment: React.FC = () => {
 												<FileName>{getFileName(url)}</FileName>
 												<FileInfo>
 													{existingSubmission.status === 'rejected'
-														? 'Your submission was rejected. Please submit a new version.'
+														? t('studentPanel.assignmentDetail.submissionRejected')
 														: existingSubmission.status === 'accepted'
-														? 'Your submission was accepted.'
-														: 'Your submission is under review.'}
+														? t('studentPanel.assignmentDetail.submissionAccepted')
+														: t('studentPanel.assignmentDetail.submissionUnderReview')}
 												</FileInfo>
 											</FileDetails>
 											<DownloadButton onClick={() => downloadSubmission(url)}>
 												<FiDownload size={16} />
-												<span>Download</span>
+												<span>{t('studentPanel.assignmentDetail.download')}</span>
 											</DownloadButton>
 										</ExistingFilePreview>
 									))}
 								</>
+							) : (
+								/* Show placeholder for submissions without files but with grade/feedback */
+								<ExistingFilePreview>
+									<FileIcon style={{ backgroundColor: '#e8f5e9', color: '#4caf50' }}>
+										<FiCheckCircle size={20} />
+									</FileIcon>
+									<FileDetails>
+										<FileName>{t('studentPanel.assignmentDetail.submissionWithoutFiles')}</FileName>
+										<FileInfo>
+											{existingSubmission.status === 'rejected'
+												? t('studentPanel.assignmentDetail.submissionRejected')
+												: existingSubmission.status === 'accepted'
+												? t('studentPanel.assignmentDetail.submissionAccepted')
+												: t('studentPanel.assignmentDetail.submissionUnderReview')}
+										</FileInfo>
+									</FileDetails>
+								</ExistingFilePreview>
 							)}
 
 							{/* Always show grade and feedback when available */}
@@ -756,14 +823,14 @@ const SingleAssignment: React.FC = () => {
 								<GradeFeedbackContainer>
 									{existingSubmission.grade !== undefined && existingSubmission.grade !== null && (
 										<GradeContainer>
-											<GradeLabel>Grade:</GradeLabel>
+											<GradeLabel>{t('studentPanel.assignmentDetail.grade')}:</GradeLabel>
 											<GradeValue>{existingSubmission.grade}/10</GradeValue>
 										</GradeContainer>
 									)}
 
 									{existingSubmission.feedback && (
 										<FeedbackContainer>
-											<FeedbackLabel>Teacher Feedback:</FeedbackLabel>
+											<FeedbackLabel>{t('studentPanel.assignmentDetail.teacherFeedback')}:</FeedbackLabel>
 											<FeedbackContent>{existingSubmission.feedback}</FeedbackContent>
 										</FeedbackContainer>
 									)}
@@ -772,12 +839,12 @@ const SingleAssignment: React.FC = () => {
 
 							{existingSubmission && (
 								<SubmissionAttemptsInfo>
-									<AttemptsLabel>Submission attempts:</AttemptsLabel>
+									<AttemptsLabel>{t('studentPanel.assignmentDetail.submissionAttempts')}:</AttemptsLabel>
 									<AttemptsCount $attempts={existingSubmission.attempt_count || 1}>
 										{existingSubmission.attempt_count || 1}/2
 										{existingSubmission.attempt_count && existingSubmission.attempt_count >= 2 && (
 											<MaxAttemptsReached>
-												You have reached the maximum number of submission attempts
+												{t('studentPanel.assignmentDetail.maxAttemptsReached')}
 											</MaxAttemptsReached>
 										)}
 									</AttemptsCount>
@@ -789,7 +856,7 @@ const SingleAssignment: React.FC = () => {
 							<SubmissionHeader>
 								<div>
 									<FiClock size={16} color='#9e9e9e' />
-									<span>Not submitted yet</span>
+									<span>{t('studentPanel.assignmentDetail.notSubmittedYet')}</span>
 								</div>
 							</SubmissionHeader>
 
@@ -798,23 +865,23 @@ const SingleAssignment: React.FC = () => {
 									<FiFileText size={20} />
 								</FileIcon>
 								<FileDetails>
-									<FileName>No files uploaded</FileName>
-									<FileInfo>Use the form below to submit your assignment</FileInfo>
+									<FileName>{t('studentPanel.assignmentDetail.noFilesUploaded')}</FileName>
+									<FileInfo>{t('studentPanel.assignmentDetail.useFormBelow')}</FileInfo>
 								</FileDetails>
 							</ExistingFilePreview>
 
 							<GradeFeedbackContainer>
 								<GradeContainer>
-									<GradeLabel>Grade:</GradeLabel>
+									<GradeLabel>{t('studentPanel.assignmentDetail.grade')}:</GradeLabel>
 									<span style={{ fontSize: '14px', color: '#9e9e9e', fontStyle: 'italic' }}>
-										Not graded yet
+										{t('studentPanel.assignmentDetail.notGradedYet')}
 									</span>
 								</GradeContainer>
 
 								<FeedbackContainer>
-									<FeedbackLabel>Teacher Feedback:</FeedbackLabel>
+									<FeedbackLabel>{t('studentPanel.assignmentDetail.teacherFeedback')}:</FeedbackLabel>
 									<FeedbackContent style={{ color: '#9e9e9e', fontStyle: 'italic' }}>
-										Feedback will be provided after submission
+										{t('studentPanel.assignmentDetail.feedbackAfterSubmission')}
 									</FeedbackContent>
 								</FeedbackContainer>
 							</GradeFeedbackContainer>
@@ -852,11 +919,11 @@ const SingleAssignment: React.FC = () => {
 											<FiUpload size={32} />
 											<DropzoneText>
 												{isDragActive
-													? 'Drop the file here...'
-													: 'Drag and drop a file here, or click to select a file'}
+													? t('studentPanel.assignmentDetail.dropFileHere')
+													: t('studentPanel.assignmentDetail.dragDropFile')}
 											</DropzoneText>
 											<DropzoneSupportedText>
-												Supported file types: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, JPG, PNG
+												{t('studentPanel.assignmentDetail.supportedFileTypes')}
 											</DropzoneSupportedText>
 										</DropzoneContent>
 									)}
@@ -865,17 +932,17 @@ const SingleAssignment: React.FC = () => {
 								{uploading && (
 									<ProgressContainer>
 										<ProgressBar $progress={uploadProgress} />
-										<ProgressText>{uploadProgress}% uploaded</ProgressText>
+										<ProgressText>{t('studentPanel.assignmentDetail.uploadProgress', { progress: uploadProgress })}</ProgressText>
 									</ProgressContainer>
 								)}
 
 								<SubmitButtonContainer>
 									<SubmitButton type='submit' disabled={!selectedFile || uploading}>
 										{uploading
-											? `Uploading... ${uploadProgress}%`
+											? t('studentPanel.assignmentDetail.uploading', { progress: uploadProgress })
 											: existingSubmission
-											? 'Resubmit Assignment'
-											: 'Submit Assignment'}
+											? t('studentPanel.assignmentDetail.resubmitAssignment')
+											: t('studentPanel.assignmentDetail.submitAssignment')}
 									</SubmitButton>
 								</SubmitButtonContainer>
 							</SubmissionForm>
@@ -884,8 +951,8 @@ const SingleAssignment: React.FC = () => {
 					{existingSubmission && existingSubmission.status !== 'rejected' && (
 						<PendingReviewMessage>
 							{existingSubmission.status === 'accepted'
-								? 'Your submission has been accepted by your teacher.'
-								: 'Your submission is currently under review by your teacher. You will be able to resubmit if it gets rejected.'}
+								? t('studentPanel.assignmentDetail.submissionAcceptedMessage')
+								: t('studentPanel.assignmentDetail.submissionUnderReviewMessage')}
 						</PendingReviewMessage>
 					)}
 
@@ -894,8 +961,7 @@ const SingleAssignment: React.FC = () => {
 						existingSubmission.attempt_count &&
 						existingSubmission.attempt_count >= 2 && (
 							<MaxAttemptsMessage>
-								Your submission was rejected and you have used all available submission attempts.
-								Please contact your teacher for further assistance.
+								{t('studentPanel.assignmentDetail.maxAttemptsMessage')}
 							</MaxAttemptsMessage>
 						)}
 				</Section>

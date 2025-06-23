@@ -309,8 +309,8 @@ export async function getStudentGrades(studentId: string): Promise<SubjectGrade[
 		// ... rest of function remains the same
 
 		// --- Fetch Teacher Information --- 
-		// Extract unique teacher IDs from classesData
-		const teacherIds = classesData
+		// Extract unique teacher IDs from fetchedClassesData
+		const teacherIds = fetchedClassesData
 			.map(c => c.teacherid)
 			.filter((id, index, self) => id && self.indexOf(id) === index); 
 		
@@ -346,7 +346,7 @@ export async function getStudentGrades(studentId: string): Promise<SubjectGrade[
 		// Combine the data to create the subject list
 		const combinedSubjects = classSubjectsData.map(classSubject => {
 			const subject = subjectsData.find(s => s.id === classSubject.subjectid);
-			const classInfo = classesData?.find(c => c.id === classSubject.classid);
+			const classInfo = fetchedClassesData?.find(c => c.id === classSubject.classid);
 			
 			if (!subject || !classInfo) return null; // Ensure we have both subject and class info
 

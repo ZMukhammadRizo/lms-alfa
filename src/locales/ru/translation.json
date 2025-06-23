@@ -30,7 +30,11 @@
     "actions": "Действия",
     "notAssigned": "Не назначено",
     "notAvailable": "Н/Д",
-    "all": "Все"
+    "all": "Все",
+    "notSpecified": "Не указано",
+    "unknown": "Неизвестно",
+    "unknownSubject": "Неизвестный предмет",
+    "student": "Ученик"
   },
   "grades": {
     "title": "Оценки",
@@ -2438,6 +2442,591 @@
       "teacher": "Учитель",
       "moduleLeader": "РУКОВОДИТЕЛЬ МОДУЛЯ",
       "system": "СИСТЕМА"
+    }
+  },
+
+  "studentPanel": {
+    "dashboard": {
+      "title": "Панель ученика",
+      "welcomeBack": "Добро пожаловать",
+      "academicProgress": "Вот обзор вашего академического прогресса",
+      "overviewCard": "Обзор",
+      "statsCards": {
+        "subjects": "Предметы",
+        "pendingAssignments": "Ожидающие задания",
+        "completedAssignments": "Выполненные задания",
+        "averageGrade": "Средняя оценка",
+        "attendance": "Посещаемость",
+        "upcomingEvents": "Предстоящие события"
+      },
+      "sections": {
+        "recentGrades": "Последние оценки",
+        "upcomingAssignments": "Предстоящие задания",
+        "dailyAttendance": "Ежедневная посещаемость",
+        "todaySchedule": "Расписание на сегодня",
+        "announcements": "Последние объявления"
+      },
+      "quickActions": {
+        "title": "Быстрые действия",
+        "viewAllGrades": "Просмотреть все оценки",
+        "viewAllAssignments": "Просмотреть все задания",
+        "viewSchedule": "Просмотреть расписание",
+        "viewAttendance": "Просмотреть посещаемость"
+      },
+      "emptyStates": {
+        "noRecentGrades": "Нет последних оценок",
+        "noPendingAssignments": "Нет ожидающих заданий",
+        "noAttendanceRecords": "Записи о посещаемости не найдены",
+        "noUpcomingClasses": "Нет уроков на сегодня",
+        "noAnnouncements": "Нет последних объявлений"
+      },
+      "loading": {
+        "dashboardData": "Загрузка данных панели...",
+        "grades": "Загрузка оценок...",
+        "assignments": "Загрузка заданий...",
+        "attendance": "Загрузка записей посещаемости...",
+        "schedule": "Загрузка расписания..."
+      }
+    },
+    "navigation": {
+      "dashboard": "Панель управления",
+      "courses": "Мои курсы",
+      "assignments": "Задания",
+      "grades": "Оценки",
+      "schedule": "Расписание",
+      "attendance": "Посещаемость",
+      "messages": "Сообщения",
+      "announcements": "Объявления",
+      "profile": "Профиль",
+      "settings": "Настройки",
+      "dailyAttendance":"Ежедневная посещаемость",
+      "tests":"Тесты",
+      "flashcards":"Флеш-карты"
+    },
+    "assignments": {
+      "title": "Задания",
+      "description": "Просмотр и управление заданиями по курсам",
+      "loading": "Загрузка заданий...",
+      "defaultFileName": "Документ задания",
+      "searchPlaceholder": "Поиск заданий...",
+      "filters": {
+        "allCourses": "Все курсы",
+        "selectCourse": "Выберите курс",
+        "tabs": {
+          "all": "Все",
+          "pending": "Ожидающие",
+          "inProgress": "В процессе",
+          "completed": "Выполнено",
+          "overdue": "Просрочено",
+          "upcoming": "Предстоящие",
+          "submitted": "Отправлено",
+          "resubmitted": "Переотправлено",
+          "dueSoon": "Скоро срок"
+        }
+      },
+      "assignmentCard": {
+        "dueDate": "Срок сдачи",
+        "subject": "Предмет",
+        "points": "Баллы",
+        "status": "Статус",
+        "viewDetails": "Подробности",
+        "downloadMaterials": "Скачать материалы",
+        "assigned": "Назначено",
+        "due": "Срок",
+        "at": "в"
+      },
+      "status": {
+        "pending": "Ожидает",
+        "inProgress": "В процессе",
+        "completed": "Выполнено",
+        "overdue": "Просрочено",
+        "upcoming": "Предстоящее",
+        "submitted": "Отправлено",
+        "graded": "Оценено",
+        "accepted": "Принято",
+        "rejected": "Отклонено",
+        "resubmitted": "Переотправлено",
+        "dueSoon": "Скоро срок"
+      },
+      "modal": {
+        "title": "Детали задания",
+        "description": "Описание",
+        "noDescription": "Описание не предоставлено",
+        "dueDate": "Срок сдачи",
+        "subject": "Предмет",
+        "points": "Общие баллы",
+        "materials": "Материалы задания",
+        "submissions": "Мои работы",
+        "feedback": "Отзыв учителя",
+        "grade": "Оценка",
+        "submitAssignment": "Сдать задание",
+        "viewSubmission": "Просмотреть работу",
+        "resubmit": "Пересдать",
+        "downloadMaterial": "Скачать",
+        "close": "Закрыть"
+      },
+      "general": "Общие",
+      "attachments": "Вложения",
+      "submittedOn": "Отправлено {{date}}",
+      "completedOn": "Завершено {{date}}",
+      "grade": "Оценка",
+      "feedback": "Отзыв",
+      "notSubmittedYet": "Еще не отправлено",
+      "noFilesUploaded": "Файлы не загружены",
+      "submissionWithoutFiles": "Работа выполнена (без файлов)",
+      "useFormBelow": "Используйте форму ниже для отправки вашего задания",
+      "notGradedYet": "Еще не оценено",
+      "feedbackAfterSubmission": "Отзыв будет предоставлен после отправки",
+      "viewDetails": "Подробности",
+      "emptyStates": {
+        "noAssignments": "Задания не найдены",
+        "noAssignmentsForFilters": "Попробуйте изменить поиск или фильтры для поиска заданий",
+        "noMaterials": "Нет материалов для этого задания"
+      },
+      "loading": {
+        "assignments": "Загрузка заданий...",
+        "assignmentDetails": "Загрузка деталей задания..."
+      },
+      "messages": {
+        "loadingError": "Не удалось загрузить данные заданий",
+        "fileUrlMissing": "URL файла отсутствует",
+        "downloadingFile": "Скачивание {{fileName}}...",
+        "downloadError": "Не удалось скачать файл"
+      }
+    },
+    "assignmentDetail": {
+      "title": "Детали задания",
+      "backToAssignments": "Назад к заданиям",
+      "description": "Описание",
+      "dueDates": "Сроки сдачи",
+      "assigned": "Назначено",
+      "due": "Срок",
+      "at": "в",
+      "assignmentMaterials": "Материалы задания",
+      "materialFromTeacher": "Материал задания от вашего учителя",
+      "view": "Просмотреть",
+      "download": "Скачать",
+      "yourSubmission": "Ваша работа",
+      "submittedOn": "Отправлено {{date}} в {{time}}",
+      "submissionRejected": "Ваша работа была отклонена. Пожалуйста, отправьте новую версию.",
+      "submissionAccepted": "Ваша работа была принята.",
+      "submissionUnderReview": "Ваша работа на рассмотрении.",
+      "grade": "Оценка",
+      "teacherFeedback": "Отзыв учителя",
+      "submissionAttempts": "Попытки отправки",
+      "maxAttemptsReached": "Вы достигли максимального количества попыток отправки",
+      "notSubmittedYet": "Еще не отправлено",
+      "noFilesUploaded": "Файлы не загружены",
+      "submissionWithoutFiles": "Работа выполнена (без файлов)",
+      "useFormBelow": "Используйте форму ниже для отправки вашего задания",
+      "notGradedYet": "Еще не оценено",
+      "feedbackAfterSubmission": "Отзыв будет предоставлен после отправки",
+      "dropFileHere": "Перетащите файл сюда...",
+      "dragDropFile": "Перетащите файл сюда или нажмите для выбора файла",
+      "supportedFileTypes": "Поддерживаемые типы файлов: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, JPG, PNG",
+      "uploadProgress": "{{progress}}% загружено",
+      "uploading": "Загрузка... {{progress}}%",
+      "submitAssignment": "Отправить задание",
+      "resubmitAssignment": "Переотправить задание",
+      "submissionAcceptedMessage": "Ваша работа была принята вашим учителем.",
+      "submissionUnderReviewMessage": "Ваша работа в настоящее время на рассмотрении у вашего учителя. Вы сможете переотправить ее, если она будет отклонена.",
+      "maxAttemptsMessage": "Ваша работа была отклонена, и вы использовали все доступные попытки отправки. Пожалуйста, обратитесь к своему учителю за дальнейшей помощью.",
+      "assignmentDocument": "Документ задания",
+      "loading": "Загрузка деталей задания...",
+      "errors": {
+        "missingId": "Отсутствует ID задания",
+        "notFound": "Задание не найдено",
+        "noAccess": "Задание, которое вы ищете, не существует или у вас нет к нему доступа.",
+        "loadingFailed": "Не удалось загрузить детали задания"
+      }
+    },
+    "grades": {
+      "title": "Мои оценки",
+      "description": "Просмотр академического прогресса и посещаемости",
+      "loading": "Загрузка оценок...",
+      "searchPlaceholder": "Поиск предметов или учителей...",
+      "viewFullDetails": "Посмотреть полную информацию",
+      "noSubjectsFound": "Предметы не найдены",
+      "noSubjectsMessage": "У вас пока нет назначенных предметов или ваш поиск не дал результатов",
+      "messages": {
+        "loadingError": "Не удалось загрузить данные оценок. Используются примерные данные."
+      },
+      "diagnostics": {
+        "title": "Диагностика базы данных",
+        "loginRequired": "Для запуска диагностики необходимо войти в систему",
+        "setupVerified": "Настройка базы данных успешно проверена!",
+        "issuesFound": "Обнаружены проблемы с базой данных: {{message}}",
+        "failed": "Не удалось запустить диагностику",
+        "tablesStatus": "Статус таблиц",
+        "userData": "Данные пользователя",
+        "classes": "Классы",
+        "subjects": "Предметы",
+        "noInfo": "Диагностическая информация недоступна. Запустите проверку для подтверждения настройки базы данных."
+      },
+      "overallPerformance": "Общая успеваемость",
+      "subjectGrades": "Оценки по предметам",
+      "recentGrades": "Последние оценки",
+      "gradeHistory": "История оценок",
+      "filters": {
+        "allSubjects": "Все предметы",
+        "selectSubject": "Выберите предмет",
+        "selectQuarter": "Выберите четверть",
+        "allQuarters": "Все четверти"
+      },
+      "gradeCard": {
+        "subject": "Предмет",
+        "lesson": "Урок",
+        "grade": "Оценка",
+        "date": "Дата",
+        "quarter": "Четверть",
+        "teacher": "Учитель",
+        "feedback": "Отзыв",
+        "viewDetails": "Подробности"
+      },
+      "statistics": {
+        "averageGrade": "Средняя оценка",
+        "highestGrade": "Высшая оценка",
+        "lowestGrade": "Низшая оценка",
+        "totalAssignments": "Всего заданий",
+        "completedAssignments": "Выполнено",
+        "pendingAssignments": "Ожидает"
+      },
+      "performance": {
+        "excellent": "Отлично",
+        "good": "Хорошо",
+        "satisfactory": "Удовлетворительно",
+        "needsImprovement": "Требует улучшения",
+        "unsatisfactory": "Неудовлетворительно"
+      },
+      "emptyStates": {
+        "noGrades": "Оценки пока недоступны",
+        "noGradesForSubject": "Оценки по этому предмету не найдены",
+        "noGradesForQuarter": "Оценки за эту четверть не записаны"
+      }
+    },
+    "dailyAttendance": {
+      "title": "Ежедневная посещаемость",
+      "loading": "Загрузка данных посещаемости...",
+      "weekdays": {
+        "monday": "Пн",
+        "tuesday": "Вт",
+        "wednesday": "Ср",
+        "thursday": "Чт",
+        "friday": "Пт",
+        "saturday": "Сб",
+        "sunday": "Вс"
+      },
+      "status": {
+        "present": "Присутствует",
+        "late": "Опоздание",
+        "excused": "Уважительная причина",
+        "absent": "Отсутствует"
+      }
+    },
+    "announcements": {
+      "title": "Объявления",
+      "description": "Оставайтесь в курсе важной информации",
+      "searchPlaceholder": "Поиск объявлений...",
+      "filter": "Фильтр",
+      "markAllAsRead": "Отметить все как прочитанные"
+    },
+    "courses": {
+      "title": "Мои курсы",
+      "description": "Просмотр и доступ к вашим курсам",
+      "myClasses": "Мои классы",
+      "classTypeClasses": "Классы {{className}}",
+      "classSubjects": "Предметы {{className}}",
+      "selectClassType": "Выберите тип класса для просмотра ваших классов",
+      "selectClass": "Выберите класс для просмотра его предметов",
+      "viewSubjects": "Просмотр и управление зарегистрированными предметами",
+      "back": "Назад",
+      "searchClassTypes": "Поиск типов классов...",
+      "searchClasses": "Поиск классов...",
+      "searchSubjects": "Поиск предметов...",
+      "loadingClassTypes": "Загрузка типов классов...",
+      "loadingClasses": "Загрузка классов...",
+      "loadingSubjects": "Загрузка предметов...",
+      "tryAgain": "Попробовать снова",
+      "noClassTypesAvailable": "Типы классов недоступны",
+      "noClassTypesMessage": "В системе не настроены типы классов.",
+      "noClassTypesFound": "Типы классов не найдены",
+      "noClassTypesSearchMessage": "Не найдены типы классов, соответствующие \"{{searchTerm}}\".",
+      "showingResults": "Показано {{count}} {{type}}",
+      "classType": "тип класса",
+      "classTypes": "типов классов",
+      "class": "класс",
+      "classes": "классов",
+      "subject": "предмет",
+      "subjects": "предметов",
+      "viewYourClasses": "Просмотр ваших классов {{className}}",
+      "viewClasses": "Просмотреть классы",
+      "noClassesFound": "Классы не найдены",
+      "notEnrolledInClasses": "Вы не зарегистрированы ни в одном классе {{className}}.",
+      "noClassesSearchMessage": "Не найдены классы, соответствующие \"{{searchTerm}}\".",
+      "level": "Уровень",
+      "viewSubjectsFor": "Просмотр предметов для {{className}}",
+      "noSubjectsFound": "Предметы не найдены",
+      "noSubjectsSearchMessage": "Не найдены предметы, соответствующие \"{{searchTerm}}\".",
+      "noSubjectsForStatus": "У вас нет предметов со статусом {{status}}.",
+      "noSubjectsInClass": "В этом классе пока нет предметов.",
+      "inProgress": "в процессе",
+      "completed": "завершенных",
+      "subjectCurriculum": "Учебная программа и материалы по {{subjectName}}.",
+      "noCode": "Нет кода",
+      "viewCourse": "Просмотреть курс",
+      "statusInProgress": "В процессе",
+      "statusCompleted": "Завершено",
+      "statusNotStarted": "Не начато",
+      "statusUnknown": "Неизвестно",
+      "errors": {
+        "userNotAuthenticated": "Пользователь не аутентифицирован",
+        "fetchingClassTypes": "Не удалось получить типы классов",
+        "loadingClassTypes": "Не удалось загрузить типы классов. Пожалуйста, попробуйте еще раз.",
+        "loadingClassTypesFailed": "Не удалось загрузить типы классов",
+        "loadingCourses": "Не удалось загрузить курсы. Пожалуйста, попробуйте еще раз.",
+        "loadingCoursesFailed": "Не удалось загрузить ваши курсы"
+      },
+      "enrolledCourses": "Зарегистрированные курсы",
+      "courseDetails": "Детали курса",
+      "searchPlaceholder": "Поиск курсов...",
+      "courseCard": {
+        "teacher": "Учитель",
+        "schedule": "Расписание",
+        "room": "Кабинет",
+        "students": "Ученики",
+        "lessons": "Уроки",
+        "assignments": "Задания",
+        "viewCourse": "Просмотреть курс",
+        "viewLessons": "Просмотреть уроки",
+        "viewAssignments": "Просмотреть задания"
+      },
+      "courseInfo": {
+        "description": "Описание",
+        "objectives": "Цели обучения",
+        "syllabus": "Программа",
+        "materials": "Материалы курса",
+        "announcements": "Объявления курса"
+      },
+      "emptyStates": {
+        "noCourses": "Вы еще не зарегистрированы ни на одном курсе",
+        "noCoursesForSearch": "Нет курсов, соответствующих поиску",
+        "noMaterials": "Нет материалов курса",
+        "noAnnouncements": "Нет объявлений курса"
+      },
+      "loading": {
+        "courses": "Загрузка курсов...",
+        "courseDetails": "Загрузка деталей курса..."
+      }
+    },
+    "schedule": {
+      "title": "Мое расписание",
+      "description": "Просмотр расписания занятий и расписания",
+      "todaySchedule": "Расписание на сегодня",
+      "weeklySchedule": "Недельное расписание",
+      "upcomingClasses": "Предстоящие уроки",
+      "filters": {
+        "today": "Сегодня",
+        "thisWeek": "Эта неделя",
+        "nextWeek": "Следующая неделя",
+        "allSubjects": "Все предметы",
+        "selectSubject": "Выберите предмет"
+      },
+      "scheduleCard": {
+        "time": "Время",
+        "subject": "Предмет",
+        "teacher": "Учитель",
+        "room": "Кабинет",
+        "duration": "Продолжительность",
+        "type": "Тип",
+        "joinClass": "Присоединиться к уроку",
+        "viewDetails": "Подробности"
+      },
+      "timeSlots": {
+        "morning": "Утро",
+        "afternoon": "День",
+        "evening": "Вечер"
+      },
+      "classTypes": {
+        "lecture": "Лекция",
+        "practical": "Практика",
+        "seminar": "Семинар",
+        "lab": "Лаборатория",
+        "exam": "Экзамен"
+      },
+      "emptyStates": {
+        "noSchedule": "Расписание недоступно",
+        "noClassesToday": "Нет уроков на сегодня",
+        "noClassesThisWeek": "Нет уроков на эту неделю",
+        "noUpcomingClasses": "Нет предстоящих уроков"
+      },
+      "loading": {
+        "schedule": "Загрузка расписания...",
+        "classDetails": "Загрузка деталей урока..."
+      }
+    },
+    "attendance": {
+      "title": "Моя посещаемость",
+      "description": "Просмотр записей и статистики посещаемости",
+      "attendanceOverview": "Обзор посещаемости",
+      "attendanceHistory": "История посещаемости",
+      "monthlyAttendance": "Месячная посещаемость",
+      "filters": {
+        "allSubjects": "Все предметы",
+        "selectSubject": "Выберите предмет",
+        "selectMonth": "Выберите месяц",
+        "allMonths": "Все месяцы"
+      },
+      "statistics": {
+        "attendanceRate": "Уровень посещаемости",
+        "totalClasses": "Всего уроков",
+        "attendedClasses": "Посещено",
+        "missedClasses": "Пропущено",
+        "lateArrivals": "Опоздания",
+        "excusedAbsences": "Уважительные причины"
+      },
+      "status": {
+        "present": "Присутствует",
+        "absent": "Отсутствует",
+        "late": "Опоздал",
+        "excused": "Уважительная причина"
+      },
+      "attendanceRecord": {
+        "date": "Дата",
+        "subject": "Предмет",
+        "lesson": "Урок",
+        "status": "Статус",
+        "time": "Время",
+        "notes": "Заметки"
+      },
+      "emptyStates": {
+        "noAttendanceRecords": "Записи о посещаемости не найдены",
+        "noRecordsForSubject": "Нет записей о посещаемости по этому предмету",
+        "noRecordsForMonth": "Нет записей о посещаемости за этот месяц"
+      },
+      "loading": {
+        "attendance": "Загрузка записей посещаемости...",
+        "attendanceDetails": "Загрузка деталей посещаемости..."
+      }
+    },
+    "messages": {
+      "title": "Сообщения",
+      "description": "Общение с учителями и одноклассниками",
+      "inbox": "Входящие",
+      "sent": "Отправленные",
+      "compose": "Написать сообщение",
+      "newMessage": "Новое сообщение",
+      "messageActions": {
+        "reply": "Ответить",
+        "forward": "Переслать",
+        "delete": "Удалить",
+        "markAsRead": "Отметить как прочитанное",
+        "markAsUnread": "Отметить как непрочитанное"
+      },
+      "messageForm": {
+        "recipient": "Получатель",
+        "subject": "Тема",
+        "message": "Сообщение",
+        "send": "Отправить",
+        "cancel": "Отмена",
+        "selectRecipient": "Выберите получателя...",
+        "enterSubject": "Введите тему...",
+        "enterMessage": "Введите ваше сообщение..."
+      },
+      "validation": {
+        "recipientRequired": "Получатель обязателен",
+        "subjectRequired": "Тема обязательна",
+        "messageRequired": "Содержание сообщения обязательно"
+      },
+      "emptyStates": {
+        "noMessages": "Сообщения не найдены",
+        "noMessageSelected": "Выберите сообщение для просмотра",
+        "emptyInbox": "Ваши входящие пусты",
+        "emptySent": "Нет отправленных сообщений"
+      },
+      "loading": {
+        "messages": "Загрузка сообщений...",
+        "sending": "Отправка сообщения..."
+      },
+      "success": {
+        "messageSent": "Сообщение отправлено успешно",
+        "messageDeleted": "Сообщение удалено успешно"
+      },
+      "errors": {
+        "failedToSend": "Не удалось отправить сообщение",
+        "failedToDelete": "Не удалось удалить сообщение",
+        "failedToLoad": "Не удалось загрузить сообщения"
+      }
+    },
+    "profile": {
+      "title": "Мой профиль",
+      "description": "Просмотр и управление информацией профиля",
+      "personalInfo": "Личная информация",
+      "academicInfo": "Академическая информация",
+      "contactInfo": "Контактная информация",
+      "securitySettings": "Настройки безопасности",
+      "fields": {
+        "fullName": "Полное имя",
+        "email": "Email",
+        "phone": "Номер телефона",
+        "dateOfBirth": "Дата рождения",
+        "address": "Адрес",
+        "studentId": "ID ученика",
+        "grade": "Уровень класса",
+        "class": "Класс",
+        "enrollmentDate": "Дата зачисления",
+        "guardian": "Опекун/Родитель"
+      },
+      "actions": {
+        "edit": "Редактировать профиль",
+        "save": "Сохранить изменения",
+        "cancel": "Отмена",
+        "changePassword": "Изменить пароль",
+        "uploadPhoto": "Загрузить фото"
+      },
+      "validation": {
+        "nameRequired": "Полное имя обязательно",
+        "emailRequired": "Email обязателен",
+        "emailInvalid": "Пожалуйста, введите действительный email",
+        "phoneInvalid": "Пожалуйста, введите действительный номер телефона"
+      },
+      "success": {
+        "profileUpdated": "Профиль обновлен успешно",
+        "passwordChanged": "Пароль изменен успешно",
+        "photoUploaded": "Фото профиля загружено успешно"
+      },
+      "errors": {
+        "updateFailed": "Не удалось обновить профиль",
+        "passwordChangeFailed": "Не удалось изменить пароль",
+        "photoUploadFailed": "Не удалось загрузить фото"
+      }
+    },
+    "common": {
+      "loading": "Загрузка...",
+      "error": "Произошла ошибка",
+      "success": "Успешно",
+      "save": "Сохранить",
+      "cancel": "Отмена",
+      "edit": "Редактировать",
+      "delete": "Удалить",
+      "view": "Просмотр",
+      "download": "Скачать",
+      "upload": "Загрузить",
+      "search": "Поиск",
+      "filter": "Фильтр",
+      "sort": "Сортировка",
+      "refresh": "Обновить",
+      "viewAll": "Просмотреть все",
+      "showMore": "Показать больше",
+      "showLess": "Показать меньше",
+      "noData": "Данные недоступны",
+      "tryAgain": "Попробовать снова",
+      "back": "Назад",
+      "next": "Далее",
+      "previous": "Предыдущий",
+      "close": "Закрыть",
+      "confirm": "Подтвердить",
+      "yes": "Да",
+      "no": "Нет"
     }
   }
 }

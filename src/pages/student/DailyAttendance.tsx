@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'react-feather'
 import styled from 'styled-components'
 import { PageTitle } from '../../components/common'
@@ -22,6 +23,7 @@ interface DailyAttendance {
 
 const DailyAttendance: React.FC = () => {
 	const { user } = useAuth()
+	const { t } = useTranslation()
 	const [currentMonth, setCurrentMonth] = useState(new Date())
 	const [attendanceData, setAttendanceData] = useState<DailyAttendance[]>([])
 	const [loading, setLoading] = useState(false)
@@ -144,7 +146,7 @@ const DailyAttendance: React.FC = () => {
 
 	return (
 		<Container>
-			<PageTitle>Daily Attendance</PageTitle>
+			<PageTitle>{t('studentPanel.dailyAttendance.title')}</PageTitle>
 
 			<CardWrapper>
 				<CalendarCard>
@@ -161,19 +163,19 @@ const DailyAttendance: React.FC = () => {
 					</CalendarHeader>
 
 					<WeekdayHeader>
-						<Weekday>Mon</Weekday>
-						<Weekday>Tue</Weekday>
-						<Weekday>Wed</Weekday>
-						<Weekday>Thu</Weekday>
-						<Weekday>Fri</Weekday>
-						<Weekday>Sat</Weekday>
-						<Weekday>Sun</Weekday>
+						<Weekday>{t('studentPanel.dailyAttendance.weekdays.monday')}</Weekday>
+						<Weekday>{t('studentPanel.dailyAttendance.weekdays.tuesday')}</Weekday>
+						<Weekday>{t('studentPanel.dailyAttendance.weekdays.wednesday')}</Weekday>
+						<Weekday>{t('studentPanel.dailyAttendance.weekdays.thursday')}</Weekday>
+						<Weekday>{t('studentPanel.dailyAttendance.weekdays.friday')}</Weekday>
+						<Weekday>{t('studentPanel.dailyAttendance.weekdays.saturday')}</Weekday>
+						<Weekday>{t('studentPanel.dailyAttendance.weekdays.sunday')}</Weekday>
 					</WeekdayHeader>
 
 					<CalendarGrid>
 						{loading ? (
 							<LoadingContainer>
-								<p>Loading attendance data...</p>
+								<p>{t('studentPanel.dailyAttendance.loading')}</p>
 							</LoadingContainer>
 						) : (
 							renderCalendarDays()
@@ -183,19 +185,19 @@ const DailyAttendance: React.FC = () => {
 					<CalendarLegend>
 						<LegendItem>
 							<LegendColor status='present' />
-							<span>Present</span>
+							<span>{t('studentPanel.dailyAttendance.status.present')}</span>
 						</LegendItem>
 						<LegendItem>
 							<LegendColor status='late' />
-							<span>Late</span>
+							<span>{t('studentPanel.dailyAttendance.status.late')}</span>
 						</LegendItem>
 						<LegendItem>
 							<LegendColor status='excused' />
-							<span>Excused</span>
+							<span>{t('studentPanel.dailyAttendance.status.excused')}</span>
 						</LegendItem>
 						<LegendItem>
 							<LegendColor status='absent' />
-							<span>Absent</span>
+							<span>{t('studentPanel.dailyAttendance.status.absent')}</span>
 						</LegendItem>
 					</CalendarLegend>
 				</CalendarCard>
