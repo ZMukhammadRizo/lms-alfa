@@ -1321,7 +1321,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
             setTeacherSpecificCourses(subjectsData.map(s => ({ 
               id: s.id, 
               name: s.subjectname || `Subject ${s.id}`, 
-              color: getRandomColor(s.subjectname || `Subject ${s.id}`)
+              color: getRandomColor(s.subjectname || `Subject ${s.id}`) 
             })));
               } else {
                 setTeacherSpecificCourses([]);
