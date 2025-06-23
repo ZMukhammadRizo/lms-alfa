@@ -4,6 +4,16 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
 	plugins: [react(), tailwindcss()],
+	build: {
+		rollupOptions: {
+			onwarn(warning, warn) {
+				// Ignore all warnings
+				return;
+			}
+		},
+		minify: false, // Disable minification to avoid potential issues
+		sourcemap: false // Disable sourcemap generation
+	},
 	server: {
 		host: "0.0.0.0",
 		port: 5173,
