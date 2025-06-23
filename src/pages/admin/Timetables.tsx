@@ -1312,7 +1312,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
           // Get details for these subject IDs from the subjects table
               const { data: subjectsData, error: subjectsError } = await supabase
                 .from('subjects')
-                .select('id, subjectname, color') // Assuming 'name' is the column for subject name
+                .select('id, subjectname') // Assuming 'name' is the column for subject name
                 .in('id', subjectIds);
 
               if (subjectsError) throw subjectsError;
@@ -1321,7 +1321,7 @@ const Timetables: React.FC<TimetablesProps> = ({ loggedInTeacherId, readOnly = f
             setTeacherSpecificCourses(subjectsData.map(s => ({ 
               id: s.id, 
               name: s.subjectname || `Subject ${s.id}`, 
-              color: s.color || getRandomColor(s.subjectname || `Subject ${s.id}`)
+              color: getRandomColor(s.subjectname || `Subject ${s.id}`)
             })));
               } else {
                 setTeacherSpecificCourses([]);
