@@ -8,6 +8,7 @@
     "edit": "Edit",
     "on": "On",
     "add": "Add",
+    "viewDetails":"View Details",
     "remove": "Remove",
     "search": "Search",
     "pendingReview": "Pending Review",
@@ -1820,15 +1821,33 @@
     },
     "dailyAttendance": {
       "title": "Daily Attendance",
+      "subtitle": "Track your daily attendance and maintain perfect records",
       "loading": "Loading attendance data...",
+      "attendanceRate": "Attendance Rate",
+      "totalDays": "Total Days",
+      "legendTitle": "Attendance Status",
+      "months": {
+        "january": "January",
+        "february": "February",
+        "march": "March",
+        "april": "April",
+        "may": "May",
+        "june": "June",
+        "july": "July",
+        "august": "August",
+        "september": "September",
+        "october": "October",
+        "november": "November",
+        "december": "December"
+      },
       "weekdays": {
-        "monday": "Mon",
-        "tuesday": "Tue",
-        "wednesday": "Wed",
-        "thursday": "Thu",
-        "friday": "Fri",
-        "saturday": "Sat",
-        "sunday": "Sun"
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
       },
       "status": {
         "present": "Present",

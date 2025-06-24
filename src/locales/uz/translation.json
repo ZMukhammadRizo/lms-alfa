@@ -1397,37 +1397,35 @@
   
     "attendance": {
       "title": "Farzandlarimning davomati",
-      "description": "Farzandlaringizning dars davomatini kuzatib boring",
-      "selectChild": "Bolani tanlang:",
-      "allChildren": "Barcha bolalar",
+      "description": "Farzandlaringizning dars davomatini kuzatish",
+      "selectChild": "Farzandni tanlang:",
+      "allChildren": "Barcha farzandlar",
       "noStudentsAvailable": "O'quvchilar mavjud emas",
       "errorLoading": "Ma'lumotlarni yuklashda xatolik",
       "loadingRecords": "Davomat yozuvlari yuklanmoqda...",
       "noRecordsAvailable": "Davomat yozuvlari mavjud emas",
-      "noRecordsForChildren": "Farzandlaringiz uchun hali davomat yozuvlari yo'q.",
-      "noRecordsForChild": "Bu bola uchun hali davomat yozuvlari yo'q.",
+      "noRecordsForChildren": "Sizning farzandlaringiz uchun hali davomat yozuvlari yo'q.",
+      "noRecordsForChild": "Bu farzand uchun hali davomat yozuvlari yo'q.",
       "summary": "Davomat xulosasi",
       "day": "kun",
-      "days": "kun",
-      "noDataToDisplay": "Ko'rsatish uchun ma'lumot yo'q",
+      "days": "kunlar",
+      "noDataToDisplay": "Ko'rsatadigan ma'lumot yo'q",
       "detailedRecords": "Batafsil davomat yozuvlari",
       "record": "yozuv",
-      "records": "yozuv",
+      "records": "yozuvlar",
       "date": "Sana",
       "subject": "Fan",
       "lesson": "Dars",
+      "present": "Kelgan",
+      "absent": "Kelmagan",
+      "total": "Jami",
       "status": {
         "label": "Holat",
-        "present": "Hozir",
-        "late": "Kech",
+        "present": "Kelgan",
+        "late": "Kech kelgan",
         "excused": "Uzrli",
-        "absent": "Yo'q"
-      },
-      "present": "Hozir",
-      "absent": "Yo'q",
-      "late": "Kech",
-      "excused": "Uzrli",
-      "total": "Jami"
+        "absent": "Kelmagan"
+      }
     },
     "dailyAttendance": {
       "title": "Kunlik davomat",
@@ -1776,26 +1774,49 @@
       "newMessage": "Yangi xabar",
       "inbox": "Kiruvchi",
       "sent": "Yuborilgan",
-      "compose": "Yozish",
-      "recipient": "Qabul qiluvchi",
-      "subject": "Mavzu",
-      "message": "Xabar",
-      "send": "Yuborish",
-      "reply": "Javob berish",
-      "forward": "Yo'naltirish",
-      "delete": "O'chirish",
-      "markAsRead": "O'qilgan deb belgilash",
-      "markAsUnread": "O'qilmagan deb belgilash",
-      "noMessages": "Xabarlar topilmadi",
-      "loadingMessages": "Xabarlar yuklanmoqda...",
-      "messageSent": "Xabar muvaffaqiyatli yuborildi",
-      "failedToSend": "Xabarni yuborish muvaffaqiyatsiz",
-      "selectRecipient": "Qabul qiluvchini tanlang...",
-      "enterSubject": "Mavzuni kiriting...",
-      "enterMessage": "Xabaringizni kiriting...",
-      "recipientRequired": "Qabul qiluvchi talab qilinadi",
-      "subjectRequired": "Mavzu talab qilinadi",
-      "messageRequired": "Xabar talab qilinadi"
+      "compose": "Xabar yozish",
+      "newMessage": "Yangi xabar",
+      "messageActions": {
+        "reply": "Javob berish",
+        "forward": "Yo'naltirish",
+        "delete": "O'chirish",
+        "markAsRead": "O'qilgan deb belgilash",
+        "markAsUnread": "O'qilmagan deb belgilash"
+      },
+      "messageForm": {
+        "recipient": "Qabul qiluvchi",
+        "subject": "Mavzu",
+        "message": "Xabar",
+        "send": "Yuborish",
+        "cancel": "Bekor qilish",
+        "selectRecipient": "Qabul qiluvchini tanlang...",
+        "enterSubject": "Mavzuni kiriting...",
+        "enterMessage": "Xabaringizni kiriting..."
+      },
+      "validation": {
+        "recipientRequired": "Qabul qiluvchi talab qilinadi",
+        "subjectRequired": "Mavzu talab qilinadi",
+        "messageRequired": "Xabar mazmuni talab qilinadi"
+      },
+      "emptyStates": {
+        "noMessages": "Xabarlar topilmadi",
+        "noMessageSelected": "Ko'rish uchun xabarni tanlang",
+        "emptyInbox": "Sizning kiruvchi xabarlaringiz bo'sh",
+        "emptySent": "Yuborilgan xabarlar yo'q"
+      },
+      "loading": {
+        "messages": "Xabarlar yuklanmoqda...",
+        "sending": "Xabar yuborilmoqda..."
+      },
+      "success": {
+        "messageSent": "Xabar muvaffaqiyatli yuborildi",
+        "messageDeleted": "Xabar muvaffaqiyatli o'chirildi"
+      },
+      "errors": {
+        "failedToSend": "Xabarni yuborish muvaffaqiyatsiz",
+        "failedToDelete": "Xabarni o'chirish muvaffaqiyatsiz",
+        "failedToLoad": "Xabarlarni yuklash muvaffaqiyatsiz"
+      }
     },
     "navigation": {
       "dashboard": "Boshqaruv paneli",
@@ -2033,6 +2054,43 @@
         "notFound": "Topshiriq topilmadi",
         "noAccess": "Siz qidirayotgan topshiriq mavjud emas yoki unga kirish huquqingiz yo'q.",
         "loadingFailed": "Topshiriq tafsilotlarini yuklashda xatolik"
+      }
+    },
+    "dailyAttendance": {
+      "title": "Kunlik davomat",
+      "subtitle": "Kunlik davomatingizni kuzatib boring va mukammal yozuvlarni saqlang",
+      "loading": "Davomat ma'lumotlari yuklanmoqda...",
+      "attendanceRate": "Davomat darajasi",
+      "totalDays": "Umumiy kunlar",
+      "legendTitle": "Davomat holati",
+      "months": {
+        "january": "Yanvar",
+        "february": "Fevral",
+        "march": "Mart",
+        "april": "Aprel",
+        "may": "May",
+        "june": "Iyun",
+        "july": "Iyul",
+        "august": "Avgust",
+        "september": "Sentyabr",
+        "october": "Oktyabr",
+        "november": "Noyabr",
+        "december": "Dekabr"
+      },
+      "weekdays": {
+        "mon": "Du",
+        "tue": "Se",
+        "wed": "Ch",
+        "thu": "Pa",
+        "fri": "Ju",
+        "sat": "Sh",
+        "sun": "Ya"
+      },
+      "status": {
+        "present": "Keldi",
+        "late": "Kech keldi",
+        "excused": "Uzrli",
+        "absent": "Kelmagan"
       }
     },
     "grades": {

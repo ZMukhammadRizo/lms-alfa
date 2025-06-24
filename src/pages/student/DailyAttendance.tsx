@@ -23,11 +23,29 @@ interface DailyAttendance {
 }
 
 const DailyAttendance: React.FC = () => {
-	const { t } = useTranslation()
+	const { t, i18n } = useTranslation()
 	const { user } = useAuth()
 	const [attendanceData, setAttendanceData] = useState<DailyAttendance[]>([])
 	const [loading, setLoading] = useState(true)
 	const [currentMonth, setCurrentMonth] = useState(new Date())
+
+	const getMonthName = (monthIndex: number) => {
+		const monthKey = [
+			'january',
+			'february',
+			'march',
+			'april',
+			'may',
+			'june',
+			'july',
+			'august',
+			'september',
+			'october',
+			'november',
+			'december',
+		][monthIndex]
+		return t(`studentPanel.dailyAttendance.months.${monthKey}`)
+	}
 
 	useEffect(() => {
 		if (user) {
@@ -166,7 +184,7 @@ const DailyAttendance: React.FC = () => {
 			<Header>
 				<TitleSection>
 					<PageTitle>{t('studentPanel.dailyAttendance.title')}</PageTitle>
-					<Subtitle>Track your daily attendance and maintain perfect records</Subtitle>
+					<Subtitle>{t('studentPanel.dailyAttendance.subtitle')}</Subtitle>
 				</TitleSection>
 				<HeaderIcon>
 					<CalendarIcon size={32} />
@@ -186,7 +204,7 @@ const DailyAttendance: React.FC = () => {
 					</StatIcon>
 					<StatContent>
 						<StatValue>{stats.attendanceRate}%</StatValue>
-						<StatLabel>Attendance Rate</StatLabel>
+						<StatLabel>{t('studentPanel.dailyAttendance.attendanceRate')}</StatLabel>
 					</StatContent>
 				</StatCard>
 
@@ -201,7 +219,7 @@ const DailyAttendance: React.FC = () => {
 					</StatIcon>
 					<StatContent>
 						<StatValue>{stats.totalDays}</StatValue>
-						<StatLabel>Total Days</StatLabel>
+						<StatLabel>{t('studentPanel.dailyAttendance.totalDays')}</StatLabel>
 					</StatContent>
 				</StatCard>
 
@@ -216,7 +234,7 @@ const DailyAttendance: React.FC = () => {
 					</StatIcon>
 					<StatContent>
 						<StatValue>{stats.presentDays}</StatValue>
-						<StatLabel>Present</StatLabel>
+						<StatLabel>{t('studentPanel.dailyAttendance.status.present')}</StatLabel>
 					</StatContent>
 				</StatCard>
 
@@ -231,7 +249,7 @@ const DailyAttendance: React.FC = () => {
 					</StatIcon>
 					<StatContent>
 						<StatValue>{stats.absentDays}</StatValue>
-						<StatLabel>Absent</StatLabel>
+						<StatLabel>{t('studentPanel.dailyAttendance.status.absent')}</StatLabel>
 					</StatContent>
 				</StatCard>
 			</StatsContainer>
@@ -254,7 +272,7 @@ const DailyAttendance: React.FC = () => {
 						</MonthNavButton>
 						<MonthYearDisplay>
 							<MonthName>
-								{currentMonth.toLocaleDateString('en-US', { month: 'long' })}
+								{getMonthName(currentMonth.getMonth())}
 							</MonthName>
 							<YearName>
 								{currentMonth.getFullYear()}
@@ -271,9 +289,17 @@ const DailyAttendance: React.FC = () => {
 					</CalendarHeader>
 
 					<WeekdayHeader>
-						{['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day, index) => (
-							<Weekday key={day} isWeekend={index >= 5}>
-								{day.slice(0, 3)}
+						{[
+							t('studentPanel.dailyAttendance.weekdays.mon'),
+							t('studentPanel.dailyAttendance.weekdays.tue'),
+							t('studentPanel.dailyAttendance.weekdays.wed'),
+							t('studentPanel.dailyAttendance.weekdays.thu'),
+							t('studentPanel.dailyAttendance.weekdays.fri'),
+							t('studentPanel.dailyAttendance.weekdays.sat'),
+							t('studentPanel.dailyAttendance.weekdays.sun')
+						].map((day, index) => (
+							<Weekday key={index} isWeekend={index >= 5}>
+								{day}
 							</Weekday>
 						))}
 					</WeekdayHeader>
@@ -299,7 +325,7 @@ const DailyAttendance: React.FC = () => {
 					<CalendarLegend>
 						<LegendTitle>
 							<Info size={16} />
-							<span>Attendance Status</span>
+							<span>{t('studentPanel.dailyAttendance.legendTitle')}</span>
 						</LegendTitle>
 						<LegendItems>
 							<LegendItem>
