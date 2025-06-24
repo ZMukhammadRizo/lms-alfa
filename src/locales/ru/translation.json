@@ -571,7 +571,25 @@
     "absent": "Отсутствует",
     "late": "Опоздал",
     "excused": "Уважительная причина",
-    "total": "Всего"
+    "total": "Всего",
+    "monthlyAttendance": "Месячная посещаемость",
+    "overallAttendance": "Общая посещаемость",
+    "weeklyAttendance": "Недельная посещаемость",
+    "dailyAttendance": "Ежедневная посещаемость",
+    "attendanceCalendar": {
+      "title": "Календарь посещаемости",
+      "tracker": "Отслеживание ежедневной посещаемости",
+      "setStatus": "Установить статус",
+      "statusLegend": "Легенда статусов",
+      "clickDayToEdit": "Нажмите на рабочий день, чтобы установить статус посещаемости",
+      "loadingData": "Загрузка данных о посещаемости...",
+      "monthlyAttendance": "Месячная посещаемость",
+      "overallAttendance": "Общая посещаемость",
+      "present": "Присутствует",
+      "absent": "Отсутствует",
+      "late": "Опоздание", 
+      "excused": "Уважительная причина"
+    }
   },
   "language": {
     "code": "ru",
@@ -1738,7 +1756,8 @@
     "errorGeneratingReport": "Ошибка генерации отчета",
     "reportGenerated": "Отчет успешно сгенерирован",
     "failedToLoadClasses": "Не удалось загрузить классы",
-    "failedToLoadAttendance": "Не удалось загрузить данные посещаемости"
+    "failedToLoadAttendance": "Не удалось загрузить данные посещаемости",
+    "clickDayInstruction": "Нажмите на любой день для просмотра или редактирования статуса посещаемости"
   },
   "parent": {
     "dashboard": {
@@ -2102,7 +2121,26 @@
       "cannotLoadSchedule": "Не удалось загрузить расписание: отсутствует ID ученика.",
       "unknownCourse": "Неизвестный курс",
       "teacherNA": "Учитель не назначен",
-      "unknownLocation": "Неизвестное местоположение"
+      "unknownLocation": "Неизвестное местоположение",
+      "january": "Январь",
+      "february": "Февраль",
+      "march": "Март",
+      "april": "Апрель",
+      "may": "Май",
+      "june": "Июнь",
+      "july": "Июль",
+      "august": "Август",
+      "september": "Сентябрь",
+      "october": "Октябрь",
+      "november": "Ноябрь",
+      "december": "Декабрь",
+      "monday": "Понедельник",
+      "tuesday": "Вторник",
+      "wednesday": "Среда",
+      "thursday": "Четверг",
+      "friday": "Пятница",
+      "saturday": "Суббота",
+      "sunday": "Воскресенье"
     },
     "notifications": {
       "title": "Уведомления",

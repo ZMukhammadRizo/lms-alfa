@@ -9,6 +9,7 @@ import Input from './Input'
 import Loader from './Loader'
 import Pagination from './Pagination'
 import Row from './Row'
+import SearchInput from './SearchInput'
 import SubjectScheduleCard from './SubjectScheduleCard'
 import Switch from './Switch'
 
@@ -24,6 +25,7 @@ export {
 	Loader,
 	Pagination,
 	Row,
+	SearchInput,
 	SubjectScheduleCard,
 	Switch,
 }

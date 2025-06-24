@@ -39,6 +39,9 @@
     "unknownSubject": "Unknown Subject",
     "student": "Student"
   },
+  "errors":{
+    "noDataAvailable":"No Data Available"
+  },
   "navigation": {
     "dashboard": "Dashboard",
     "userManagement": "User Management",
@@ -91,7 +94,14 @@
     "september": "Sep",
     "october": "Oct",
     "november": "Nov",
-    "december": "Dec"
+    "december": "Dec",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday",
+    "sunday": "Sunday"
   },
   "assignSubjectModal": {
     "title": "Assign Subject to Grade",
@@ -167,6 +177,7 @@
     "noDescriptionAvailable": "No description available"
   },
   "attendance": {
+    "title": "Attandance",
     "monthlyAttendance": "Monthly Attendance",
     "overallAttendance": "Overall Attendance",
     "weeklyAttendance": "Weekly Attendance",
@@ -176,7 +187,21 @@
     "absent": "Absent",
     "late": "Late",
     "excused": "Excused",
-    "total": "Total"
+    "total": "Total",
+    "attendanceCalendar": {
+      "title": "Attendance Calendar",
+      "tracker": "Daily Attendance Tracker",
+      "setStatus": "Set Status",
+      "statusLegend": "Status Legend",
+      "clickDayToEdit": "Click on a weekday to set attendance status",
+      "loadingData": "Loading attendance data...",
+      "monthlyAttendance": "Monthly Attendance",
+      "overallAttendance": "Overall Attendance",
+      "present": "Present",
+      "absent": "Absent", 
+      "late": "Late",
+      "excused": "Excused"
+    }
   },
   "userMenu": {
     "myProfile": "My Profile",
@@ -364,6 +389,17 @@
     "passwordUpdated": "Password updated successfully",
     "profileUpdateFailed": "Failed to update profile",
     "passwordUpdateFailed": "Failed to update password"
+  },
+  "userProfile": {
+    "edit":"Edit Profile",
+    "resetPassword":"Reset Password",
+    "backToUsers":"Back to Users",
+    "userInformation":"User Information",
+    "fullName":"Full Name",
+    "lastLogin":"Last Login",
+    "email":"Email",
+    "dateOfBirth":"Date of Birth",
+    "createdOn":"Created On"
   },
   "classes": {
     "title": "Classes",
@@ -647,6 +683,7 @@
     "description": "Manage all submissions across classes",
     "searchByStudentOrAssignment": "Search by student or assignment",
     "viewSubmissions": "View Submissions",
+    "assignment": "Assignment",
     "viewFile": "View File",
     "submitted": "Submitted",
     "accepted": "Accepted",
@@ -718,6 +755,9 @@
     "searchClasses": "Search classes...",
     "searchStudents": "Search students...",
     "backToLevels": "Back to Levels",
+    "filterAndReport": "Filter and Report",
+    "searchLevels":"Search level...",
+    "studentList": "Student list...",
     "backToClasses": "Back to Classes",
     "loadingClasses": "Loading classes...",
     "loadingStudents": "Loading students...",
@@ -750,10 +790,22 @@
     "monthly": "Monthly (Current Month)",
     "export": "Export",
     "exporting": "Exporting...",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "clickDayInstruction": "Click on any day to view or edit attendance status",
+    "reports": {
+      "export": "Export",
+      "selectPeriod": "Select Period",
+      "weekly":"Weekly",
+      "monthly":"Monthly"
+    }
   },
   "grades": {
     "title": "Grades",
+    "addComment": "Add comment",
+    "cancel": "Cancel",
+    "student": "Student",
+    "saveComment": "Save comment",
+    "enterCommentHere": "Enter comment here...",
     "selectGradeLevel": "Select Grade Level",
     "searchGradeLevels": "Search grade levels...",
     "loadingLevels": "Loading grade levels...",
@@ -798,6 +850,9 @@
     "title": "Timetables",
     "manageTimetables": "Manage Class Timetables",
     "selectGradeSectionToView": "Select a grade section to view",
+    "loadingSchedule": "Loading schedule...",
+    "time": "Time",
+    "noLocationSpecified": "No location",
     "monthShort": {
       "jan": "Jan",
       "feb": "Feb",
@@ -1695,7 +1750,8 @@
         "missingId": "Missing assignment ID",
         "notFound": "Assignment not found",
         "noAccess": "The assignment you're looking for doesn't exist or you don't have access to it.",
-        "loadingFailed": "Failed to load assignment details"
+        "loadingFailed": "Failed to load assignment details",
+        "noDataAvailable": "No Data Available"
       }
     },
     "grades": {

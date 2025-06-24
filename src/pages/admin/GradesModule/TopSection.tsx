@@ -1,8 +1,9 @@
 import React from 'react'
-import { Calendar, Search, X } from 'react-feather'
+import { Calendar } from 'react-feather'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import { SearchInput } from '../../../components/ui'
 
 // Component props interface
 interface TopSectionProps {
@@ -55,20 +56,15 @@ const TopSection: React.FC<TopSectionProps> = ({
 			</HeaderInfo>
 
 			<ToolbarContainer>
-				<SearchContainer>
-					<Search size={16} />
+				<SearchInputWrapper>
 					<SearchInput
-						type='text'
-						placeholder={t('grades.searchStudents')}
 						value={searchQuery}
-						onChange={e => setSearchQuery(e.target.value)}
+						onChange={setSearchQuery}
+						placeholder={t('grades.searchStudents')}
+						variant="elevated"
+						size="medium"
 					/>
-					{searchQuery && (
-						<ClearButton onClick={() => setSearchQuery('')}>
-							<X size={14} />
-						</ClearButton>
-					)}
-				</SearchContainer>
+				</SearchInputWrapper>
 
 				<RightControls>
 					<QuarterSelector>
@@ -143,60 +139,14 @@ const ToolbarContainer = styled.div`
 	}
 `
 
-const SearchContainer = styled.div`
-	display: flex;
-	align-items: center;
-	background-color: ${props => props.theme.colors.background.lighter};
-	border-radius: 6px;
-	padding: 8px 12px;
+const SearchInputWrapper = styled.div`
 	flex: 1;
-	max-width: 300px;
-	border: 1px solid ${props => props.theme.colors.border.light};
-
-	svg {
-		color: ${props => props.theme.colors.text.secondary};
-		margin-right: 8px;
-	}
+	max-width: 400px;
+	min-width: 280px;
 
 	@media (max-width: 768px) {
 		max-width: 100%;
 		width: 100%;
-	}
-`
-
-const SearchInput = styled.input`
-	border: none;
-	background: transparent;
-	flex: 1;
-	font-size: 0.875rem;
-	outline: none;
-	color: ${props => props.theme.colors.text.primary};
-
-	&:disabled {
-		cursor: not-allowed;
-		opacity: 0.6;
-	}
-
-	&::placeholder {
-		color: ${props => props.theme.colors.text.secondary};
-	}
-`
-
-const ClearButton = styled.button`
-	background: none;
-	border: none;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	color: ${props => props.theme.colors.text.secondary};
-	padding: 2px;
-	border-radius: 50%;
-	margin-left: 4px;
-
-	&:hover {
-		background-color: rgba(0, 0, 0, 0.05);
-		color: ${props => props.theme.colors.text.primary};
 	}
 `
 
