@@ -233,6 +233,22 @@ const ParentDashboard: React.FC = () => {
 		return 'F'
 	}
 
+	// Get translated status text
+	const getStatusText = (status: string) => {
+		switch (status.toLowerCase()) {
+			case 'present':
+				return t('parent.dashboard.present')
+			case 'late':
+				return t('parent.dashboard.late')
+			case 'excused':
+				return t('parent.dashboard.excused')
+			case 'absent':
+				return t('parent.dashboard.absent')
+			default:
+				return status.charAt(0).toUpperCase() + status.slice(1)
+		}
+	}
+
 	// Format date string for display
 	const formatDate = (dateString: string) => {
 		const date = new Date(dateString)
@@ -613,7 +629,7 @@ const ParentDashboard: React.FC = () => {
 												<AttendanceStudentName>{record.student_name}</AttendanceStudentName>
 											</AttendanceCardLeft>
 											<AttendanceStatus $status={record.status.toLowerCase()}>
-												{record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+												{getStatusText(record.status)}
 											</AttendanceStatus>
 										</AttendanceCard>
 									))
