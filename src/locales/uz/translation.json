@@ -571,7 +571,25 @@
     "absent": "Kelmagan",
     "late": "Kech kelgan",
     "excused": "Javob so'radi",
-    "total": "Jami"
+    "total": "Jami",
+    "monthlyAttendance": "Oylik davomat",
+    "overallAttendance": "Umumiy davomat",
+    "weeklyAttendance": "Haftalik davomat",
+    "dailyAttendance": "Kunlik davomat",
+    "attendanceCalendar": {
+      "title": "Davomat kalendari",
+      "tracker": "Kunlik davomat kuzatuvi",
+      "setStatus": "Holat belgilash",
+      "statusLegend": "Holatlar belgisi",
+      "clickDayToEdit": "Davomat holatini belgilash uchun ish kuniga bosing",
+      "loadingData": "Davomat ma'lumotlari yuklanmoqda...",
+      "monthlyAttendance": "Oylik davomat",
+      "overallAttendance": "Umumiy davomat",
+      "present": "Hozir",
+      "absent": "Yo'q",
+      "late": "Kech qolgan",
+      "excused": "Uzrli sabab"
+    }
   },
   "language": {
     "code": "uz",
@@ -1466,7 +1484,26 @@
       "cannotLoadSchedule": "Jadvalni yuklab bo'lmadi: O'quvchi ID yo'q.",
       "unknownCourse": "Noma'lum kurs",
       "teacherNA": "O'qituvchi belgilanmagan",
-      "unknownLocation": "Noma'lum manzil"
+      "unknownLocation": "Noma'lum manzil",
+      "january": "Yanvar",
+      "february": "Fevral",
+      "march": "Mart",
+      "april": "Aprel",
+      "may": "May",
+      "june": "Iyun",
+      "july": "Iyul",
+      "august": "Avgust",
+      "september": "Sentyabr",
+      "october": "Oktyabr",
+      "november": "Noyabr",
+      "december": "Dekabr",
+      "monday": "Dushanba",
+      "tuesday": "Seshanba",
+      "wednesday": "Chorshanba",
+      "thursday": "Payshanba",
+      "friday": "Juma",
+      "saturday": "Shanba",
+      "sunday": "Yakshanba"
     },
     "notifications": {
       "title": "Bildirishnomalar",
@@ -1730,7 +1767,8 @@
       "totalStudents": "Jami o'quvchilar",
       "presentToday": "Bugun hozir",
       "absentToday": "Bugun yo'q",
-      "attendanceRate": "Davomat darajasi"
+      "attendanceRate": "Davomat darajasi",
+      "clickDayInstruction": "Davomat holatini ko'rish yoki tahrirlash uchun istalgan kunga bosing"
     },
     "messages": {
       "title": "Xabarlar",
