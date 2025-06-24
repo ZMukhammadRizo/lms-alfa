@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'react-feather'
+import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 import { PageTitle } from '../../components/common'
 import supabase from '../../config/supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
 
 // Define attendance status type
-type AttendanceStatus = 'present' | 'late' | 'excused' | 'absent' | null
+type AttendanceStatus = 'present' | 'late' | 'excused' | 'absent' | 'not-assigned' | null
 
 // Define attendance record interface
 interface DailyAttendance {
@@ -421,6 +421,8 @@ const Day = styled.div<DayProps>`
 				return props.theme.colors.primary[500]
 			case 'absent':
 				return props.theme.colors.danger[500]
+			case 'not-assigned':
+				return props.theme.colors.text.disabled || '#9CA3AF'
 			default:
 				return props.theme.colors.background.lighter
 		}
@@ -451,6 +453,8 @@ const DayNumber = styled.span<DayNumberProps>`
 			case 'excused':
 				return 'white'
 			case 'absent':
+				return 'white'
+			case 'not-assigned':
 				return 'white'
 			default:
 				return 'black'

@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 import { ArrowLeft, Calendar, FileText, Grid, List, Search } from 'react-feather'
+import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
@@ -9,7 +10,6 @@ import AttendanceCalendarModal from '../../../components/common/AttendanceCalend
 import PageHeader from '../../../components/common/PageHeader'
 import supabase from '../../../config/supabaseClient'
 import { useAuth } from '../../../contexts/AuthContext'
-import { useTranslation } from 'react-i18next'
 
 interface Student {
 	id: string
@@ -317,16 +317,20 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 						month: 'short',
 						day: 'numeric',
 					})
-					row[formattedDate] = studentData.attendance[date] || 'Absent'
+					row[formattedDate] = studentData.attendance[date] || 'Not Assigned'
 				})
 
-				// Calculate attendance percentage - consider N/A (now "Absent") as absent
-				const totalDays = allDates.length
-				const presentDays = Object.values(studentData.attendance).filter(
+				// Calculate attendance percentage - exclude not-assigned days
+				const assignedDays = Object.values(studentData.attendance).filter(
+					(status: any) => status !== 'Not Assigned' && status !== 'not-assigned'
+				)
+				const totalAssignedDays = assignedDays.length
+				const presentDays = assignedDays.filter(
 					(status: any) => status === 'present' || status === 'late'
 				).length
 
-				const percentage = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0
+				const percentage =
+					totalAssignedDays > 0 ? Math.round((presentDays / totalAssignedDays) * 100) : 0
 				row['Attendance %'] = `${percentage}%`
 
 				return row
@@ -423,8 +427,16 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 			</BackLink>
 
 			<PageHeader
-				title={classData ? `${classData.classname} - ${t('dailyAttendance.title')}` : t('dailyAttendance.title')}
-				subtitle={level ? `${level.name} - ${t('dailyAttendance.manageAttendance')}` : t('dailyAttendance.manageAttendance')}
+				title={
+					classData
+						? `${classData.classname} - ${t('dailyAttendance.title')}`
+						: t('dailyAttendance.title')
+				}
+				subtitle={
+					level
+						? `${level.name} - ${t('dailyAttendance.manageAttendance')}`
+						: t('dailyAttendance.manageAttendance')
+				}
 			/>
 
 			{loading ? (
@@ -441,7 +453,9 @@ const TeacherDailyAttendanceClass: React.FC = () => {
 				<TableWrapper>
 					<SearchContainer>
 						<LeftSection>
-							<StudentCount>{students.length} {t('dailyAttendance.students')}</StudentCount>
+							<StudentCount>
+								{students.length} {t('dailyAttendance.students')}
+							</StudentCount>
 							<ViewToggle>
 								<ViewToggleButton
 									isActive={viewMode === 'grid'}

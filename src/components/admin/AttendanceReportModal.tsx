@@ -1,22 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import styled, { keyframes } from 'styled-components';
-import { X, Users, UserCheck, UserX, Clock, BookOpen, Loader, AlertCircle } from 'react-feather';
-import { useTranslation } from 'react-i18next';
-import { supabase } from '../../lib/supabaseClient';
+import React, { useEffect, useState } from 'react'
+import { AlertCircle, BookOpen, Clock, Loader, UserCheck, Users, UserX, X } from 'react-feather'
+import { useTranslation } from 'react-i18next'
+import styled, { keyframes } from 'styled-components'
+import { supabase } from '../../lib/supabaseClient'
 
 interface ClassAttendanceData {
-  classId: string;
-  className: string;
-  totalStudents: number;
-  present: number;
-  absent: number;
-  late: number;
-  excused: number;
+	classId: string
+	className: string
+	totalStudents: number
+	present: number
+	absent: number
+	late: number
+	excused: number
+	notAssigned: number
 }
 
 interface AttendanceReportModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+	isOpen: boolean
+	onClose: () => void
 }
 
 // Animation keyframes
@@ -27,7 +28,7 @@ const fadeIn = keyframes`
   to {
     opacity: 1;
   }
-`;
+`
 
 const slideIn = keyframes`
   from {
@@ -38,7 +39,7 @@ const slideIn = keyframes`
     transform: translate(-50%, -50%);
     opacity: 1;
   }
-`;
+`
 
 const spin = keyframes`
   from {
@@ -47,571 +48,594 @@ const spin = keyframes`
   to {
     transform: rotate(360deg);
   }
-`;
+`
 
 // Styled components
 const ModalOverlay = styled.div<{ $isOpen: boolean }>`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: ${props => props.$isOpen ? 'flex' : 'none'};
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: ${fadeIn} 0.3s ease;
-`;
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: ${props => (props.$isOpen ? 'flex' : 'none')};
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+	animation: ${fadeIn} 0.3s ease;
+`
 
 const ModalContainer = styled.div`
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: ${props => props.theme.colors.background.secondary};
-  border-radius: ${props => props.theme.borderRadius.lg};
-  box-shadow: ${props => props.theme.shadows.lg};
-  border: 1px solid ${props => props.theme.colors.border.light};
-  width: 90%;
-  max-width: 800px;
-  max-height: 80vh;
-  overflow: hidden;
-  animation: ${slideIn} 0.3s ease;
-`;
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background-color: ${props => props.theme.colors.background.secondary};
+	border-radius: ${props => props.theme.borderRadius.lg};
+	box-shadow: ${props => props.theme.shadows.lg};
+	border: 1px solid ${props => props.theme.colors.border.light};
+	width: 90%;
+	max-width: 800px;
+	max-height: 80vh;
+	overflow: hidden;
+	animation: ${slideIn} 0.3s ease;
+`
 
 const ModalHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: ${props => props.theme.spacing[6]};
-  border-bottom: 1px solid ${props => props.theme.colors.border.light};
-  background-color: ${props => props.theme.colors.background.primary};
-`;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: ${props => props.theme.spacing[6]};
+	border-bottom: 1px solid ${props => props.theme.colors.border.light};
+	background-color: ${props => props.theme.colors.background.primary};
+`
 
 const ModalTitle = styled.h2`
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: ${props => props.theme.colors.text.primary};
-  display: flex;
-  align-items: center;
-  gap: ${props => props.theme.spacing[2]};
-`;
+	margin: 0;
+	font-size: 1.5rem;
+	font-weight: 600;
+	color: ${props => props.theme.colors.text.primary};
+	display: flex;
+	align-items: center;
+	gap: ${props => props.theme.spacing[2]};
+`
 
 const CloseButton = styled.button`
-  background: none;
-  border: none;
-  padding: ${props => props.theme.spacing[2]};
-  cursor: pointer;
-  border-radius: ${props => props.theme.borderRadius.md};
-  color: ${props => props.theme.colors.text.secondary};
-  transition: all 0.2s ease;
+	background: none;
+	border: none;
+	padding: ${props => props.theme.spacing[2]};
+	cursor: pointer;
+	border-radius: ${props => props.theme.borderRadius.md};
+	color: ${props => props.theme.colors.text.secondary};
+	transition: all 0.2s ease;
 
-  &:hover {
-    background-color: ${props => props.theme.colors.background.light};
-    color: ${props => props.theme.colors.text.primary};
-  }
+	&:hover {
+		background-color: ${props => props.theme.colors.background.light};
+		color: ${props => props.theme.colors.text.primary};
+	}
 
-  svg {
-    width: 20px;
-    height: 20px;
-  }
-`;
+	svg {
+		width: 20px;
+		height: 20px;
+	}
+`
 
 const ModalBody = styled.div`
-  padding: ${props => props.theme.spacing[6]};
-  max-height: 60vh;
-  overflow-y: auto;
-`;
+	padding: ${props => props.theme.spacing[6]};
+	max-height: 60vh;
+	overflow-y: auto;
+`
 
 const LoadingContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: ${props => props.theme.spacing[8]};
-  gap: ${props => props.theme.spacing[3]};
-  color: ${props => props.theme.colors.text.secondary};
-`;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: ${props => props.theme.spacing[8]};
+	gap: ${props => props.theme.spacing[3]};
+	color: ${props => props.theme.colors.text.secondary};
+`
 
 const LoadingSpinner = styled.div`
-  animation: ${spin} 1s linear infinite;
-`;
+	animation: ${spin} 1s linear infinite;
+`
 
 const ErrorContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: ${props => props.theme.spacing[8]};
-  gap: ${props => props.theme.spacing[3]};
-  color: ${props => props.theme.colors.danger[500]};
-  text-align: center;
-`;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: ${props => props.theme.spacing[8]};
+	gap: ${props => props.theme.spacing[3]};
+	color: ${props => props.theme.colors.danger[500]};
+	text-align: center;
+`
 
 const ErrorMessage = styled.p`
-  margin: 0;
-  font-size: 0.875rem;
-`;
+	margin: 0;
+	font-size: 0.875rem;
+`
 
 const NoDataContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: ${props => props.theme.spacing[8]};
-  gap: ${props => props.theme.spacing[3]};
-  color: ${props => props.theme.colors.text.secondary};
-  text-align: center;
-`;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: ${props => props.theme.spacing[8]};
+	gap: ${props => props.theme.spacing[3]};
+	color: ${props => props.theme.colors.text.secondary};
+	text-align: center;
+`
 
 const ClassCard = styled.div`
-  background-color: ${props => props.theme.colors.background.primary};
-  border: 1px solid ${props => props.theme.colors.border.light};
-  border-radius: ${props => props.theme.borderRadius.lg};
-  padding: ${props => props.theme.spacing[5]};
-  margin-bottom: ${props => props.theme.spacing[4]};
-  transition: all 0.2s ease;
+	background-color: ${props => props.theme.colors.background.primary};
+	border: 1px solid ${props => props.theme.colors.border.light};
+	border-radius: ${props => props.theme.borderRadius.lg};
+	padding: ${props => props.theme.spacing[5]};
+	margin-bottom: ${props => props.theme.spacing[4]};
+	transition: all 0.2s ease;
 
-  &:hover {
-    box-shadow: ${props => props.theme.shadows.sm};
-    border-color: ${props => props.theme.colors.primary[300]};
-  }
+	&:hover {
+		box-shadow: ${props => props.theme.shadows.sm};
+		border-color: ${props => props.theme.colors.primary[300]};
+	}
 
-  &:last-child {
-    margin-bottom: 0;
-  }
-`;
+	&:last-child {
+		margin-bottom: 0;
+	}
+`
 
 const ClassHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: ${props => props.theme.spacing[4]};
-  gap: ${props => props.theme.spacing[3]};
-`;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: ${props => props.theme.spacing[4]};
+	gap: ${props => props.theme.spacing[3]};
+`
 
 const ClassName = styled.h3`
-  margin: 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: ${props => props.theme.colors.text.primary};
-  display: flex;
-  align-items: center;
-  gap: ${props => props.theme.spacing[2]};
-`;
+	margin: 0;
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: ${props => props.theme.colors.text.primary};
+	display: flex;
+	align-items: center;
+	gap: ${props => props.theme.spacing[2]};
+`
 
 const TotalStudents = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${props => props.theme.spacing[2]};
-  background-color: ${props => props.theme.colors.primary[50]};
-  padding: ${props => props.theme.spacing[2]} ${props => props.theme.spacing[3]};
-  border-radius: ${props => props.theme.borderRadius.md};
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: ${props => props.theme.colors.primary[700]};
-`;
+	display: flex;
+	align-items: center;
+	gap: ${props => props.theme.spacing[2]};
+	background-color: ${props => props.theme.colors.primary[50]};
+	padding: ${props => props.theme.spacing[2]} ${props => props.theme.spacing[3]};
+	border-radius: ${props => props.theme.borderRadius.md};
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: ${props => props.theme.colors.primary[700]};
+`
 
 const AttendanceStats = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: ${props => props.theme.spacing[3]};
-`;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+	gap: ${props => props.theme.spacing[3]};
+`
 
 const StatItem = styled.div<{ $color: string }>`
-  display: flex;
-  align-items: center;
-  gap: ${props => props.theme.spacing[2]};
-  padding: ${props => props.theme.spacing[3]};
-  border-radius: ${props => props.theme.borderRadius.md};
-  background-color: ${props => props.$color}15;
-  border: 1px solid ${props => props.$color}30;
-`;
+	display: flex;
+	align-items: center;
+	gap: ${props => props.theme.spacing[2]};
+	padding: ${props => props.theme.spacing[3]};
+	border-radius: ${props => props.theme.borderRadius.md};
+	background-color: ${props => props.$color}15;
+	border: 1px solid ${props => props.$color}30;
+`
 
 const StatIcon = styled.div<{ $color: string }>`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: ${props => props.theme.borderRadius.md};
-  background-color: ${props => props.$color};
-  color: white;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: ${props => props.theme.borderRadius.md};
+	background-color: ${props => props.$color};
+	color: white;
 
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-`;
+	svg {
+		width: 16px;
+		height: 16px;
+	}
+`
 
 const StatText = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
+	display: flex;
+	flex-direction: column;
+`
 
 const StatLabel = styled.span`
-  font-size: 0.75rem;
-  color: ${props => props.theme.colors.text.secondary};
-  margin-bottom: 2px;
-`;
+	font-size: 0.75rem;
+	color: ${props => props.theme.colors.text.secondary};
+	margin-bottom: 2px;
+`
 
 const StatValue = styled.span`
-  font-size: 1rem;
-  font-weight: 600;
-  color: ${props => props.theme.colors.text.primary};
-`;
+	font-size: 1rem;
+	font-weight: 600;
+	color: ${props => props.theme.colors.text.primary};
+`
 
 const SummaryCard = styled.div`
-  background: linear-gradient(135deg, ${props => props.theme.colors.primary[500]}, ${props => props.theme.colors.primary[600]});
-  border-radius: ${props => props.theme.borderRadius.lg};
-  padding: ${props => props.theme.spacing[5]};
-  margin-bottom: ${props => props.theme.spacing[6]};
-  color: white;
-`;
+	background: linear-gradient(
+		135deg,
+		${props => props.theme.colors.primary[500]},
+		${props => props.theme.colors.primary[600]}
+	);
+	border-radius: ${props => props.theme.borderRadius.lg};
+	padding: ${props => props.theme.spacing[5]};
+	margin-bottom: ${props => props.theme.spacing[6]};
+	color: white;
+`
 
 const SummaryTitle = styled.h3`
-  margin: 0 0 ${props => props.theme.spacing[3]} 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-`;
+	margin: 0 0 ${props => props.theme.spacing[3]} 0;
+	font-size: 1.125rem;
+	font-weight: 600;
+`
 
 const SummaryStats = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: ${props => props.theme.spacing[4]};
-`;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+	gap: ${props => props.theme.spacing[4]};
+`
 
 const SummaryStat = styled.div`
-  text-align: center;
-`;
+	text-align: center;
+`
 
 const SummaryStatValue = styled.div`
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: ${props => props.theme.spacing[1]};
-`;
+	font-size: 1.5rem;
+	font-weight: 700;
+	margin-bottom: ${props => props.theme.spacing[1]};
+`
 
 const SummaryStatLabel = styled.div`
-  font-size: 0.875rem;
-  opacity: 0.9;
-`;
+	font-size: 0.875rem;
+	opacity: 0.9;
+`
 
 const AttendanceReportModal: React.FC<AttendanceReportModalProps> = ({ isOpen, onClose }) => {
-  const { t } = useTranslation();
-  
-  // Debug: Check if translations are working
-  console.log('Translation test:', {
-    present: t('attendance.present'),
-    absent: t('attendance.absent'),
-    title: t('dailyAttendanceReport.title')
-  });
-  
-  const [attendanceData, setAttendanceData] = useState<ClassAttendanceData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+	const { t } = useTranslation()
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchAttendanceData();
-    }
-  }, [isOpen]);
+	// Debug: Check if translations are working
+	console.log('Translation test:', {
+		present: t('attendance.present'),
+		absent: t('attendance.absent'),
+		title: t('dailyAttendanceReport.title'),
+	})
 
-  const fetchAttendanceData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+	const [attendanceData, setAttendanceData] = useState<ClassAttendanceData[]>([])
+	const [loading, setLoading] = useState(false)
+	const [error, setError] = useState<string | null>(null)
 
-      // Get today's date in YYYY-MM-DD format
-      const today = new Date().toISOString().split('T')[0];
+	useEffect(() => {
+		if (isOpen) {
+			fetchAttendanceData()
+		}
+	}, [isOpen])
 
-      // Fetch attendance data with class information
-      const { data: attendanceRecords, error: attendanceError } = await supabase
-        .from('daily_attendance')
-        .select(`
+	const fetchAttendanceData = async () => {
+		try {
+			setLoading(true)
+			setError(null)
+
+			// Get today's date in YYYY-MM-DD format
+			const today = new Date().toISOString().split('T')[0]
+
+			// Fetch attendance data with class information
+			const { data: attendanceRecords, error: attendanceError } = await supabase
+				.from('daily_attendance')
+				.select(
+					`
           class_id,
           status,
           classes!inner(id, classname)
-        `)
-        .eq('noted_for', today);
+        `
+				)
+				.eq('noted_for', today)
 
-      if (attendanceError) {
-        throw new Error(attendanceError.message);
-      }
+			if (attendanceError) {
+				throw new Error(attendanceError.message)
+			}
 
-      // Fetch all students grouped by class to get total counts
-      const { data: allStudents, error: studentsError } = await supabase
-        .from('classstudents')
-        .select(`
+			// Fetch all students grouped by class to get total counts
+			const { data: allStudents, error: studentsError } = await supabase.from('classstudents')
+				.select(`
           classid,
           classes!inner(id, classname)
-        `);
+        `)
 
-      if (studentsError) {
-        throw new Error(studentsError.message);
-      }
+			if (studentsError) {
+				throw new Error(studentsError.message)
+			}
 
-      // Process the data to group by class
-      const classMap = new Map<string, ClassAttendanceData>();
+			// Process the data to group by class
+			const classMap = new Map<string, ClassAttendanceData>()
 
-      // Initialize classes with total student counts
-      allStudents?.forEach((student: any) => {
-        const classId = student.classid;
-        const className = student.classes?.classname || 'Unknown Class';
-        
-        if (!classMap.has(classId)) {
-          classMap.set(classId, {
-            classId,
-            className,
-            totalStudents: 0,
-            present: 0,
-            absent: 0,
-            late: 0,
-            excused: 0,
-          });
-        }
-        
-        const classData = classMap.get(classId)!;
-        classData.totalStudents++;
-      });
+			// Initialize classes with total student counts
+			allStudents?.forEach((student: any) => {
+				const classId = student.classid
+				const className = student.classes?.classname || 'Unknown Class'
 
-      // Add attendance counts
-      attendanceRecords?.forEach((record: any) => {
-        const classId = record.class_id;
-        const status = record.status || 'absent';
-        const className = record.classes?.classname || 'Unknown Class';
+				if (!classMap.has(classId)) {
+					classMap.set(classId, {
+						classId,
+						className,
+						totalStudents: 0,
+						present: 0,
+						absent: 0,
+						late: 0,
+						excused: 0,
+						notAssigned: 0,
+					})
+				}
 
-        if (!classMap.has(classId)) {
-          classMap.set(classId, {
-            classId,
-            className,
-            totalStudents: 0,
-            present: 0,
-            absent: 0,
-            late: 0,
-            excused: 0,
-          });
-        }
+				const classData = classMap.get(classId)!
+				classData.totalStudents++
+			})
 
-        const classData = classMap.get(classId)!;
-        
-        switch (status.toLowerCase()) {
-          case 'present':
-            classData.present++;
-            break;
-          case 'absent':
-            classData.absent++;
-            break;
-          case 'late':
-            classData.late++;
-            break;
-          case 'excused':
-            classData.excused++;
-            break;
-          default:
-            classData.absent++;
-            break;
-        }
-      });
+			// Add attendance counts
+			attendanceRecords?.forEach((record: any) => {
+				const classId = record.class_id
+				const status = record.status || 'not-assigned'
+				const className = record.classes?.classname || 'Unknown Class'
 
-      // Convert map to array and sort by class name
-      const classAttendanceData = Array.from(classMap.values())
-        .filter(classData => classData.totalStudents > 0)
-        .sort((a, b) => a.className.localeCompare(b.className));
+				if (!classMap.has(classId)) {
+					classMap.set(classId, {
+						classId,
+						className,
+						totalStudents: 0,
+						present: 0,
+						absent: 0,
+						late: 0,
+						excused: 0,
+						notAssigned: 0,
+					})
+				}
 
-      setAttendanceData(classAttendanceData);
-    } catch (err) {
-      console.error('Error fetching attendance data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch attendance data');
-    } finally {
-      setLoading(false);
-    }
-  };
+				const classData = classMap.get(classId)!
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
+				switch (status.toLowerCase()) {
+					case 'present':
+						classData.present++
+						break
+					case 'absent':
+						classData.absent++
+						break
+					case 'late':
+						classData.late++
+						break
+					case 'excused':
+						classData.excused++
+						break
+					case 'not-assigned':
+						classData.notAssigned++
+						break
+					default:
+						classData.notAssigned++
+						break
+				}
+			})
 
-  // Calculate totals for summary
-  const totals = attendanceData.reduce(
-    (acc, classData) => ({
-      totalStudents: acc.totalStudents + classData.totalStudents,
-      present: acc.present + classData.present,
-      absent: acc.absent + classData.absent,
-      late: acc.late + classData.late,
-      excused: acc.excused + classData.excused,
-    }),
-    { totalStudents: 0, present: 0, absent: 0, late: 0, excused: 0 }
-  );
+			// Convert map to array and sort by class name
+			const classAttendanceData = Array.from(classMap.values())
+				.filter(classData => classData.totalStudents > 0)
+				.sort((a, b) => a.className.localeCompare(b.className))
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'present':
-        return <UserCheck />;
-      case 'absent':
-        return <UserX />;
-      case 'late':
-        return <Clock />;
-      case 'excused':
-        return <BookOpen />;
-      default:
-        return <Users />;
-    }
-  };
+			setAttendanceData(classAttendanceData)
+		} catch (err) {
+			console.error('Error fetching attendance data:', err)
+			setError(err instanceof Error ? err.message : 'Failed to fetch attendance data')
+		} finally {
+			setLoading(false)
+		}
+	}
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'present':
-        return '#10b981'; // Green
-      case 'absent':
-        return '#ef4444'; // Red
-      case 'late':
-        return '#f59e0b'; // Orange
-      case 'excused':
-        return '#6366f1'; // Indigo
-      default:
-        return '#6b7280'; // Gray
-    }
-  };
+	const handleOverlayClick = (e: React.MouseEvent) => {
+		if (e.target === e.currentTarget) {
+			onClose()
+		}
+	}
 
-  if (!isOpen) return null;
+	// Calculate totals for summary
+	const totals = attendanceData.reduce(
+		(acc, classData) => ({
+			totalStudents: acc.totalStudents + classData.totalStudents,
+			present: acc.present + classData.present,
+			absent: acc.absent + classData.absent,
+			late: acc.late + classData.late,
+			excused: acc.excused + classData.excused,
+			notAssigned: acc.notAssigned + classData.notAssigned,
+		}),
+		{ totalStudents: 0, present: 0, absent: 0, late: 0, excused: 0, notAssigned: 0 }
+	)
 
-  return (
-    <ModalOverlay $isOpen={isOpen} onClick={handleOverlayClick}>
-      <ModalContainer>
-        <ModalHeader>
-          <ModalTitle>
-            <Users size={24} />
-{t('dailyAttendanceReport.title')}
-          </ModalTitle>
-          <CloseButton onClick={onClose}>
-            <X />
-          </CloseButton>
-        </ModalHeader>
+	const getStatusIcon = (status: string) => {
+		switch (status) {
+			case 'present':
+				return <UserCheck />
+			case 'absent':
+				return <UserX />
+			case 'late':
+				return <Clock />
+			case 'excused':
+				return <BookOpen />
+			default:
+				return <Users />
+		}
+	}
 
-        <ModalBody>
-          {loading && (
-            <LoadingContainer>
-              <LoadingSpinner>
-                <Loader size={24} />
-              </LoadingSpinner>
-              <span>{t('dailyAttendanceReport.loadingData')}</span>
-            </LoadingContainer>
-          )}
+	const getStatusColor = (status: string) => {
+		switch (status) {
+			case 'present':
+				return '#10b981' // Green
+			case 'absent':
+				return '#ef4444' // Red
+			case 'late':
+				return '#f59e0b' // Orange
+			case 'excused':
+				return '#6366f1' // Indigo
+			default:
+				return '#6b7280' // Gray
+		}
+	}
 
-          {error && (
-            <ErrorContainer>
-              <AlertCircle size={32} />
-              <ErrorMessage>
-                {t('dailyAttendanceReport.failedToLoad')}
-                <br />
-                {error}
-              </ErrorMessage>
-            </ErrorContainer>
-          )}
+	if (!isOpen) return null
 
-          {!loading && !error && attendanceData.length === 0 && (
-            <NoDataContainer>
-              <AlertCircle size={32} />
-              <span>{t('dailyAttendanceReport.noDataFound')}</span>
-            </NoDataContainer>
-          )}
+	return (
+		<ModalOverlay $isOpen={isOpen} onClick={handleOverlayClick}>
+			<ModalContainer>
+				<ModalHeader>
+					<ModalTitle>
+						<Users size={24} />
+						{t('dailyAttendanceReport.title')}
+					</ModalTitle>
+					<CloseButton onClick={onClose}>
+						<X />
+					</CloseButton>
+				</ModalHeader>
 
-          {!loading && !error && attendanceData.length > 0 && (
-            <>
-              {/* Summary Card */}
-              <SummaryCard>
-                <SummaryTitle>{t('dailyAttendanceReport.overallSummary')}</SummaryTitle>
-                <SummaryStats>
-                  <SummaryStat>
-                    <SummaryStatValue>{totals.totalStudents}</SummaryStatValue>
-                    <SummaryStatLabel>{t('dailyAttendanceReport.totalStudents')}</SummaryStatLabel>
-                  </SummaryStat>
-                  <SummaryStat>
-                    <SummaryStatValue>{totals.present}</SummaryStatValue>
-                    <SummaryStatLabel>{t('attendance.present')}</SummaryStatLabel>
-                  </SummaryStat>
-                  <SummaryStat>
-                    <SummaryStatValue>{totals.absent}</SummaryStatValue>
-                    <SummaryStatLabel>{t('attendance.absent')}</SummaryStatLabel>
-                  </SummaryStat>
-                  <SummaryStat>
-                    <SummaryStatValue>{totals.late}</SummaryStatValue>
-                    <SummaryStatLabel>{t('attendance.late')}</SummaryStatLabel>
-                  </SummaryStat>
-                  <SummaryStat>
-                    <SummaryStatValue>{totals.excused}</SummaryStatValue>
-                    <SummaryStatLabel>{t('attendance.excused')}</SummaryStatLabel>
-                  </SummaryStat>
-                </SummaryStats>
-              </SummaryCard>
+				<ModalBody>
+					{loading && (
+						<LoadingContainer>
+							<LoadingSpinner>
+								<Loader size={24} />
+							</LoadingSpinner>
+							<span>{t('dailyAttendanceReport.loadingData')}</span>
+						</LoadingContainer>
+					)}
 
-              {/* Class-wise breakdown */}
-              {attendanceData.map((classData) => (
-                <ClassCard key={classData.classId}>
-                  <ClassHeader>
-                    <ClassName>
-                      <BookOpen size={20} />
-                      {classData.className}
-                    </ClassName>
-                    <TotalStudents>
-                      <Users size={16} />
-{classData.totalStudents} {t('dailyAttendanceReport.students')}
-                    </TotalStudents>
-                  </ClassHeader>
+					{error && (
+						<ErrorContainer>
+							<AlertCircle size={32} />
+							<ErrorMessage>
+								{t('dailyAttendanceReport.failedToLoad')}
+								<br />
+								{error}
+							</ErrorMessage>
+						</ErrorContainer>
+					)}
 
-                  <AttendanceStats>
-                    <StatItem $color={getStatusColor('present')}>
-                      <StatIcon $color={getStatusColor('present')}>
-                        {getStatusIcon('present')}
-                      </StatIcon>
-                      <StatText>
-                        <StatLabel>{t('attendance.present')}</StatLabel>
-                        <StatValue>{classData.present}</StatValue>
-                      </StatText>
-                    </StatItem>
+					{!loading && !error && attendanceData.length === 0 && (
+						<NoDataContainer>
+							<AlertCircle size={32} />
+							<span>{t('dailyAttendanceReport.noDataFound')}</span>
+						</NoDataContainer>
+					)}
 
-                    <StatItem $color={getStatusColor('absent')}>
-                      <StatIcon $color={getStatusColor('absent')}>
-                        {getStatusIcon('absent')}
-                      </StatIcon>
-                      <StatText>
-                        <StatLabel>{t('attendance.absent')}</StatLabel>
-                        <StatValue>{classData.absent}</StatValue>
-                      </StatText>
-                    </StatItem>
+					{!loading && !error && attendanceData.length > 0 && (
+						<>
+							{/* Summary Card */}
+							<SummaryCard>
+								<SummaryTitle>{t('dailyAttendanceReport.overallSummary')}</SummaryTitle>
+								<SummaryStats>
+									<SummaryStat>
+										<SummaryStatValue>{totals.totalStudents}</SummaryStatValue>
+										<SummaryStatLabel>{t('dailyAttendanceReport.totalStudents')}</SummaryStatLabel>
+									</SummaryStat>
+									<SummaryStat>
+										<SummaryStatValue>{totals.present}</SummaryStatValue>
+										<SummaryStatLabel>{t('attendance.present')}</SummaryStatLabel>
+									</SummaryStat>
+									<SummaryStat>
+										<SummaryStatValue>{totals.absent}</SummaryStatValue>
+										<SummaryStatLabel>{t('attendance.absent')}</SummaryStatLabel>
+									</SummaryStat>
+									<SummaryStat>
+										<SummaryStatValue>{totals.late}</SummaryStatValue>
+										<SummaryStatLabel>{t('attendance.late')}</SummaryStatLabel>
+									</SummaryStat>
+									<SummaryStat>
+										<SummaryStatValue>{totals.excused}</SummaryStatValue>
+										<SummaryStatLabel>{t('attendance.excused')}</SummaryStatLabel>
+									</SummaryStat>
+									<SummaryStat>
+										<SummaryStatValue>{totals.notAssigned}</SummaryStatValue>
+										<SummaryStatLabel>{t('dailyAttendanceReport.notAssigned')}</SummaryStatLabel>
+									</SummaryStat>
+								</SummaryStats>
+							</SummaryCard>
 
-                    <StatItem $color={getStatusColor('late')}>
-                      <StatIcon $color={getStatusColor('late')}>
-                        {getStatusIcon('late')}
-                      </StatIcon>
-                      <StatText>
-                        <StatLabel>{t('attendance.late')}</StatLabel>
-                        <StatValue>{classData.late}</StatValue>
-                      </StatText>
-                    </StatItem>
+							{/* Class-wise breakdown */}
+							{attendanceData.map(classData => (
+								<ClassCard key={classData.classId}>
+									<ClassHeader>
+										<ClassName>
+											<BookOpen size={20} />
+											{classData.className}
+										</ClassName>
+										<TotalStudents>
+											<Users size={16} />
+											{classData.totalStudents} {t('dailyAttendanceReport.students')}
+										</TotalStudents>
+									</ClassHeader>
 
-                    <StatItem $color={getStatusColor('excused')}>
-                      <StatIcon $color={getStatusColor('excused')}>
-                        {getStatusIcon('excused')}
-                      </StatIcon>
-                      <StatText>
-                        <StatLabel>{t('attendance.excused')}</StatLabel>
-                        <StatValue>{classData.excused}</StatValue>
-                      </StatText>
-                    </StatItem>
-                  </AttendanceStats>
-                </ClassCard>
-              ))}
-            </>
-          )}
-        </ModalBody>
-      </ModalContainer>
-    </ModalOverlay>
-  );
-};
+									<AttendanceStats>
+										<StatItem $color={getStatusColor('present')}>
+											<StatIcon $color={getStatusColor('present')}>
+												{getStatusIcon('present')}
+											</StatIcon>
+											<StatText>
+												<StatLabel>{t('attendance.present')}</StatLabel>
+												<StatValue>{classData.present}</StatValue>
+											</StatText>
+										</StatItem>
 
-export default AttendanceReportModal; 
+										<StatItem $color={getStatusColor('absent')}>
+											<StatIcon $color={getStatusColor('absent')}>
+												{getStatusIcon('absent')}
+											</StatIcon>
+											<StatText>
+												<StatLabel>{t('attendance.absent')}</StatLabel>
+												<StatValue>{classData.absent}</StatValue>
+											</StatText>
+										</StatItem>
+
+										<StatItem $color={getStatusColor('late')}>
+											<StatIcon $color={getStatusColor('late')}>{getStatusIcon('late')}</StatIcon>
+											<StatText>
+												<StatLabel>{t('attendance.late')}</StatLabel>
+												<StatValue>{classData.late}</StatValue>
+											</StatText>
+										</StatItem>
+
+										<StatItem $color={getStatusColor('excused')}>
+											<StatIcon $color={getStatusColor('excused')}>
+												{getStatusIcon('excused')}
+											</StatIcon>
+											<StatText>
+												<StatLabel>{t('attendance.excused')}</StatLabel>
+												<StatValue>{classData.excused}</StatValue>
+											</StatText>
+										</StatItem>
+
+										<StatItem $color={getStatusColor('not-assigned')}>
+											<StatIcon $color={getStatusColor('not-assigned')}>
+												{getStatusIcon('not-assigned')}
+											</StatIcon>
+											<StatText>
+												<StatLabel>{t('dailyAttendanceReport.notAssigned')}</StatLabel>
+												<StatValue>{classData.notAssigned}</StatValue>
+											</StatText>
+										</StatItem>
+									</AttendanceStats>
+								</ClassCard>
+							))}
+						</>
+					)}
+				</ModalBody>
+			</ModalContainer>
+		</ModalOverlay>
+	)
+}
+
+export default AttendanceReportModal

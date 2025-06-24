@@ -284,16 +284,20 @@ const AdminDailyAttendanceClass: React.FC = () => {
 						month: 'short',
 						day: 'numeric',
 					})
-					row[formattedDate] = studentData.attendance[date] || 'Absent'
+					row[formattedDate] = studentData.attendance[date] || 'Not Assigned'
 				})
 
-				// Calculate attendance percentage - consider N/A (now "Absent") as absent
-				const totalDays = allDates.length
-				const presentDays = Object.values(studentData.attendance).filter(
+				// Calculate attendance percentage - exclude not-assigned days
+				const assignedDays = Object.values(studentData.attendance).filter(
+					(status: any) => status !== 'Not Assigned' && status !== 'not-assigned'
+				)
+				const totalAssignedDays = assignedDays.length
+				const presentDays = assignedDays.filter(
 					(status: any) => status === 'present' || status === 'late'
 				).length
 
-				const percentage = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0
+				const percentage =
+					totalAssignedDays > 0 ? Math.round((presentDays / totalAssignedDays) * 100) : 0
 				row['Attendance %'] = `${percentage}%`
 
 				return row
