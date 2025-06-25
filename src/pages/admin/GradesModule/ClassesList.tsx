@@ -1,12 +1,12 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FiAward, FiBookOpen, FiChevronRight, FiSearch, FiUsers } from 'react-icons/fi'
+import { FiAward, FiBookOpen, FiChevronRight, FiUsers } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { getClassStudentCount } from '../../../api/grades'
 import { PageTitle } from '../../../components/common'
-import { Badge, Card, Container, Input } from '../../../components/ui'
+import { Badge, Card, Container, SearchInput } from '../../../components/ui'
 import { useAuth } from '../../../contexts/AuthContext'
 import useGradesStore from '../../../store/gradesStore'
 
@@ -179,11 +179,13 @@ const ClassesList: React.FC = () => {
 					</HeaderContent>
 					<HeaderRight>
 						<SearchWrapper>
-							<StyledInput
-								prefix={<FiSearch />}
-								placeholder={t('grades.searchClasses')}
+							<SearchInput
 								value={searchTerm}
-								onChange={e => setSearchTerm(e.target.value)}
+								onChange={setSearchTerm}
+								placeholder={t('grades.searchClasses')}
+								variant="elevated"
+								size="medium"
+								resultsCount={filteredClasses.length}
 							/>
 						</SearchWrapper>
 					</HeaderRight>
@@ -405,16 +407,7 @@ const SearchWrapper = styled.div`
 	width: 100%;
 `
 
-const StyledInput = styled(Input)`
-	width: 100%;
-	font-size: 1rem;
-	border-radius: 8px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 
-	&:focus-within {
-		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-	}
-`
 
 const LevelSection = styled.div`
 	margin-bottom: 32px;

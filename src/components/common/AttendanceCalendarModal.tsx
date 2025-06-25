@@ -1,6 +1,6 @@
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, Clock, FileText, X as XIcon } from 'react-feather'
+import { Check, ChevronLeft, ChevronRight, Clock, FileText, X as XIcon, Calendar as CalendarIcon, TrendingUp, User, Info } from 'react-feather'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
@@ -210,125 +210,97 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 	}
 
 	const formatDateString = (day: number): string => {
-		// Fix month formatting (months are 0-indexed in JS Date)
 		return `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(
 			2,
 			'0'
 		)}-${String(day).padStart(2, '0')}`
 	}
 
-	// Check if a date is a weekend (Saturday or Sunday)
 	const isWeekend = (day: number): boolean => {
 		const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
 		const dayOfWeek = date.getDay() // 0 = Sunday, 6 = Saturday
 		return dayOfWeek === 0 || dayOfWeek === 6
 	}
 
-	// Check if a date is after the current week
 	const isAfterCurrentWeek = (day: number): boolean => {
 		const today = new Date()
-		const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
+		const currentDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
 
-		// If it's a different month in the future
-		if (
-			date.getFullYear() > today.getFullYear() ||
-			(date.getFullYear() === today.getFullYear() && date.getMonth() > today.getMonth())
-		) {
-			return true
-		}
+		// Get the date 3 days ago (to account for 3-day rule)
+		const threeDaysAgo = new Date(today)
+		threeDaysAgo.setDate(today.getDate() - 3)
 
-		// If it's in the current month but future week
-		if (date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()) {
-			// Get the start of the current week (Monday)
-			const startOfWeek = new Date(today)
-			const todayDayOfWeek = today.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-			const daysFromMonday = todayDayOfWeek === 0 ? 6 : todayDayOfWeek - 1
-			startOfWeek.setDate(today.getDate() - daysFromMonday)
+		// Check if the date is after current week or too far in the past
+		const dayOfWeek = today.getDay()
+		const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // Adjust for Monday start
 
-			// Get the end of the current week (Sunday)
-			const endOfWeek = new Date(startOfWeek)
-			endOfWeek.setDate(startOfWeek.getDate() + 6)
+		const startOfCurrentWeek = new Date(today)
+		startOfCurrentWeek.setDate(today.getDate() - daysFromMonday)
+		startOfCurrentWeek.setHours(0, 0, 0, 0)
 
-			// Check if the date is after the end of the current week
-			return date > endOfWeek
-		}
+		const endOfCurrentWeek = new Date(startOfCurrentWeek)
+		endOfCurrentWeek.setDate(startOfCurrentWeek.getDate() + 6)
+		endOfCurrentWeek.setHours(23, 59, 59, 999)
 
-		return false
+		// Only enable editing for current week and future dates, but not more than 3 days in the past
+		const isInCurrentWeek = currentDate >= startOfCurrentWeek && currentDate <= endOfCurrentWeek
+		const isFutureDate = currentDate > endOfCurrentWeek
+		const isWithinEditWindow = currentDate >= threeDaysAgo
+
+		return !(isInCurrentWeek || isFutureDate) || !isWithinEditWindow
 	}
 
 	const handleDayClick = (day: number) => {
 		const dateString = formatDateString(day)
+		if (isAfterCurrentWeek(day) || isWeekend(day)) return
 
-		// Don't allow interaction with weekends or future weeks
-		if (isWeekend(day) || isAfterCurrentWeek(day)) {
-			return
+		// Toggle dropdown
+		if (showStatusDropdown === dateString) {
+			setShowStatusDropdown(null)
+		} else {
+			setShowStatusDropdown(dateString)
 		}
-
-		setShowStatusDropdown(showStatusDropdown === dateString ? null : dateString)
-		setSelectedStatus(null)
 	}
 
 	const handleStatusSelect = async (date: string, status: AttendanceStatus) => {
-		if (!student?.id || !classId || !status) return
+		if (!student?.id || savingDate === date) return
 
 		setSavingDate(date)
-		setSelectedStatus(status)
-
-		// Check if there's already an attendance record for this date
-		const existingRecord = attendanceData.find(record => record.noted_for === date)
-
 		try {
+			// Check if attendance record already exists
+			const existingRecord = attendanceData.find(record => record.noted_for === date)
+
 			if (existingRecord) {
 				// Update existing record
 				const { error } = await supabase
 					.from('daily_attendance')
-					.update({
-						status,
-						noted_at: new Date().toISOString(),
-					})
+					.update({ status })
 					.eq('id', existingRecord.id)
 
 				if (error) throw error
-
-				// Update local state
-				setAttendanceData(prev =>
-					prev.map(item =>
-						item.id === existingRecord.id
-							? { ...item, status, noted_at: new Date().toISOString() }
-							: item
-					)
-				)
-
-				toast.success('Attendance updated successfully')
 			} else {
 				// Create new record
-				const { data, error } = await supabase
-					.from('daily_attendance')
-					.insert({
+				const { error } = await supabase.from('daily_attendance').insert([
+					{
 						student_id: student.id,
 						noted_for: date,
 						status,
 						class_id: classId,
 						teacher_id: teacherId,
 						quarter_id: quarterId,
-					})
-					.select()
+					},
+				])
 
 				if (error) throw error
-
-				// Update local state
-				if (data && data.length > 0) {
-					setAttendanceData(prev => [...prev, data[0]])
-				}
-
-				toast.success('Attendance saved successfully')
 			}
 
-			// Recalculate attendance stats after update
-			fetchOverallAttendance()
+			// Refresh attendance data
+			await fetchAttendanceData()
+
+			toast.success('Attendance updated successfully')
 		} catch (error) {
-			console.error('Error saving attendance:', error)
-			toast.error('Failed to save attendance')
+			console.error('Error updating attendance:', error)
+			toast.error('Failed to update attendance')
 		} finally {
 			setSavingDate(null)
 			setShowStatusDropdown(null)
@@ -337,14 +309,12 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 
 	const getAttendanceStatus = (day: number): AttendanceStatus => {
 		const dateString = formatDateString(day)
-		const record = attendanceData.find(item => item.noted_for === dateString)
-		return record ? (record.status as AttendanceStatus) : null
+		const record = attendanceData.find(record => record.noted_for === dateString)
+		return record ? (record.status.toLowerCase() as AttendanceStatus) : null
 	}
 
 	const getStatusIcon = (status: AttendanceStatus) => {
-		if (!status) return null
-
-		switch (status.toLowerCase()) {
+		switch (status) {
 			case 'present':
 				return <Check size={16} />
 			case 'late':
@@ -359,12 +329,15 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 	}
 
 	const renderCalendarDays = () => {
+		const year = currentMonth.getFullYear()
+		const month = currentMonth.getMonth()
+		const daysInMonth = getDaysInMonth(year, month)
+		const firstDayOfMonth = getFirstDayOfMonth(year, month)
+
 		const days = []
-		const daysInMonth = getDaysInMonth(currentMonth.getFullYear(), currentMonth.getMonth())
-		const firstDay = getFirstDayOfMonth(currentMonth.getFullYear(), currentMonth.getMonth())
 
 		// Add empty cells for days before the first day of the month
-		for (let i = 0; i < firstDay; i++) {
+		for (let i = 0; i < firstDayOfMonth; i++) {
 			days.push(<EmptyDay key={`empty-${i}`} />)
 		}
 
@@ -372,391 +345,484 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 		for (let day = 1; day <= daysInMonth; day++) {
 			const dateString = formatDateString(day)
 			const status = getAttendanceStatus(day)
-			const isToday = new Date().toDateString() === new Date(dateString).toDateString()
-			const isSaving = savingDate === dateString
-			const isDropdownOpen = showStatusDropdown === dateString
-			const isDisabledWeekend = isWeekend(day)
-			const isDisabledFuture = isAfterCurrentWeek(day)
-			const isDisabled = isDisabledWeekend || isDisabledFuture
+			const isWeekendDay = isWeekend(day)
+			const isDisabled = isAfterCurrentWeek(day) || isWeekendDay
+			const isToday =
+				new Date().toDateString() === new Date(year, month, day).toDateString()
 
 			days.push(
-				<Day
-					key={day}
-					onClick={() => handleDayClick(day)}
-					status={status}
-					isToday={isToday}
-					isActive={isDropdownOpen}
-					isDisabled={isDisabled}
-					isWeekend={isDisabledWeekend}
-				>
-					<DayNumber isDisabled={isDisabled}>{day}</DayNumber>
-					{status && <StatusIndicator status={status}>{getStatusIcon(status)}</StatusIndicator>}
+				<DayContainer key={day}>
+					<Day
+						as={motion.div}
+						initial={{ opacity: 0, scale: 0.8 }}
+						animate={{ opacity: 1, scale: 1 }}
+						transition={{ duration: 0.2, delay: day * 0.01 }}
+						whileHover={!isDisabled ? { scale: 1.05, y: -2 } : {}}
+						whileTap={!isDisabled ? { scale: 0.95 } : {}}
+						status={status}
+						isToday={isToday}
+						isActive={showStatusDropdown === dateString}
+						isDisabled={isDisabled}
+						isWeekend={isWeekendDay}
+						onClick={() => handleDayClick(day)}
+					>
+						<DayNumber isDisabled={isDisabled} hasStatus={!!status}>{day}</DayNumber>
+						{status && <StatusIndicator status={status}>{getStatusIcon(status)}</StatusIndicator>}
+						{savingDate === dateString && (
+							<SavingIndicator>
+								<LoadingSpinner size="small" />
+							</SavingIndicator>
+						)}
+					</Day>
 
-					{isDropdownOpen && (
-						<StatusDropdown>
-							<StatusOption
-								status='present'
-								isSelected={selectedStatus === 'present'}
-								onClick={e => {
-									e.stopPropagation()
-									handleStatusSelect(dateString, 'present')
-								}}
-								disabled={isSaving}
-								color='success'
+					<AnimatePresence>
+						{showStatusDropdown === dateString && !isDisabled && (
+							<StatusDropdown
+								as={motion.div}
+								initial={{ opacity: 0, scale: 0.8, y: -10 }}
+								animate={{ opacity: 1, scale: 1, y: 0 }}
+								exit={{ opacity: 0, scale: 0.8, y: -10 }}
+								transition={{ duration: 0.2 }}
 							>
-								<Check size={16} />
-								<span>Present</span>
-							</StatusOption>
-							<StatusOption
-								status='late'
-								isSelected={selectedStatus === 'late'}
-								onClick={e => {
-									e.stopPropagation()
-									handleStatusSelect(dateString, 'late')
-								}}
-								disabled={isSaving}
-								color='warning'
-							>
-								<Clock size={16} />
-								<span>Late</span>
-							</StatusOption>
-							<StatusOption
-								status='excused'
-								isSelected={selectedStatus === 'excused'}
-								onClick={e => {
-									e.stopPropagation()
-									handleStatusSelect(dateString, 'excused')
-								}}
-								disabled={isSaving}
-								color='primary'
-							>
-								<FileText size={16} />
-								<span>Excused</span>
-							</StatusOption>
-							<StatusOption
-								status='absent'
-								isSelected={selectedStatus === 'absent'}
-								onClick={e => {
-									e.stopPropagation()
-									handleStatusSelect(dateString, 'absent')
-								}}
-								disabled={isSaving}
-								color='danger'
-							>
-								<XIcon size={16} />
-								<span>Absent</span>
-							</StatusOption>
-						</StatusDropdown>
-					)}
-
-					{isSaving && (
-						<LoadingOverlay>
-							<LoadingSpinner />
-						</LoadingOverlay>
-					)}
-				</Day>
+								<DropdownHeader>
+									<span>{t('attendance.attendanceCalendar.setStatus')}</span>
+									<DropdownDate>{new Date(year, month, day).toLocaleDateString()}</DropdownDate>
+								</DropdownHeader>
+								<StatusOption
+									onClick={() => handleStatusSelect(dateString, 'present')}
+									status="present"
+									isSelected={status === 'present'}
+									color="success"
+								>
+									<Check size={16} />
+									<span>{t('attendance.attendanceCalendar.present')}</span>
+								</StatusOption>
+								<StatusOption
+									onClick={() => handleStatusSelect(dateString, 'late')}
+									status="late"
+									isSelected={status === 'late'}
+									color="warning"
+								>
+									<Clock size={16} />
+									<span>{t('attendance.attendanceCalendar.late')}</span>
+								</StatusOption>
+								<StatusOption
+									onClick={() => handleStatusSelect(dateString, 'excused')}
+									status="excused"
+									isSelected={status === 'excused'}
+									color="primary"
+								>
+									<FileText size={16} />
+									<span>{t('attendance.attendanceCalendar.excused')}</span>
+								</StatusOption>
+								<StatusOption
+									onClick={() => handleStatusSelect(dateString, 'absent')}
+									status="absent"
+									isSelected={status === 'absent'}
+									color="danger"
+								>
+									<XIcon size={16} />
+									<span>{t('attendance.attendanceCalendar.absent')}</span>
+								</StatusOption>
+							</StatusDropdown>
+						)}
+					</AnimatePresence>
+				</DayContainer>
 			)
 		}
 
 		return days
 	}
 
-	// Get formatted month name for display
 	const getFormattedMonthName = () => {
 		const monthNames = [
-			t('calendar.january'),
-			t('calendar.february'),
-			t('calendar.march'),
-			t('calendar.april'),
-			t('calendar.may'),
-			t('calendar.june'),
-			t('calendar.july'),
-			t('calendar.august'),
-			t('calendar.september'),
-			t('calendar.october'),
-			t('calendar.november'),
-			t('calendar.december'),
+			t('calendar.january'), t('calendar.february'), t('calendar.march'),
+			t('calendar.april'), t('calendar.may'), t('calendar.june'),
+			t('calendar.july'), t('calendar.august'), t('calendar.september'),
+			t('calendar.october'), t('calendar.november'), t('calendar.december')
 		]
-		return `${monthNames[currentMonth.getMonth()]} ${currentMonth.getFullYear()}`
-	}
-
-	const renderCalendarHeader = () => {
-		const dayNames = [
-			t('calendar.monday'),
-			t('calendar.tuesday'),
-			t('calendar.wednesday'),
-			t('calendar.thursday'),
-			t('calendar.friday'),
-			t('calendar.saturday'),
-			t('calendar.sunday'),
-		]
-
-		return (
-			<CalendarHeader>
-				{dayNames.map((day, index) => (
-					<DayName key={index} isWeekend={index >= 5}>
-						{day.substring(0, 3)}
-					</DayName>
-				))}
-			</CalendarHeader>
-		)
+		
+		const month = monthNames[currentMonth.getMonth()]
+		const year = currentMonth.getFullYear()
+		return `${month} ${year}`
 	}
 
 	if (!isOpen) return null
 
 	return (
 		<ModalOverlay
+			as={motion.div}
 			initial={{ opacity: 0 }}
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
 			onClick={onClose}
 		>
 			<ModalContent
-				initial={{ scale: 0.9, opacity: 0 }}
-				animate={{ scale: 1, opacity: 1 }}
-				exit={{ scale: 0.9, opacity: 0 }}
+				as={motion.div}
+				initial={{ scale: 0.9, opacity: 0, y: 20 }}
+				animate={{ scale: 1, opacity: 1, y: 0 }}
+				exit={{ scale: 0.9, opacity: 0, y: 20 }}
+				transition={{ type: "spring", duration: 0.5 }}
 				onClick={e => e.stopPropagation()}
 			>
 				<ModalHeader>
-					<StudentInfo>
-						<StudentAvatar>{student.fullName.charAt(0)}</StudentAvatar>
-						<div>
-							<h2>{student.fullName}</h2>
-							<p>{t('attendance.title')}</p>
-						</div>
-					</StudentInfo>
-					<CloseButton onClick={onClose}>
-						<XIcon size={24} />
+					<StudentSection>
+						<StudentAvatar>
+							<User size={24} />
+						</StudentAvatar>
+						<StudentInfo>
+							<StudentName>{student.fullName}</StudentName>
+							<StudentSubtitle>{t('attendance.attendanceCalendar.tracker')}</StudentSubtitle>
+						</StudentInfo>
+					</StudentSection>
+					<CloseButton 
+						onClick={onClose}
+						whileHover={{ scale: 1.1, rotate: 90 }}
+						whileTap={{ scale: 0.9 }}
+						as={motion.button}
+					>
+						<XIcon size={20} />
 					</CloseButton>
 				</ModalHeader>
 
-				<AttendanceStatsContainer>
-					<AttendanceStatItem>
-						<StatLabel>
-							{getFormattedMonthName()} {t('attendance.monthlyAttendance')}:
-						</StatLabel>
-						{attendanceStats.isLoading ? (
-							<LoadingSpinner size='small' />
-						) : (
-							<AttendancePercentageIndicator percentage={attendanceStats.monthly} />
-						)}
-					</AttendanceStatItem>
-					<AttendanceStatItem>
-						<StatLabel>{t('attendance.overallAttendance')}:</StatLabel>
-						{attendanceStats.isLoading ? (
-							<LoadingSpinner size='small' />
-						) : (
-							<AttendancePercentageIndicator percentage={attendanceStats.overall} />
-						)}
-					</AttendanceStatItem>
-				</AttendanceStatsContainer>
+				<StatsSection>
+					<StatCard
+						as={motion.div}
+						initial={{ opacity: 0, x: -20 }}
+						animate={{ opacity: 1, x: 0 }}
+						transition={{ delay: 0.1 }}
+					>
+						<StatIcon $color="#3b82f6">
+							<CalendarIcon size={20} />
+						</StatIcon>
+						<StatContent>
+							<StatLabel>{t('attendance.attendanceCalendar.monthlyAttendance')}</StatLabel>
+							{attendanceStats.isLoading ? (
+								<LoadingSpinner size='small' />
+							) : (
+								<AttendancePercentageIndicator percentage={attendanceStats.monthly} />
+							)}
+						</StatContent>
+					</StatCard>
 
-				<CalendarContainer>
-					<CalendarHeader>
-						<MonthNavButton onClick={handlePreviousMonth}>
+					<StatCard
+						as={motion.div}
+						initial={{ opacity: 0, x: 20 }}
+						animate={{ opacity: 1, x: 0 }}
+						transition={{ delay: 0.2 }}
+					>
+						<StatIcon $color="#22c55e">
+							<TrendingUp size={20} />
+						</StatIcon>
+						<StatContent>
+							<StatLabel>{t('attendance.attendanceCalendar.overallAttendance')}</StatLabel>
+							{attendanceStats.isLoading ? (
+								<LoadingSpinner size='small' />
+							) : (
+								<AttendancePercentageIndicator percentage={attendanceStats.overall} />
+							)}
+						</StatContent>
+					</StatCard>
+				</StatsSection>
+
+				<CalendarContainer
+					as={motion.div}
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ delay: 0.3 }}
+				>
+					<CalendarHeaderContainer>
+						<MonthNavButton 
+							onClick={handlePreviousMonth}
+							whileHover={{ scale: 1.1 }}
+							whileTap={{ scale: 0.9 }}
+							as={motion.button}
+						>
 							<ChevronLeft size={20} />
 						</MonthNavButton>
 						<MonthYearDisplay>{getFormattedMonthName()}</MonthYearDisplay>
-						<MonthNavButton onClick={handleNextMonth}>
+						<MonthNavButton 
+							onClick={handleNextMonth}
+							whileHover={{ scale: 1.1 }}
+							whileTap={{ scale: 0.9 }}
+							as={motion.button}
+						>
 							<ChevronRight size={20} />
 						</MonthNavButton>
-					</CalendarHeader>
+					</CalendarHeaderContainer>
 
 					<WeekdayHeader>
-						<Weekday>{t('calendar.monday').substring(0, 3)}</Weekday>
-						<Weekday>{t('calendar.tuesday').substring(0, 3)}</Weekday>
-						<Weekday>{t('calendar.wednesday').substring(0, 3)}</Weekday>
-						<Weekday>{t('calendar.thursday').substring(0, 3)}</Weekday>
-						<Weekday>{t('calendar.friday').substring(0, 3)}</Weekday>
-						<Weekday>{t('calendar.saturday').substring(0, 3)}</Weekday>
-						<Weekday>{t('calendar.sunday').substring(0, 3)}</Weekday>
+						{[
+							t('calendar.monday').substring(0, 3),
+							t('calendar.tuesday').substring(0, 3),
+							t('calendar.wednesday').substring(0, 3),
+							t('calendar.thursday').substring(0, 3),
+							t('calendar.friday').substring(0, 3),
+							t('calendar.saturday').substring(0, 3),
+							t('calendar.sunday').substring(0, 3)
+						].map((day, index) => (
+							<Weekday key={day} isWeekend={index >= 5}>
+								{day}
+							</Weekday>
+						))}
 					</WeekdayHeader>
 
 					<CalendarGrid>
-						{loading ? (
-							<LoadingContainer>
-								<LoadingSpinner size='large' />
-								<p>{t('attendance.loadingAttendance')}</p>
-							</LoadingContainer>
-						) : (
-							renderCalendarDays()
-						)}
+						<AnimatePresence mode="wait">
+							{loading ? (
+								<LoadingContainer
+									as={motion.div}
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 1 }}
+									exit={{ opacity: 0 }}
+								>
+									<LoadingSpinner size='large' />
+									<LoadingText>{t('attendance.attendanceCalendar.loadingData')}</LoadingText>
+								</LoadingContainer>
+							) : (
+								renderCalendarDays()
+							)}
+						</AnimatePresence>
 					</CalendarGrid>
 				</CalendarContainer>
 
-				<LegendContainer>
-					<LegendItem>
-						<LegendColor status='present' />
-						<span>{t('attendance.present')}</span>
-					</LegendItem>
-					<LegendItem>
-						<LegendColor status='late' />
-						<span>{t('attendance.late')}</span>
-					</LegendItem>
-					<LegendItem>
-						<LegendColor status='excused' />
-						<span>{t('attendance.excused')}</span>
-					</LegendItem>
-					<LegendItem>
-						<LegendColor status='absent' />
-						<span>{t('attendance.absent')}</span>
-					</LegendItem>
-				</LegendContainer>
+				<LegendSection>
+					<LegendTitle>
+						<Info size={16} />
+						<span>{t('attendance.attendanceCalendar.statusLegend')}</span>
+					</LegendTitle>
+					<LegendContainer>
+						<LegendItem>
+							<LegendColor status='present' />
+							<span>{t('attendance.attendanceCalendar.present')}</span>
+						</LegendItem>
+						<LegendItem>
+							<LegendColor status='late' />
+							<span>{t('attendance.attendanceCalendar.late')}</span>
+						</LegendItem>
+						<LegendItem>
+							<LegendColor status='excused' />
+							<span>{t('attendance.attendanceCalendar.excused')}</span>
+						</LegendItem>
+						<LegendItem>
+							<LegendColor status='absent' />
+							<span>{t('attendance.attendanceCalendar.absent')}</span>
+						</LegendItem>
+					</LegendContainer>
+				</LegendSection>
 
 				<ModalFooter>
-					<HelpText>{t('dailyAttendance.clickDayInstruction')}</HelpText>
+					<HelpText>
+						<Info size={14} />
+						<span>{t('attendance.attendanceCalendar.clickDayToEdit')}</span>
+					</HelpText>
 				</ModalFooter>
 			</ModalContent>
 		</ModalOverlay>
 	)
 }
 
-const ModalOverlay = styled(motion.div)`
+// Enhanced Styled Components
+const ModalOverlay = styled.div`
 	position: fixed;
 	top: 0;
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background-color: rgba(0, 0, 0, 0.6);
+	background: rgba(0, 0, 0, 0.6);
+	backdrop-filter: blur(8px);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	z-index: 1000;
 	padding: 20px;
-	backdrop-filter: blur(2px);
 `
 
-const ModalContent = styled(motion.div)`
-	background-color: #fff;
-	border-radius: 16px;
-	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+const ModalContent = styled.div`
+	background: white;
+	border-radius: 24px;
+	box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 	width: 100%;
-	max-width: 800px;
+	max-width: 900px;
 	max-height: 90vh;
 	overflow-y: auto;
-	padding: 24px;
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
-	z-index: 1001;
+	border: 1px solid rgba(255, 255, 255, 0.2);
 `
 
 const ModalHeader = styled.div`
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 16px;
-	padding-bottom: 16px;
-	border-bottom: 1px solid var(--color-border);
+	padding: 32px 32px 0;
+	margin-bottom: 24px;
 `
 
-const StudentInfo = styled.div`
+const StudentSection = styled.div`
 	display: flex;
 	align-items: center;
 	gap: 16px;
-
-	h2 {
-		margin: 0;
-		font-size: 1.5rem;
-		color: var(--color-text-primary);
-		max-width: 300px;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	p {
-		margin: 4px 0 0;
-		color: var(--color-text-secondary);
-		font-size: 0.9rem;
-	}
 `
 
 const StudentAvatar = styled.div`
-	width: 48px;
-	height: 48px;
-	border-radius: 50%;
-	background-color: #0ea5e9;
+	width: 60px;
+	height: 60px;
+	border-radius: 16px;
+	background: linear-gradient(135deg, #3b82f6, #1d4ed8);
 	color: white;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-weight: 600;
-	font-size: 1.4rem;
+	box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+`
+
+const StudentInfo = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+`
+
+const StudentName = styled.h2`
+	margin: 0;
+	font-size: 1.5rem;
+	font-weight: 700;
+	color: #1e293b;
+	max-width: 400px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+`
+
+const StudentSubtitle = styled.p`
+	margin: 0;
+	color: #64748b;
+	font-size: 0.875rem;
+	font-weight: 500;
 `
 
 const CloseButton = styled.button`
-	background: transparent;
+	background: #f1f5f9;
 	border: none;
-	color: var(--color-text-secondary);
+	color: #475569;
 	cursor: pointer;
-	padding: 8px;
-	border-radius: 50%;
+	border-radius: 12px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	transition: background-color 0.2s, color 0.2s;
+	width: 44px;
+	height: 44px;
+	transition: all 0.2s ease;
 
 	&:hover {
-		background-color: #0ea5e9;
-		color: #fff;
+		background: #e2e8f0;
+		color: #1e293b;
 	}
 `
 
-const CalendarContainer = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-	background-color: var(--color-bg-secondary);
-	border-radius: 12px;
-	padding: 20px;
-`
-
-const CalendarHeader = styled.div`
+const StatsSection = styled.div`
 	display: grid;
-	grid-template-columns: repeat(7, 1fr);
-	gap: 8px;
-	margin-bottom: 8px;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	gap: 20px;
+	padding: 0 32px;
+	margin-bottom: 24px;
 `
 
-const MonthNavButton = styled.button`
-	background: transparent;
-	border: none;
-	color: var(--color-text-primary);
-	cursor: pointer;
-	padding: 8px;
-	border-radius: 50%;
+const StatCard = styled.div`
+	background: #f8fafc;
+	border-radius: 16px;
+	padding: 20px;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	border: 1px solid #e2e8f0;
+`
+
+const StatIcon = styled.div<{ $color: string }>`
+	width: 48px;
+	height: 48px;
+	border-radius: 12px;
+	background: ${props => `${props.$color}15`};
+	color: ${props => props.$color};
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	transition: background-color 0.2s;
+	flex-shrink: 0;
+`
+
+const StatContent = styled.div`
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	flex: 1;
+`
+
+const StatLabel = styled.div`
+	font-size: 0.875rem;
+	color: #64748b;
+	font-weight: 500;
+`
+
+const CalendarContainer = styled.div`
+	background: #f8fafc;
+	border-radius: 20px;
+	padding: 24px;
+	margin: 0 32px 24px;
+	border: 1px solid #e2e8f0;
+`
+
+const CalendarHeaderContainer = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 24px;
+	padding: 0 8px;
+`
+
+const MonthNavButton = styled.button`
+	background: white;
+	border: 1px solid #e2e8f0;
+	color: #475569;
+	cursor: pointer;
+	border-radius: 12px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	transition: all 0.2s ease;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 
 	&:hover {
-		background-color: #0ea5e9;
-		color: #fff;
+		background: #f1f5f9;
+		border-color: #cbd5e1;
+		color: #1e293b;
 	}
 `
 
 const MonthYearDisplay = styled.h3`
 	margin: 0;
-	font-size: 1.2rem;
-	font-weight: 600;
-	color: #0ea5e9;
+	font-size: 1.5rem;
+	font-weight: 700;
+	color: #1e293b;
+	text-align: center;
 `
 
 const WeekdayHeader = styled.div`
 	display: grid;
 	grid-template-columns: repeat(7, 1fr);
 	gap: 8px;
-	margin-bottom: 8px;
+	margin-bottom: 16px;
 `
 
-const Weekday = styled.div`
+const Weekday = styled.div<{ isWeekend?: boolean }>`
 	text-align: center;
 	font-weight: 600;
-	color: var(--color-text-secondary);
-	font-size: 0.9rem;
-	padding: 8px 0;
+	color: ${props => props.isWeekend ? '#ef4444' : '#64748b'};
+	font-size: 0.875rem;
+	padding: 12px 0;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
 `
 
 const CalendarGrid = styled.div`
@@ -764,6 +830,13 @@ const CalendarGrid = styled.div`
 	grid-template-columns: repeat(7, 1fr);
 	gap: 8px;
 	position: relative;
+`
+
+const DayContainer = styled.div`
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
 `
 
 interface DayProps {
@@ -776,37 +849,43 @@ interface DayProps {
 
 const Day = styled.div<DayProps>`
 	aspect-ratio: 1;
-	border-radius: 8px;
-	padding: 4px;
+	border-radius: 12px;
+	padding: 8px;
 	cursor: ${props => (props.isDisabled ? 'not-allowed' : 'pointer')};
 	position: relative;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	transition: all 0.2s;
-	opacity: ${props => (props.isDisabled ? '0.5' : '1')};
-	background-color: ${props =>
-		props.isDisabled
-			? props.isWeekend
-				? '#f5f5f5'
-				: '#f0f0f0'
-			: props.isActive
-			? '#f5f5f5'
-			: props.status
-			? `${getStatusColor(props.status)}15`
-			: 'var(--color-bg-primary)'};
-	border: 2px solid
-		${props =>
-			props.isToday ? '#0ea5e9' : props.status ? getStatusColor(props.status) : 'transparent'};
-	box-shadow: ${props =>
-		props.status && !props.isDisabled ? '0 2px 4px rgba(0, 0, 0, 0.05)' : 'none'};
-	z-index: ${props => (props.isActive ? 10 : 1)};
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	opacity: ${props => (props.isDisabled ? 0.4 : 1)};
+	width: 100%;
+	
+	background: ${props => {
+		if (props.status === 'present') return 'linear-gradient(135deg, #22c55e, #16a34a)'
+		if (props.status === 'late') return 'linear-gradient(135deg, #f59e0b, #d97706)'
+		if (props.status === 'excused') return 'linear-gradient(135deg, #3b82f6, #2563eb)'
+		if (props.status === 'absent') return 'linear-gradient(135deg, #ef4444, #dc2626)'
+		return 'linear-gradient(135deg, #f8fafc, #e2e8f0)'
+	}};
+	
+	border: ${props => {
+		if (props.isToday) return '3px solid #3b82f6'
+		if (props.isActive) return '2px solid #8b5cf6'
+		if (props.status) return '2px solid rgba(255, 255, 255, 0.3)'
+		return '2px solid #e2e8f0'
+	}};
+	
+	box-shadow: ${props => {
+		if (props.isActive) return '0 8px 25px rgba(139, 92, 246, 0.3)'
+		if (props.status) return '0 4px 12px rgba(0, 0, 0, 0.15)'
+		return '0 1px 3px rgba(0, 0, 0, 0.1)'
+	}};
 
 	&:hover {
-		background-color: ${props =>
-			props.isDisabled ? (props.isWeekend ? '#f5f5f5' : '#f0f0f0') : '#f5f5f5'};
-		transform: ${props => (props.isDisabled ? 'none' : 'translateY(-2px)')};
+		${props => !props.isDisabled && `
+			box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+		`}
 	}
 `
 
@@ -816,12 +895,22 @@ const EmptyDay = styled.div`
 
 interface DayNumberProps {
 	isDisabled: boolean
+	hasStatus: boolean
 }
 
 const DayNumber = styled.span<DayNumberProps>`
-	font-weight: 500;
-	font-size: 1rem;
-	color: ${props => (props.isDisabled ? '#999' : 'var(--color-text-primary)')};
+	font-weight: 700;
+	font-size: 1.1rem;
+	color: ${props => {
+		if (props.isDisabled) return '#94a3b8'
+		if (props.hasStatus) return 'white'
+		return '#1e293b'
+	}};
+	line-height: 1;
+	margin-bottom: 4px;
+	text-shadow: ${props => props.hasStatus ? '0 1px 3px rgba(0, 0, 0, 0.5)' : 'none'};
+	z-index: 2;
+	position: relative;
 `
 
 interface StatusIndicatorProps {
@@ -829,28 +918,58 @@ interface StatusIndicatorProps {
 }
 
 const StatusIndicator = styled.div<StatusIndicatorProps>`
-	margin-top: 4px;
-	color: ${props => getStatusColor(props.status)};
+	color: ${props => props.status ? 'rgba(255, 255, 255, 0.9)' : '#64748b'};
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	text-shadow: ${props => props.status ? '0 1px 2px rgba(0, 0, 0, 0.2)' : 'none'};
+`
+
+const SavingIndicator = styled.div`
+	position: absolute;
+	top: 2px;
+	right: 2px;
+	background: rgba(255, 255, 255, 0.9);
+	border-radius: 50%;
+	padding: 2px;
 `
 
 const StatusDropdown = styled.div`
 	position: absolute;
-	top: calc(100% + 5px);
+	top: calc(100% + 8px);
 	left: 50%;
 	transform: translateX(-50%);
-	background-color: #fff;
-	border-radius: 8px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-	padding: 8px;
+	background: white;
+	border-radius: 16px;
+	box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+	padding: 16px;
 	z-index: 1000;
 	display: flex;
 	flex-direction: column;
+	gap: 8px;
+	min-width: 180px;
+	border: 1px solid #e2e8f0;
+`
+
+const DropdownHeader = styled.div`
+	display: flex;
+	flex-direction: column;
 	gap: 4px;
-	min-width: 140px;
-	border: 1px solid #c4c4c4;
+	padding-bottom: 12px;
+	border-bottom: 1px solid #f1f5f9;
+	margin-bottom: 8px;
+
+	span:first-child {
+		font-weight: 600;
+		color: #1e293b;
+		font-size: 0.875rem;
+	}
+`
+
+const DropdownDate = styled.span`
+	font-size: 0.75rem;
+	color: #64748b;
+	font-weight: 500;
 `
 
 interface StatusOptionProps {
@@ -862,110 +981,43 @@ interface StatusOptionProps {
 const StatusOption = styled.button<StatusOptionProps>`
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	padding: 10px;
+	gap: 12px;
+	padding: 12px;
 	border: none;
 	cursor: pointer;
-	border-radius: 6px;
-	transition: all 0.2s;
-	font-weight: ${props => (props.isSelected ? '500' : 'normal')};
+	border-radius: 10px;
+	transition: all 0.2s ease;
+	font-weight: 500;
+	font-size: 0.875rem;
+	
+	background: ${props => {
+		const colors = {
+			success: props.isSelected ? '#22c55e' : '#f0fdf4',
+			warning: props.isSelected ? '#f59e0b' : '#fffbeb',
+			primary: props.isSelected ? '#3b82f6' : '#eff6ff',
+			danger: props.isSelected ? '#ef4444' : '#fef2f2'
+		}
+		return colors[props.color as keyof typeof colors] || '#f8fafc'
+	}};
+	
+	color: ${props => {
+		const colors = {
+			success: props.isSelected ? 'white' : '#166534',
+			warning: props.isSelected ? 'white' : '#92400e',
+			primary: props.isSelected ? 'white' : '#1d4ed8',
+			danger: props.isSelected ? 'white' : '#dc2626'
+		}
+		return colors[props.color as keyof typeof colors] || '#475569'
+	}};
+
+	&:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+	}
 
 	&:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
-	}
-
-	span {
-		font-size: 0.9rem;
-	}
-	${props => {
-		switch (props.color) {
-			case 'success':
-				return `
-					background-color: ${props.theme.colors.success[50]};
-					color: ${props.theme.colors.success[700]};
-					border: 1px solid ${props.theme.colors.success[200]};
-
-					&:hover {
-						background-color: ${props.theme.colors.success[100]};
-					}
-				`
-			case 'primary':
-				return `
-					background-color: ${props.theme.colors.primary[50]};
-					color: ${props.theme.colors.primary[700]};
-					border: 1px solid ${props.theme.colors.primary[200]};
-
-					&:hover {
-						background-color: ${props.theme.colors.primary[100]};
-					}
-				`
-			case 'warning':
-				return `
-					background-color: ${props.theme.colors.warning[50]};
-					color: ${props.theme.colors.warning[700]};
-					border: 1px solid ${props.theme.colors.warning[200]};
-
-					&:hover {
-						background-color: ${props.theme.colors.warning[100]};
-					}
-				`
-			case 'danger':
-				return `
-					background-color: ${props.theme.colors.danger[50]};
-					color: ${props.theme.colors.danger[700]};
-					border: 1px solid ${props.theme.colors.danger[200]};
-
-					&:hover {
-						background-color: ${props.theme.colors.danger[100]};
-					}
-				`
-			default:
-				return `
-					background-color: ${props.theme.colors.neutral[100]};
-					color: ${props.theme.colors.neutral[600]};
-					border: 1px solid ${props.theme.colors.neutral[200]};
-
-					&:hover {
-						background-color: ${props.theme.colors.neutral[200]};
-					}
-				`
-		}
-	}}
-`
-
-const LoadingOverlay = styled.div`
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	background-color: rgba(255, 255, 255, 0.7);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-radius: 8px;
-`
-
-interface LoadingSpinnerProps {
-	size?: 'small' | 'medium' | 'large'
-}
-
-const LoadingSpinner = styled.div<LoadingSpinnerProps>`
-	width: ${props => (props.size === 'large' ? '40px' : props.size === 'medium' ? '24px' : '16px')};
-	height: ${props => (props.size === 'large' ? '40px' : props.size === 'medium' ? '24px' : '16px')};
-	border: 2px solid var(--color-bg-secondary);
-	border-top: 2px solid var(--color-primary);
-	border-radius: 50%;
-	animation: spin 1s linear infinite;
-
-	@keyframes spin {
-		0% {
-			transform: rotate(0deg);
-		}
-		100% {
-			transform: rotate(360deg);
-		}
 	}
 `
 
@@ -975,103 +1027,134 @@ const LoadingContainer = styled.div`
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	padding: 40px;
+	padding: 60px 20px;
 	gap: 16px;
+`
 
-	p {
-		color: var(--color-text-secondary);
+interface LoadingSpinnerProps {
+	size?: 'small' | 'medium' | 'large'
+}
+
+const LoadingSpinner = styled.div<LoadingSpinnerProps>`
+	width: ${props => props.size === 'large' ? '40px' : props.size === 'small' ? '20px' : '32px'};
+	height: ${props => props.size === 'large' ? '40px' : props.size === 'small' ? '20px' : '32px'};
+	border: 3px solid #e2e8f0;
+	border-top: 3px solid #3b82f6;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+
+	@keyframes spin {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
 	}
 `
 
-const LegendContainer = styled.div`
+const LoadingText = styled.p`
+	color: #64748b;
+	font-weight: 500;
+	margin: 0;
+`
+
+const LegendSection = styled.div`
+	padding: 0 32px;
+	margin-bottom: 24px;
+`
+
+const LegendTitle = styled.div`
 	display: flex;
-	justify-content: center;
+	align-items: center;
+	gap: 8px;
+	color: #475569;
+	font-weight: 600;
+	font-size: 0.875rem;
+	margin-bottom: 16px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+`
+
+const LegendContainer = styled.div`
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 	gap: 16px;
-	padding: 16px;
-	background-color: var(--color-bg-secondary);
-	border-radius: 12px;
+`
+
+const LegendItem = styled.div`
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px;
+	border-radius: 8px;
+	transition: background-color 0.2s ease;
+
+	&:hover {
+		background-color: #f8fafc;
+	}
+
+	span {
+		font-size: 0.875rem;
+		color: #475569;
+		font-weight: 500;
+	}
 `
 
 interface LegendColorProps {
 	status: AttendanceStatus
 }
 
-const LegendItem = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 8px;
-
-	span {
-		font-size: 0.9rem;
-		font-weight: 500;
-		color: var(--color-text-secondary);
-	}
-`
-
 const LegendColor = styled.div<LegendColorProps>`
 	width: 16px;
 	height: 16px;
-	border-radius: 4px;
-	background-color: ${props => getStatusColor(props.status)};
+	border-radius: 50%;
+	background: ${props => {
+		switch (props.status) {
+			case 'present':
+				return 'linear-gradient(135deg, #22c55e, #16a34a)'
+			case 'late':
+				return 'linear-gradient(135deg, #f59e0b, #d97706)'
+			case 'excused':
+				return 'linear-gradient(135deg, #3b82f6, #2563eb)'
+			case 'absent':
+				return 'linear-gradient(135deg, #ef4444, #dc2626)'
+			default:
+				return '#e2e8f0'
+		}
+	}};
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	flex-shrink: 0;
 `
 
 const ModalFooter = styled.div`
-	display: flex;
-	justify-content: center;
-	padding-top: 8px;
+	padding: 24px 32px 32px;
+	border-top: 1px solid #f1f5f9;
 `
 
-const HelpText = styled.p`
-	font-size: 0.9rem;
-	color: var(--color-text-secondary);
-	margin: 0;
-	font-style: italic;
-`
-
-const AttendanceStatsContainer = styled.div`
-	display: flex;
-	flex-wrap: wrap;
-	gap: 16px;
-	padding: 16px 0;
-	border-bottom: 1px solid var(--color-border);
-	margin-bottom: 16px;
-
-	@media (max-width: 768px) {
-		flex-direction: column;
-		gap: 12px;
-	}
-`
-
-const AttendanceStatItem = styled.div`
+const HelpText = styled.div`
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	flex: 1;
-	min-width: 180px;
-`
-
-const StatLabel = styled.span`
-	font-size: 0.9rem;
+	color: #64748b;
+	font-size: 0.875rem;
 	font-weight: 500;
-	color: var(--color-text-secondary);
-	white-space: nowrap;
+	text-align: center;
+	justify-content: center;
+	
+	span {
+		font-style: italic;
+	}
 `
 
-// Helper function for styled components to access
 export function getStatusColor(status: AttendanceStatus): string {
-	if (!status) return 'transparent'
-
-	switch (status.toLowerCase()) {
+	switch (status) {
 		case 'present':
-			return '#10b981' // success color
+			return '#22c55e'
 		case 'late':
-			return '#f59e0b' // warning color
+			return '#f59e0b'
 		case 'excused':
-			return '#3b82f6' // primary color
+			return '#3b82f6'
 		case 'absent':
-			return '#ef4444' // danger color
+			return '#ef4444'
 		default:
-			return 'transparent'
+			return '#6b7280'
 	}
 }
 

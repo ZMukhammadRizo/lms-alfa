@@ -1,11 +1,11 @@
 import { motion } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FiAward, FiBarChart2, FiBookOpen, FiChevronRight, FiSearch, FiUsers } from 'react-icons/fi'
+import { FiAward, FiBarChart2, FiBookOpen, FiChevronRight, FiUsers } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { PageTitle } from '../../../components/common'
-import { Card, Container, Input } from '../../../components/ui'
+import { Card, Container, SearchInput } from '../../../components/ui'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../services/supabaseClient'
 import useGradesStore from '../../../store/gradesStore'
@@ -191,11 +191,13 @@ const GradeLevelSelect: React.FC = () => {
 					</HeaderContent>
 					<HeaderRight>
 						<SearchWrapper>
-							<StyledInput
-								prefix={<FiSearch />}
-								placeholder={t('grades.searchGradeLevels')}
+							<SearchInput
 								value={searchTerm}
-								onChange={e => setSearchTerm(e.target.value)}
+								onChange={setSearchTerm}
+								placeholder={t('grades.searchGradeLevels')}
+								variant="elevated"
+								size="medium"
+								resultsCount={filteredGradeLevels.length}
 							/>
 						</SearchWrapper>
 					</HeaderRight>
@@ -347,16 +349,7 @@ const SearchWrapper = styled.div`
 	width: 100%;
 `
 
-const StyledInput = styled(Input)`
-	width: 100%;
-	font-size: 1rem;
-	border-radius: 8px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 
-	&:focus-within {
-		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-	}
-`
 
 const GradeLevelGrid = styled.div`
 	display: grid;
