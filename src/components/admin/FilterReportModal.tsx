@@ -28,9 +28,14 @@ interface ClassSelection {
 interface FilterReportModalProps {
 	isOpen: boolean
 	onClose: () => void
+	baseRoute?: string // Optional prop to specify the base route (admin or teacher)
 }
 
-const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }) => {
+const FilterReportModal: React.FC<FilterReportModalProps> = ({
+	isOpen,
+	onClose,
+	baseRoute = 'admin',
+}) => {
 	const { t } = useTranslation()
 	const [levels, setLevels] = useState<Level[]>([])
 	const [classes, setClasses] = useState<Record<string, Class[]>>({})
@@ -135,7 +140,8 @@ const FilterReportModal: React.FC<FilterReportModalProps> = ({ isOpen, onClose }
 			}))
 
 		// Navigate to reports page with selected classes and report type
-		navigate('/admin/daily-attendance/reports', {
+		// Use baseRoute prop to determine the correct panel path
+		navigate(`/${baseRoute}/daily-attendance/reports`, {
 			state: {
 				selectedClasses: selectedClassesData,
 				reportType,
