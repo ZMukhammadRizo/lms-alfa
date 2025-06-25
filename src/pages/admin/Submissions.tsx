@@ -30,7 +30,7 @@ const getThemeValue = (theme: any): DefaultTheme => theme as DefaultTheme
 // Interface definitions
 interface Submission {
 	id: string
-	fileurl: string[] | string
+	fileurl: string[]
 	submittedat: string
 	grade: number | null
 	feedback: string | null
@@ -1101,9 +1101,7 @@ const AdminSubmissions: React.FC = () => {
 				<HeaderContent>
 					<div>
 						<PageTitle>{t('submissions.title')}</PageTitle>
-						<PageDescription>
-							{t('submissions.description')}
-						</PageDescription>
+						<PageDescription>{t('submissions.description')}</PageDescription>
 					</div>
 				</HeaderContent>
 
@@ -1122,7 +1120,9 @@ const AdminSubmissions: React.FC = () => {
 						<FilterButton onClick={() => setShowClassDropdown(!showClassDropdown)}>
 							<FiFilter />
 							{selectedClass
-								? `${t('submissions.class')}: ${classes.find(c => c.id === selectedClass)?.classname || t('common.selected')}`
+								? `${t('submissions.class')}: ${
+										classes.find(c => c.id === selectedClass)?.classname || t('common.selected')
+								  }`
 								: t('submissions.allClasses')}
 							<FiChevronDown />
 						</FilterButton>
@@ -1177,12 +1177,16 @@ const AdminSubmissions: React.FC = () => {
 						<SubmissionsGrid>
 							{displayedSubmissions.map(submission => (
 								<SubmissionCard key={submission.id} onClick={() => handleOpenDetail(submission)}>
-									<CardHeader>{submission.assignment?.title || t('submissions.untitledAssignment')}</CardHeader>
+									<CardHeader>
+										{submission.assignment?.title || t('submissions.untitledAssignment')}
+									</CardHeader>
 									<CardBody>
 										<CardInfo>
 											<InfoItem>
 												<FiUser />
-												<InfoText>{submission.student?.fullName || t('submissions.unknownStudent')}</InfoText>
+												<InfoText>
+													{submission.student?.fullName || t('submissions.unknownStudent')}
+												</InfoText>
 											</InfoItem>
 											{submission.student?.email && (
 												<InfoItem>
@@ -1198,7 +1202,9 @@ const AdminSubmissions: React.FC = () => {
 											)}
 											<InfoItem>
 												<FiCalendar />
-												<InfoText>{t('submissions.submittedColon')} {formatDate(submission.submittedat)}</InfoText>
+												<InfoText>
+													{t('submissions.submittedColon')} {formatDate(submission.submittedat)}
+												</InfoText>
 											</InfoItem>
 										</CardInfo>
 
@@ -1210,7 +1216,8 @@ const AdminSubmissions: React.FC = () => {
 															<a href={url} target='_blank' rel='noopener noreferrer'>
 																<FiExternalLink size={14} />
 																<span>
-																	{t('submissions.viewFile')} {submission.fileurl.length > 1 ? `${index + 1}` : ''}
+																	{t('submissions.viewFile')}{' '}
+																	{submission.fileurl.length > 1 ? `${index + 1}` : ''}
 																</span>
 															</a>
 															<DownloadButton
@@ -1228,13 +1235,17 @@ const AdminSubmissions: React.FC = () => {
 										</CardActions>
 										<FeedbackSection>
 											{submission.grade ? (
-												<GradeBadge>{t('submissions.grade')}: {submission.grade}/10</GradeBadge>
+												<GradeBadge>
+													{t('submissions.grade')}: {submission.grade}/10
+												</GradeBadge>
 											) : (
 												<PendingBadge>{t('submissions.notGraded')}</PendingBadge>
 											)}
 											{submission.status && (
 												<StatusBadge $status={submission.status}>
-													{submission.status === 'accepted' ? t('submissions.accepted') : t('submissions.rejected')}
+													{submission.status === 'accepted'
+														? t('submissions.accepted')
+														: t('submissions.rejected')}
 												</StatusBadge>
 											)}
 											{submission.feedback && (
@@ -1279,7 +1290,9 @@ const AdminSubmissions: React.FC = () => {
 								</InfoGroup>
 								<InfoGroup>
 									<InfoLabel>{t('submissions.student')}</InfoLabel>
-									<InfoValue>{selectedSubmission.student?.fullName || t('submissions.unknownStudent')}</InfoValue>
+									<InfoValue>
+										{selectedSubmission.student?.fullName || t('submissions.unknownStudent')}
+									</InfoValue>
 								</InfoGroup>
 								{selectedSubmission.student?.email && (
 									<InfoGroup>
@@ -1368,7 +1381,9 @@ const AdminSubmissions: React.FC = () => {
 										</StatusOptions>
 									</FormGroup>
 									<ButtonGroup>
-										<CancelButton onClick={handleCloseDetail}>{t('submissions.cancel')}</CancelButton>
+										<CancelButton onClick={handleCloseDetail}>
+											{t('submissions.cancel')}
+										</CancelButton>
 										<SaveButton onClick={handleSaveGradeFeedback}>
 											<FiCheck /> {t('submissions.saveFeedback')}
 										</SaveButton>
