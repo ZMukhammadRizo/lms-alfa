@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Book, Calendar, ChevronRight, FileText, Search, Users } from 'react-feather'
-import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import styled from 'styled-components'
 import FilterReportModal from '../../../components/admin/FilterReportModal'
@@ -199,11 +199,15 @@ const TeacherDailyAttendance: React.FC = () => {
 									<LevelStats>
 										<StatItem>
 											<Book size={16} />
-											<span>{level.class_count} {t('teacherPanel.classes.title')}</span>
+											<span>
+												{level.class_count} {t('teacherPanel.classes.title')}
+											</span>
 										</StatItem>
 										<StatItem>
 											<Users size={16} />
-											<span>{level.student_count || 0} {t('teacherPanel.dashboard.students')}</span>
+											<span>
+												{level.student_count || 0} {t('teacherPanel.dashboard.students')}
+											</span>
 										</StatItem>
 									</LevelStats>
 									<GoButton>
@@ -216,7 +220,11 @@ const TeacherDailyAttendance: React.FC = () => {
 				</>
 			)}
 
-			<FilterReportModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} />
+			<FilterReportModal
+				isOpen={isReportModalOpen}
+				onClose={() => setIsReportModalOpen(false)}
+				baseRoute='teacher'
+			/>
 		</Container>
 	)
 }

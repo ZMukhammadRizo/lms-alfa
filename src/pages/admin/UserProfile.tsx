@@ -60,7 +60,7 @@ interface StudentGrade {
 interface StudentAttendance {
 	id: string
 	date: string
-	status: 'present' | 'absent' | 'late' | 'excused' | 'unknown'
+	status: 'present' | 'absent' | 'late' | 'excused' | 'not-assigned'
 	subject?: string
 	quarter?: string
 	lessonName?: string
@@ -584,7 +584,7 @@ const UserProfile: React.FC = () => {
 						(record): StudentAttendance => ({
 							id: record.id,
 							date: record.noted_at,
-							status: record.status || 'unknown',
+							status: record.status || 'not-assigned',
 							subject: record.lessons?.subjects?.subjectname || 'Unknown Subject',
 							lessonName: record.lessons?.lessonname || 'Lesson ' + record.lesson_id,
 							quarter: record.quarters?.name || 'Current Quarter',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ArrowLeft, Download, FileText, Check, X, Clock, BookOpen } from 'react-feather'
+import { ArrowLeft, BookOpen, Check, Clock, Download, FileText, X } from 'react-feather'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -25,7 +25,7 @@ interface AttendanceRecord {
 	id: string
 	student_id: string
 	noted_for: string
-	status: 'present' | 'absent' | 'late' | 'excused'
+	status: 'present' | 'absent' | 'late' | 'excused' | 'not-assigned'
 }
 
 interface StudentAttendance {
@@ -116,7 +116,7 @@ const DailyAttendanceReports: React.FC = () => {
 					// Create a map of date to attendance status
 					const attendanceByDate: Record<string, string> = {}
 					dates.forEach(date => {
-						attendanceByDate[formatDate(date)] = 'absent' // Default to absent
+						attendanceByDate[formatDate(date)] = 'not-assigned' // Default to not-assigned
 					})
 
 					// Update with actual attendance data
@@ -124,13 +124,16 @@ const DailyAttendanceReports: React.FC = () => {
 						attendanceByDate[record.noted_for] = record.status
 					})
 
-					// Calculate attendance percentage
-					const totalDays = dates.length
-					const presentDays = Object.values(attendanceByDate).filter(
+					// Calculate attendance percentage - exclude not-assigned days
+					const assignedDays = Object.values(attendanceByDate).filter(
+						status => status !== 'not-assigned'
+					)
+					const totalAssignedDays = assignedDays.length
+					const presentDays = assignedDays.filter(
 						status => status === 'present' || status === 'late'
 					).length
 
-					const percentage = totalDays > 0 ? (presentDays / totalDays) * 100 : 0
+					const percentage = totalAssignedDays > 0 ? (presentDays / totalAssignedDays) * 100 : 0
 
 					return {
 						student,
@@ -221,15 +224,41 @@ const DailyAttendanceReports: React.FC = () => {
 	const getStatusDisplay = (status: string) => {
 		switch (status) {
 			case 'present':
-				return <StatusIcon $status='present' title={t('dailyAttendance.status.present')}><Check size={16} /></StatusIcon>
+				return (
+					<StatusIcon $status='present' title={t('dailyAttendance.status.present')}>
+						<Check size={16} />
+					</StatusIcon>
+				)
 			case 'late':
-				return <StatusIcon $status='late' title={t('dailyAttendance.status.late')}><Clock size={16} /></StatusIcon>
+				return (
+					<StatusIcon $status='late' title={t('dailyAttendance.status.late')}>
+						<Clock size={16} />
+					</StatusIcon>
+				)
 			case 'excused':
-				return <StatusIcon $status='excused' title={t('dailyAttendance.status.excused')}><BookOpen size={16} /></StatusIcon>
+				return (
+					<StatusIcon $status='excused' title={t('dailyAttendance.status.excused')}>
+						<BookOpen size={16} />
+					</StatusIcon>
+				)
 			case 'absent':
-				return <StatusIcon $status='absent' title={t('dailyAttendance.status.absent')}><X size={16} /></StatusIcon>
+				return (
+					<StatusIcon $status='absent' title={t('dailyAttendance.status.absent')}>
+						<X size={16} />
+					</StatusIcon>
+				)
+			case 'not-assigned':
+				return (
+					<StatusIcon $status='not-assigned' title={t('dailyAttendance.status.notAssigned')}>
+						-
+					</StatusIcon>
+				)
 			default:
-				return <StatusIcon $status='absent' title={t('dailyAttendance.status.absent')}><X size={16} /></StatusIcon>
+				return (
+					<StatusIcon $status='not-assigned' title={t('dailyAttendance.status.notAssigned')}>
+						-
+					</StatusIcon>
+				)
 		}
 	}
 
@@ -459,7 +488,7 @@ const DailyAttendanceReports: React.FC = () => {
 }
 
 interface StatusIconProps {
-	$status: 'present' | 'late' | 'excused' | 'absent'
+	$status: 'present' | 'late' | 'excused' | 'absent' | 'not-assigned'
 }
 
 const StatusIcon = styled.div<StatusIconProps>`
@@ -476,8 +505,10 @@ const StatusIcon = styled.div<StatusIconProps>`
 				return '#3b82f6' // Blue
 			case 'absent':
 				return '#ef4444' // Red
+			case 'not-assigned':
+				return '#9CA3AF' // Gray
 			default:
-				return '#ef4444'
+				return '#9CA3AF'
 		}
 	}};
 `
@@ -502,8 +533,10 @@ const StatusTableCell = styled.td<StatusTableCellProps>`
 				return 'rgba(59, 130, 246, 0.1)' // Blue with 10% opacity
 			case 'absent':
 				return 'rgba(239, 68, 68, 0.1)' // Red with 10% opacity
+			case 'not-assigned':
+				return 'rgba(156, 163, 175, 0.1)' // Gray with 10% opacity
 			default:
-				return 'rgba(239, 68, 68, 0.1)' // Default to red
+				return 'rgba(156, 163, 175, 0.1)' // Default to gray
 		}
 	}};
 `

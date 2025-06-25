@@ -18,7 +18,7 @@
       // the single page app to route accordingly.
       (function(l) {
         if (l.search[1] === '/' ) {
-          var decoded = l.search.slice(1).split('&').map(function(s) { 
+          var decoded = l.search.slice(1).split('&').map(function(s) {
             return s.replace(/~and~/g, '&')
           }).join('?');
           window.history.replaceState(null, null,
@@ -27,15 +27,15 @@
         }
       }(window.location))
 
-      // On page load, set initial dark mode class based on localStorage or system preference
-      (function() {
-        const theme = localStorage.getItem('theme');
-        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      })(); 
+      // // On page load, set initial dark mode class based on localStorage or system preference
+      // (function() {
+      //   const theme = localStorage.getItem('theme');
+      //   if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      //     document.documentElement.classList.add('dark');
+      //   } else {
+      //     document.documentElement.classList.remove('dark');
+      //   }
+      // })();
     </script>
   </head>
   <body>

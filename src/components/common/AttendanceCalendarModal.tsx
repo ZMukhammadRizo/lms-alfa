@@ -28,7 +28,7 @@ interface DailyAttendance {
 }
 
 // Define status types for better type safety
-type AttendanceStatus = 'present' | 'late' | 'excused' | 'absent' | null
+type AttendanceStatus = 'present' | 'late' | 'excused' | 'absent' | 'not-assigned' | null
 
 const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 	isOpen,
@@ -151,15 +151,17 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 
 				// Skip weekends
 				if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-					totalDays++
-
 					// Check if there's an attendance record for this day
 					const dateStr = date.toISOString().split('T')[0]
 					const record = records.find(r => r.noted_for === dateStr)
 
-					// Count as present only if explicitly marked present or late
-					if (record && (record.status === 'present' || record.status === 'late')) {
-						presentDays++
+					// Only count assigned days in total (exclude not-assigned)
+					if (record && record.status !== 'not-assigned') {
+						totalDays++
+						// Count as present only if explicitly marked present or late
+						if (record.status === 'present' || record.status === 'late') {
+							presentDays++
+						}
 					}
 				}
 			}
@@ -176,8 +178,8 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 				const recordDate = new Date(date)
 				const dayOfWeek = recordDate.getDay()
 
-				// Only count weekdays
-				if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+				// Only count weekdays and exclude not-assigned days
+				if (dayOfWeek !== 0 && dayOfWeek !== 6 && status !== 'not-assigned') {
 					totalDays++
 					if (status === 'present' || status === 'late') {
 						presentDays++

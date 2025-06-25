@@ -25,7 +25,7 @@ type AttendanceRecord = {
 }
 
 type ChildFilter = number | 'all'
-type StatusFilter = 'all' | 'present' | 'absent' | 'late' | 'excused'
+type StatusFilter = 'all' | 'present' | 'absent' | 'late' | 'excused' | 'not-assigned'
 type MonthFilter = number | 'all' // 0-11 for Jan-Dec
 
 // Add the missing interface
@@ -181,6 +181,7 @@ const AttendancePage: React.FC = () => {
 			late: 0,
 			excused: 0,
 			absent: 0,
+			notAssigned: 0,
 		}
 
 		childAttendance.forEach(record => {
@@ -189,37 +190,40 @@ const AttendancePage: React.FC = () => {
 			else if (status === 'late') stats.late++
 			else if (status === 'excused') stats.excused++
 			else if (status === 'absent') stats.absent++
+			else if (status === 'not-assigned') stats.notAssigned++
 		})
 
-		const total = childAttendance.length
+		// Only count assigned days for percentage calculation (exclude not-assigned)
+		const assignedTotal = stats.present + stats.late + stats.excused + stats.absent
 
 		return {
 			counts: stats,
-			total,
+			total: childAttendance.length, // Total includes all records
+			assignedTotal, // Total of only assigned days
 			pieData: [
 				{
 					title: t('parent.attendance.status.present'),
 					value: stats.present,
 					color: '#22c55e', // success.500
-					percentage: total > 0 ? Math.round((stats.present / total) * 100) : 0,
+					percentage: assignedTotal > 0 ? Math.round((stats.present / assignedTotal) * 100) : 0,
 				},
 				{
 					title: t('parent.attendance.status.late'),
 					value: stats.late,
 					color: '#f59e0b', // warning.500
-					percentage: total > 0 ? Math.round((stats.late / total) * 100) : 0,
+					percentage: assignedTotal > 0 ? Math.round((stats.late / assignedTotal) * 100) : 0,
 				},
 				{
 					title: t('parent.attendance.status.excused'),
 					value: stats.excused,
 					color: '#3b82f6', // primary.500
-					percentage: total > 0 ? Math.round((stats.excused / total) * 100) : 0,
+					percentage: assignedTotal > 0 ? Math.round((stats.excused / assignedTotal) * 100) : 0,
 				},
 				{
 					title: t('parent.attendance.status.absent'),
 					value: stats.absent,
 					color: '#ef4444', // danger.500
-					percentage: total > 0 ? Math.round((stats.absent / total) * 100) : 0,
+					percentage: assignedTotal > 0 ? Math.round((stats.absent / assignedTotal) * 100) : 0,
 				},
 			].filter(item => item.value > 0), // Only include statuses that have values
 		}
@@ -241,7 +245,9 @@ const AttendancePage: React.FC = () => {
 						disabled={loading || children.length === 0}
 					>
 						<option value='all'>{t('parent.attendance.allChildren')}</option>
-						{children.length === 0 && <option value=''>{t('parent.attendance.noStudentsAvailable')}</option>}
+						{children.length === 0 && (
+							<option value=''>{t('parent.attendance.noStudentsAvailable')}</option>
+						)}
 						{children.map(child => (
 							<option key={child.id} value={child.id}>
 								{child.firstName} {child.lastName}
@@ -251,7 +257,11 @@ const AttendancePage: React.FC = () => {
 				</StudentSelectorWrapper>
 			</PageHeader>
 
-			{error && <ErrorMessage>{t('parent.attendance.errorLoading')}: {error}</ErrorMessage>}
+			{error && (
+				<ErrorMessage>
+					{t('parent.attendance.errorLoading')}: {error}
+				</ErrorMessage>
+			)}
 
 			{loading ? (
 				<LoadingState>{t('parent.attendance.loadingRecords')}</LoadingState>
@@ -275,9 +285,7 @@ const AttendancePage: React.FC = () => {
 									</ChildName>
 									<EmptyState>
 										<EmptyStateTitle>{t('parent.attendance.noRecordsAvailable')}</EmptyStateTitle>
-										<EmptyStateText>
-											{t('parent.attendance.noRecordsForChild')}
-										</EmptyStateText>
+										<EmptyStateText>{t('parent.attendance.noRecordsForChild')}</EmptyStateText>
 									</EmptyState>
 								</ChildAttendanceSection>
 							)
@@ -350,9 +358,11 @@ const AttendancePage: React.FC = () => {
 														<StatsValue>{attendanceStats.counts.present}</StatsValue>
 														<StatsLabel>{t('parent.attendance.status.present')}</StatsLabel>
 														<StatsPercentage>
-															{attendanceStats.total > 0
+															{attendanceStats.assignedTotal > 0
 																? Math.round(
-																		(attendanceStats.counts.present / attendanceStats.total) * 100
+																		(attendanceStats.counts.present /
+																			attendanceStats.assignedTotal) *
+																			100
 																  )
 																: 0}
 															%
@@ -368,9 +378,10 @@ const AttendancePage: React.FC = () => {
 														<StatsValue>{attendanceStats.counts.late}</StatsValue>
 														<StatsLabel>{t('parent.attendance.status.late')}</StatsLabel>
 														<StatsPercentage>
-															{attendanceStats.total > 0
+															{attendanceStats.assignedTotal > 0
 																? Math.round(
-																		(attendanceStats.counts.late / attendanceStats.total) * 100
+																		(attendanceStats.counts.late / attendanceStats.assignedTotal) *
+																			100
 																  )
 																: 0}
 															%
@@ -386,9 +397,11 @@ const AttendancePage: React.FC = () => {
 														<StatsValue>{attendanceStats.counts.excused}</StatsValue>
 														<StatsLabel>{t('parent.attendance.status.excused')}</StatsLabel>
 														<StatsPercentage>
-															{attendanceStats.total > 0
+															{attendanceStats.assignedTotal > 0
 																? Math.round(
-																		(attendanceStats.counts.excused / attendanceStats.total) * 100
+																		(attendanceStats.counts.excused /
+																			attendanceStats.assignedTotal) *
+																			100
 																  )
 																: 0}
 															%
@@ -404,9 +417,11 @@ const AttendancePage: React.FC = () => {
 														<StatsValue>{attendanceStats.counts.absent}</StatsValue>
 														<StatsLabel>{t('parent.attendance.status.absent')}</StatsLabel>
 														<StatsPercentage>
-															{attendanceStats.total > 0
+															{attendanceStats.assignedTotal > 0
 																? Math.round(
-																		(attendanceStats.counts.absent / attendanceStats.total) * 100
+																		(attendanceStats.counts.absent /
+																			attendanceStats.assignedTotal) *
+																			100
 																  )
 																: 0}
 															%
@@ -426,7 +441,9 @@ const AttendancePage: React.FC = () => {
 											</DetailsHeaderTitle>
 											<DetailsHeaderInfo>
 												{childAttendance.length}{' '}
-												{childAttendance.length === 1 ? t('parent.attendance.record') : t('parent.attendance.records')}
+												{childAttendance.length === 1
+													? t('parent.attendance.record')
+													: t('parent.attendance.records')}
 											</DetailsHeaderInfo>
 										</DetailsHeader>
 

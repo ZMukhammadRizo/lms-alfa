@@ -3,11 +3,11 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-d
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { DefaultTheme, ThemeProvider } from 'styled-components'
-import './i18n' // Initialize i18n
 import ProtectedRoute from './components/common/ProtectedRoute'
 import RoleMiddleware from './components/common/RoleMiddleware'
 import { AnnouncementProvider } from './contexts/AnnouncementContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import './i18n' // Initialize i18n
 import AdminLayout from './layouts/AdminLayout'
 import ParentLayout from './layouts/ParentLayout'
 import StudentLayout from './layouts/StudentLayout'
@@ -15,7 +15,11 @@ import TeacherLayout from './layouts/TeacherLayout'
 import AnnouncementCreate from './pages/admin/AnnouncementCreate'
 import AdminAnnouncements from './pages/admin/Announcements'
 import AdminAssignments from './pages/admin/Assignments'
-import { Classes } from './pages/admin/Classes'
+import AdminClassesLayout from './pages/admin/classes/AdminClassesLayout'
+import ClassesPage from './pages/admin/classes/ClassesPage'
+import ClassTypesPage from './pages/admin/classes/ClassTypesPage'
+import SectionsPage from './pages/admin/classes/SectionsPage'
+import StudentsPage from './pages/admin/classes/StudentsPage'
 import AdminDailyAttendance from './pages/admin/DailyAttendance/AdminDailyAttendance'
 import AdminDailyAttendanceClass from './pages/admin/DailyAttendance/AdminDailyAttendanceClass'
 import AdminDailyAttendanceLevel from './pages/admin/DailyAttendance/AdminDailyAttendanceLevel'
@@ -29,7 +33,7 @@ import ProfilePage from './pages/admin/ProfilePage'
 import Roles from './pages/admin/Roles'
 import Settings from './pages/admin/Settings'
 import Subjects from './pages/admin/Subjects'
-import AdminSubmissions from './pages/admin/Submissions'
+import AdminSubmissionsModule from './pages/admin/SubmissionsModule'
 import Timetables from './pages/admin/Timetables'
 import UserProfile from './pages/admin/UserProfile'
 import Users from './pages/admin/Users'
@@ -44,7 +48,7 @@ import NotificationsPage from './pages/parent/NotificationsPage'
 import ParentCalendar from './pages/parent/ParentCalendar'
 import ParentDashboard from './pages/parent/ParentDashboard'
 import { SettingsPage } from './pages/parent/SettingsPage'
-import { StudentsPage } from './pages/parent/StudentsPage'
+import { StudentsPage as ParentStudentsPage } from './pages/parent/StudentsPage'
 import Announcements from './pages/student/Announcements'
 import Assignments from './pages/student/Assignments'
 import CourseDetail from './pages/student/CourseDetail'
@@ -60,6 +64,7 @@ import TeacherDailyAttendanceClass from './pages/teacher/DailyAttendance/Teacher
 import TeacherDailyAttendanceLevel from './pages/teacher/DailyAttendance/TeacherDailyAttendanceLevel'
 import TeacherGradesModule from './pages/teacher/GradesModule'
 import SubjectsManagePage from './pages/teacher/SubjectsManagePage'
+import TeacherSubmissionsModule from './pages/teacher/SubmissionsModule'
 import TeacherAssignmentFiles from './pages/teacher/TeacherAssignmentFiles'
 import TeacherAssignments from './pages/teacher/TeacherAssignments'
 import TeacherClasses from './pages/teacher/TeacherClasses'
@@ -69,7 +74,6 @@ import TeacherJournalPage from './pages/teacher/TeacherJournalPage'
 import TeacherLessonDetails from './pages/teacher/TeacherLessonDetails'
 import TeacherSchedule from './pages/teacher/TeacherSchedule'
 import { TeacherSubjectDetails } from './pages/teacher/TeacherSubjectDetails'
-import TeacherSubmissions from './pages/teacher/TeacherSubmissions'
 import GlobalStyle from './styles/globalStyles'
 import { createTheme } from './styles/theme'
 
@@ -167,7 +171,15 @@ function AppContent() {
 							<Route path='users/:userId' element={<UserProfile />} />
 							<Route path='roles' element={<Roles />} />
 							<Route path='subjects' element={<Subjects />} />
-							<Route path='classes' element={<Classes />} />
+							<Route path='classes' element={<AdminClassesLayout />}>
+								<Route index element={<ClassTypesPage />} />
+								<Route path='types/:typeId' element={<ClassesPage />} />
+								<Route path='types/:typeId/levels/:levelId' element={<SectionsPage />} />
+								<Route
+									path='types/:typeId/levels/:levelId/sections/:sectionId'
+									element={<StudentsPage />}
+								/>
+							</Route>
 							<Route path='assignments' element={<AdminAssignments />} />
 							<Route path='grades/*' element={<AdminGradesModule />} />
 							<Route path='daily-attendance' element={<AdminDailyAttendance />} />
@@ -185,7 +197,7 @@ function AppContent() {
 							<Route path='subjects/:subjectId/lessons' element={<LessonsManagePage />} />
 							<Route path='subjects' element={<SubjectsManagePage />} />
 							<Route path='lessons/:id' element={<LessonDetail />} />
-							<Route path='submissions' element={<AdminSubmissions />} />
+							<Route path='submissions/*' element={<AdminSubmissionsModule />} />
 						</Route>
 					</Route>
 
@@ -211,7 +223,7 @@ function AppContent() {
 							<Route path='announcements' element={<TeacherAnnouncements />} />
 							<Route path='journal/:classId' element={<TeacherJournalPage />} />
 							<Route path='journal' element={<TeacherJournalPage />} />
-							<Route path='submissions' element={<TeacherSubmissions />} />
+							<Route path='submissions/*' element={<TeacherSubmissionsModule />} />
 							<Route path='assignments' element={<TeacherAssignments />} />
 							<Route path='assignments/files/:id' element={<TeacherAssignmentFiles />} />
 							<Route path='subjects/:subjectId/lessons' element={<LessonsManagePage />} />
@@ -256,7 +268,7 @@ function AppContent() {
 						<Route path='/parent' element={<ParentLayout />}>
 							<Route index element={<ParentDashboard />} />
 							<Route path='dashboard' element={<ParentDashboard />} />
-							<Route path='students' element={<StudentsPage />} />
+							<Route path='students' element={<ParentStudentsPage />} />
 							<Route path='assignments' element={<AssignmentsPage />} />
 							<Route path='grades' element={<GradesPage />} />
 							<Route path='attendance' element={<AttendancePage />} />
