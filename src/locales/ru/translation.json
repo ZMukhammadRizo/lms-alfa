@@ -557,22 +557,6 @@
 		"studentStatistics": "Статистика учащихся",
 		"activeVsInactive": "Активные против неактивных"
 	},
-	"attendance": {
-		"title": "Посещаемость",
-		"overview": "Обзор",
-		"markAttendance": "Отметить посещаемость",
-		"viewReports": "Просмотр отчетов",
-		"dailyReport": "Ежедневный отчет",
-		"monthlyReport": "Месячный отчет",
-		"classWiseReport": "Отчет по классам",
-		"attendanceReport": "Отчет о посещаемости",
-		"overallStudents": "Всего учащихся",
-		"present": "Присутствует",
-		"absent": "Отсутствует",
-		"late": "Опоздал",
-		"excused": "Уважительная причина",
-		"total": "Всего"
-	},
 	"language": {
 		"code": "ru",
 		"selectLanguage": "Выберите язык",
@@ -1088,6 +1072,32 @@
 		"statusCompleted": "Завершено",
 		"statusNotStarted": "Не начато",
 		"statusUnknown": "Неизвестно",
+		"filterAndReport": "Фильтр и отчет",
+		"searchLevels": "Поиск уровней...",
+		"filterModal": {
+			"selectClasses": "Выберите классы",
+			"selectClass": "Выберите класс",
+			"selectLevel": "Выберите уровень",
+			"addClass": "Добавить класс",
+			"next": "Далее",
+			"selectedClasses": "Выбранные классы",
+			"remove": "Удалить",
+			"selectReportType": "Выберите тип отчета",
+			"monthly": "Ежемесячный",
+			"weekly": "Еженедельный",
+			"back": "Назад",
+			"proceed": "Продолжить"
+		},
+		"reports": {
+			"weekly": "Еженедельный",
+			"monthly": "Ежемесячный",
+			"export": "Экспорт",
+			"exporting": "Экспорт...",
+			"cancel": "Отмена",
+			"filterAndReport": "Фильтр и отчет",
+			"searchLevels": "Поиск уровней...",
+			"exportSuccess": "Экспорт успешно завершен"
+		},
 		"errors": {
 			"userNotAuthenticated": "Пользователь не аутентифицирован",
 			"fetchingClassTypes": "Не удалось получить типы классов",
@@ -1180,6 +1190,19 @@
 		"attendanceOverview": "Обзор посещаемости",
 		"attendanceHistory": "История посещаемости",
 		"monthlyAttendance": "Месячная посещаемость",
+		"avgAttendance": "Средняя посещаемость",
+		"attendanceCalendar":{
+			"monthlyAttendance": "Месячная посещаемость",
+			"overallAttendance": "Общая посещаемость",
+			"tracker": "Посещаемость",
+			"present": "Присутствовал",
+			"absent": "Отсутствовал",
+			"late": "Опоздал",
+			"excused": "Отпросился",
+			"total": "Всего",
+			"clickDayToEdit": "Нажмите на день для редактирования",
+			"statusLegend": "Статусы"
+		},
 		"filters": {
 			"allSubjects": "Все предметы",
 			"selectSubject": "Выберите предмет",
