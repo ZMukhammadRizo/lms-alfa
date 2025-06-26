@@ -192,7 +192,8 @@
 			"excused": "Excused",
 			"total": "Total",
 			"clickDayToEdit": "Click day to edit",
-			"statusLegend": "Status"
+			"statusLegend": "Status",
+      "setStatus": "Set Status"
 		}
 	},
 	"userMenu": {
@@ -291,7 +292,10 @@
 		"deleteSelected": "Delete Selected",
 		"allStatus": "All Status"
 	},
-
+  "userProfile": {
+    "fullName": "Full Name",
+    "email": "Email"
+  },
 	"userForm": {
 		"createNewUser": "Create New User",
 		"updateUserInfo": "Update User Information",
@@ -661,6 +665,7 @@
 	},
 	"submissions": {
 		"title": "Submissions",
+		"avgGrade": "Average Grade",
 		"selectGradeLevel": "Select a grade level to view submissions",
 		"searchGradeLevels": "Search grade levels...",
 		"grade": "Grade",
@@ -672,7 +677,7 @@
 		"noGradeLevelsFound": "No grade levels found",
 		"noGradeLevelsAvailable": "No grade levels available",
 		"loadingLevels": "Loading levels...",
-
+		"classStudents": "Class Students",
 		"classesForGrade": "Classes for Grade {{grade}}",
 		"selectClassToViewSubmissions": "Select a class to view student submissions",
 		"searchClasses": "Search classes...",
@@ -680,7 +685,7 @@
 		"noClassesFoundForLevel": "No classes found for this level",
 		"noClassesFoundMatching": "No classes found matching '{{searchTerm}}'",
 		"loadingClasses": "Loading classes...",
-
+		"student": "Student",
 		"studentsForClass": "Students in {{className}}",
 		"selectStudentToViewSubmissions": "Select a student to view their submissions",
 		"searchStudents": "Search students...",
@@ -739,7 +744,8 @@
 		"submittedOn": "Submitted On",
 		"file": "File",
 		"downloadFile": "Download File",
-		"viewOnline": "View Online"
+		"viewOnline": "View Online",
+    "view": "View File"
 	},
 	"dailyAttendance": {
 		"title": "Daily Attendance",
@@ -786,6 +792,7 @@
 		"cancel": "Cancel",
 		"filterAndReport": "Filter and Report",
 		"searchLevels": "Search levels...",
+    "studentList": "Student List",
 		"filterModal": {
 			"selectClasses": "Select Classes",
 			"selectClass": "Select Class",
@@ -1138,13 +1145,13 @@
 			"attendance": "Attendance",
 			"loadingData": "Loading attendance data",
 			"weekdays": {
-				"mon": "Mon",
-				"tue": "Tue",
-				"wed": "Wed",
-				"thu": "Thu",
-				"fri": "Fri",
-				"sat": "Sat",
-				"sun": "Sun"
+				"mon": "MON",
+				"tue": "TUE",
+				"wed": "WED",
+				"thu": "THU",
+				"fri": "FRI",
+				"sat": "SAT",
+				"sun": "SUN"
 			},
 			"status": {
 				"present": "Present",
@@ -1757,6 +1764,26 @@
 				"notFound": "Assignment not found",
 				"noAccess": "The assignment you're looking for doesn't exist or you don't have access to it.",
 				"loadingFailed": "Failed to load assignment details"
+			}
+		},
+		"dailyAttendance": {
+			"title": "Daily Attendance",
+			"loading": "Loading attendance data...",
+			"weekdays": {
+				"monday": "MON",
+				"tuesday": "TUE",
+				"wednesday": "WED",
+				"thursday": "THU",
+				"friday": "FRI",
+				"saturday": "SAT",
+				"sunday": "SUN"
+			},
+			"status": {
+				"present": "Present",
+				"late": "Late",
+				"excused": "Excused",
+				"absent": "Absent",
+				"notAssigned": "Not Assigned"
 			}
 		},
 		"grades": {

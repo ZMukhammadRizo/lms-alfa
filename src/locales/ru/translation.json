@@ -555,7 +555,7 @@
 		"quickActions": "Быстрые действия",
 		"systemHealth": "Состояние системы",
 		"studentStatistics": "Статистика учащихся",
-		"activeVsInactive": "Активные против неактивных"
+		"activeVsInactive": "Активные и неактивные"
 	},
 	"language": {
 		"code": "ru",
@@ -948,6 +948,7 @@
 	},
 	"submissions": {
 		"title": "Работы",
+		"avgGrade": "Средняя оценка",
 		"selectGradeLevel": "Выберите уровень класса для просмотра работ",
 		"searchGradeLevels": "Поиск уровней классов...",
 		"grade": "Класс",
@@ -959,7 +960,7 @@
 		"noGradeLevelsFound": "Уровни классов не найдены",
 		"noGradeLevelsAvailable": "Уровни классов недоступны",
 		"loadingLevels": "Загрузка уровней...",
-
+		"student": "Ученик",
 		"classesForGrade": "Классы для {{grade}} класса",
 		"selectClassToViewSubmissions": "Выберите класс для просмотра работ учеников",
 		"searchClasses": "Поиск классов...",
@@ -967,7 +968,7 @@
 		"noClassesFoundForLevel": "Классы не найдены для этого уровня",
 		"noClassesFoundMatching": "Классы не найдены по запросу '{{searchTerm}}'",
 		"loadingClasses": "Загрузка классов...",
-
+		"classStudents": "Ученики класса",
 		"studentsForClass": "Ученики в {{className}}",
 		"selectStudentToViewSubmissions": "Выберите ученика для просмотра его работ",
 		"searchStudents": "Поиск учеников...",
@@ -1026,12 +1027,22 @@
 		"submittedOn": "Отправлено",
 		"file": "Файл",
 		"downloadFile": "Скачать файл",
-		"viewOnline": "Просмотреть онлайн"
+		"viewOnline": "Просмотреть онлайн",
+    "view": "Просмотреть файл"
 	},
 	"dailyAttendance": {
 		"title": "Ежедневная посещаемость",
 		"subtitle": "Отслеживание и управление посещаемостью учеников",
 		"description": "Управление записями ежедневной посещаемости всех учеников",
+		"weekdays": {
+			"monday": "ПН",
+			"tuesday": "ВТ",
+			"wednesday": "СР",
+			"thursday": "ЧТ",
+			"friday": "ПТ",
+			"saturday": "СБ",
+			"sunday": "ВС"
+		},
 		"selectLevel": "Выберите уровень для просмотра и управления посещаемостью",
 		"selectClass": "Выберите класс для управления ежедневной посещаемостью",
 		"selectClassToManage": "Выберите класс для управления ежедневной посещаемостью",
@@ -1074,6 +1085,12 @@
 		"statusUnknown": "Неизвестно",
 		"filterAndReport": "Фильтр и отчет",
 		"searchLevels": "Поиск уровней...",
+    "students": "Ученики",
+    "loadingStudents": "Ученики загружаются...",
+    "studentList": "Список учеников",
+		"viewAttendance": "Просмотреть посещаемость",
+    "searchStudents": "Поиск учеников...",
+    "exportAttendance": "Скачать посещаемость",
 		"filterModal": {
 			"selectClasses": "Выберите классы",
 			"selectClass": "Выберите класс",
@@ -1201,7 +1218,8 @@
 			"excused": "Отпросился",
 			"total": "Всего",
 			"clickDayToEdit": "Нажмите на день для редактирования",
-			"statusLegend": "Статусы"
+			"statusLegend": "Статусы",
+      "setStatus": "Установить статус"
 		},
 		"filters": {
 			"allSubjects": "Все предметы",
@@ -1333,9 +1351,57 @@
 			"photoUploadFailed": "Не удалось загрузить фото"
 		}
 	},
+	"parent": {
+		"dailyAttendance": {
+			"title": "Ежедневная посещаемость",
+			"selectChild": "Выберите ребенка",
+			"loadingChildren": "Загрузка детей",
+			"noChildrenFound": "Дети не найдены",
+			"attendance": "Посещаемость",
+			"loadingData": "Загрузка данных о посещаемости",
+			"weekdays": {
+				"mon": "ПН",
+				"tue": "ВТ",
+				"wed": "СР",
+				"thu": "ЧТ",
+				"fri": "ПТ",
+				"sat": "СБ",
+				"sun": "ВС"
+			},
+			"status": {
+				"present": "Присутствует",
+				"late": "Опоздание",
+				"excused": "Уважительная причина",
+				"absent": "Отсутствует"
+			}
+		}
+	},
+	"studentPanel": {
+		"dailyAttendance": {
+			"title": "Ежедневная посещаемость",
+			"loading": "Загрузка данных о посещаемости...",
+			"weekdays": {
+				"monday": "ПН",
+				"tuesday": "ВТ",
+				"wednesday": "СР",
+				"thursday": "ЧТ",
+				"friday": "ПТ",
+				"saturday": "СБ",
+				"sunday": "ВС"
+			},
+			"status": {
+				"present": "Присутствует",
+				"late": "Опоздание",
+				"excused": "Уважительная причина",
+				"absent": "Отсутствует",
+				"notAssigned": "Не назначено"
+			}
+		}
+	},
 	"common": {
 		"loading": "Загрузка...",
 		"error": "Произошла ошибка",
+    "room": "Класс",
 		"success": "Успешно",
 		"save": "Сохранить",
 		"cancel": "Отмена",
@@ -1359,6 +1425,7 @@
 		"close": "Закрыть",
 		"confirm": "Подтвердить",
 		"yes": "Да",
-		"no": "Нет"
+		"no": "Нет",
+    "actions": "Действия"
 	}
 }

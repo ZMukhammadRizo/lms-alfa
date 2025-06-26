@@ -33,7 +33,9 @@
 		"notSpecified": "Belgilanmagan",
 		"unknown": "Noma'lum",
 		"unknownSubject": "Noma'lum fan",
-		"student": "O'quvchi"
+		"student": "O'quvchi",
+    "room": "Sinf",
+    "actions": "Amallar"
 	},
 	"navigation": {
 		"dashboard": "Bosh sahifa",
@@ -583,7 +585,8 @@
 			"excused": "Javob so'radi",
 			"total": "Jami",
 			"clickDayToEdit": "Kunni tahrirlash uchun kunning ustiga bosing",
-			"statusLegend": "Statuslar"
+			"statusLegend": "Statuslar",
+      "setStatus": "Statusni o'rnatish"
 		}
 	},
 	"language": {
@@ -967,6 +970,7 @@
 	},
 	"submissions": {
 		"title": "Topshiriqlar",
+    "avgGrade": "O'rtacha baho",
 		"studentSubmissions": "O'quvchi topshiriqlari",
 		"description": "Tizimdagi barcha o'quvchi topshiriqlarini ko'rish va boshqarish",
 		"teacherDescription": "O'quvchilaringiz tomonidan topshirilgan vazifalarni ko'rib chiqish va baholash",
@@ -978,6 +982,7 @@
 		"selectQuarter": "Chorakni tanlang",
 		"class": "Sinf",
 		"quarter": "Chorak",
+    "selectStudentToViewSubmissions": "Ishini ko'rish uchun o'quvchini tanlang",
 		"loadingSubmissions": "Topshiriqlar yuklanmoqda...",
 		"noPermissionView": "Topshiriqlarni ko'rish uchun ruxsatingiz yo'q.",
 		"noSubmissionsFound": "Tizimda topshiriqlar topilmadi.",
@@ -988,10 +993,12 @@
 		"submitted": "Topshirilgan",
 		"submittedColon": "Topshirilgan:",
 		"submissionDate": "Topshirish sanasi",
+    "lastSubmission": "So'ngi topshirish", 
 		"viewFile": "Faylni ko'rish",
+    "submissions": "Topshiriqlar",
 		"submittedFiles": "Topshirilgan fayllar",
 		"submissionFile": "Topshiriq fayli",
-		"grade": "Baho",
+		"grade": "Sinf",
 		"gradeOutOf10": "Baho: {{grade}}/10",
 		"notGraded": "Baholanmagan",
 		"accepted": "Qabul qilingan",
@@ -1026,7 +1033,7 @@
 		"failedToCheckPermissions": "Ruxsatlarni tekshirish muvaffaqiyatsiz",
 		"submittedFiles": "Topshirilgan fayllar",
 		"submissionFile": "Topshiriq fayli",
-		"grade": "Baho",
+		"grade": "Sinf",
 		"enterGrade": "Bahoni kiriting (1-10)",
 		"gradeOutOf10": "Baho: {{grade}}/10",
 		"notGraded": "Baholanmagan",
@@ -1051,7 +1058,31 @@
 		"submissionUpdatedSuccessfully": "Topshiriq muvaffaqiyatli yangilandi",
 		"errorUpdatingSubmission": "Topshiriqni yangilashda xatolik",
 		"errorDownloadingFile": "Faylni yuklab olishda xatolik",
-		"accept": "Qabul qilish"
+		"accept": "Qabul qilish",
+    "classStudents": "Sinf o'quvchilari",
+		"student": "O'quvchi",
+    "searchStudents": "O'quvchilarni qidirish...",
+    "averageGrade": "O'rtacha baho",
+    "submissionCount": "Ishlar",
+    "actions": "Amallar",
+    "view": "Faylni ko'rish",
+    "submission": "Topshiriq",
+    "classesForGrade": "{{grade}}-sinf uchun sinflar",
+    "selectClassToViewSubmissions": "Topshiriqlarni ko'rish uchun sinfni tanlang",
+    "students": "O'quvchilar",
+    "classes": "Sinflar",
+    "viewStudents": "O'quvchilarni ko'rish",
+    "loadingClasses": "Sinflar yuklanmoqda...",
+    "noClassesFoundForLevel": "Bu darajada sinflar topilmadi",
+    "noClassesFoundMatching": "Mos keladigan sinflar topilmadi",
+    "noGradeLevelsFound": "Sinf topilmadi",
+    "noGradeLevelsAvailable": "Darajalar mavjud emas",
+    "loadingLevels": "Sinflar yuklanmoqda...",
+    "noClassesFound": "Sinflar topilmadi",
+    "searchGradeLevels": "Sinflarni qidirish...",
+    "selectGradeLevel": "Sinfni tanlang",
+    "viewSubmissions": "Topshiriqlarni ko'rish",
+    "searchClasses": "Sinflarni qidirish..."
 	},
 	"dailyAttendance": {
 		"title": "Kunlik davomat",
@@ -1098,6 +1129,7 @@
 		"cancel": "Bekor qilish",
 		"filterAndReport": "Filtrlash va hisobot",
 		"searchLevels": "Darajalarni qidirish...",
+    "studentList": "O'quvchilar ro'yxati",
 		"filterModal": {
 			"selectClasses": "Sinflarni tanlang",
 			"selectClass": "Sinfni tanlang",
@@ -1317,6 +1349,29 @@
 			"analysis": "Tahlil",
 			"synthesis": "Sintez",
 			"evaluation": "Baholash"
+		},
+		"dailyAttendance": {
+			"title": "Kunlik davomat",
+			"selectChild": "Farzandni tanlang",
+			"loadingChildren": "Farzandlar yuklanmoqda",
+			"noChildrenFound": "Farzandlar topilmadi",
+			"attendance": "Davomat",
+			"loadingData": "Davomat ma'lumotlari yuklanmoqda",
+			"weekdays": {
+				"mon": "DU",
+				"tue": "SE",
+				"wed": "CH",
+				"thu": "PA",
+				"fri": "JU",
+				"sat": "SH",
+				"sun": "YA"
+			},
+			"status": {
+				"present": "Hozir",
+				"late": "Kechikish",
+				"excused": "Uzrli",
+				"absent": "Yo'q"
+			}
 		},
 		"students": {
 			"title": "Mening farzandlarim",
@@ -2019,6 +2074,26 @@
 				"notFound": "Topshiriq topilmadi",
 				"noAccess": "Siz qidirayotgan topshiriq mavjud emas yoki unga kirish huquqingiz yo'q.",
 				"loadingFailed": "Topshiriq tafsilotlarini yuklashda xatolik"
+			}
+		},
+		"dailyAttendance": {
+			"title": "Kunlik davomat",
+			"loading": "Davomat ma'lumotlari yuklanmoqda...",
+			"weekdays": {
+				"monday": "DU",
+				"tuesday": "SE",
+				"wednesday": "CH",
+				"thursday": "PA",
+				"friday": "JU",
+				"saturday": "SH",
+				"sunday": "YA"
+			},
+			"status": {
+				"present": "Hozir",
+				"late": "Kechikish",
+				"excused": "Uzrli",
+				"absent": "Yo'q",
+				"notAssigned": "Tayinlanmagan"
 			}
 		},
 		"grades": {
