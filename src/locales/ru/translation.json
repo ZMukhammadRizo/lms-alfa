@@ -1034,15 +1034,6 @@
 		"title": "Ежедневная посещаемость",
 		"subtitle": "Отслеживание и управление посещаемостью учеников",
 		"description": "Управление записями ежедневной посещаемости всех учеников",
-		"weekdays": {
-			"monday": "ПН",
-			"tuesday": "ВТ",
-			"wednesday": "СР",
-			"thursday": "ЧТ",
-			"friday": "ПТ",
-			"saturday": "СБ",
-			"sunday": "ВС"
-		},
 		"selectLevel": "Выберите уровень для просмотра и управления посещаемостью",
 		"selectClass": "Выберите класс для управления ежедневной посещаемостью",
 		"selectClassToManage": "Выберите класс для управления ежедневной посещаемостью",
@@ -1351,52 +1342,26 @@
 			"photoUploadFailed": "Не удалось загрузить фото"
 		}
 	},
-	"parent": {
-		"dailyAttendance": {
-			"title": "Ежедневная посещаемость",
-			"selectChild": "Выберите ребенка",
-			"loadingChildren": "Загрузка детей",
-			"noChildrenFound": "Дети не найдены",
-			"attendance": "Посещаемость",
-			"loadingData": "Загрузка данных о посещаемости",
-			"weekdays": {
-				"mon": "ПН",
-				"tue": "ВТ",
-				"wed": "СР",
-				"thu": "ЧТ",
-				"fri": "ПТ",
-				"sat": "СБ",
-				"sun": "ВС"
-			},
-			"status": {
-				"present": "Присутствует",
-				"late": "Опоздание",
-				"excused": "Уважительная причина",
-				"absent": "Отсутствует"
-			}
-		}
-	},
-	"studentPanel": {
-		"dailyAttendance": {
-			"title": "Ежедневная посещаемость",
-			"loading": "Загрузка данных о посещаемости...",
-			"weekdays": {
-				"monday": "ПН",
-				"tuesday": "ВТ",
-				"wednesday": "СР",
-				"thursday": "ЧТ",
-				"friday": "ПТ",
-				"saturday": "СБ",
-				"sunday": "ВС"
-			},
-			"status": {
-				"present": "Присутствует",
-				"late": "Опоздание",
-				"excused": "Уважительная причина",
-				"absent": "Отсутствует",
-				"notAssigned": "Не назначено"
-			}
-		}
+	"calendar": {
+		"january": "Янв",
+		"february": "Фев",
+		"march": "Мар",
+		"april": "Апр",
+		"may": "Май",
+		"june": "Июн",
+		"july": "Июл",
+		"august": "Авг",
+		"september": "Сен",
+		"october": "Окт",
+		"november": "Ноя",
+		"december": "Дек",
+		"monday": "ПН",
+		"tuesday": "ВТ",
+		"wednesday": "СР",
+		"thursday": "ЧТ",
+		"friday": "ПТ",
+		"saturday": "СБ",
+		"sunday": "ВС"
 	},
 	"common": {
 		"loading": "Загрузка...",

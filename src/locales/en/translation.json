@@ -92,7 +92,14 @@
 		"september": "Sep",
 		"october": "Oct",
 		"november": "Nov",
-		"december": "Dec"
+		"december": "Dec",
+		"monday": "MON",
+		"tuesday": "TUE",
+		"wednesday": "WED",
+		"thursday": "THU",
+		"friday": "FRI",
+		"saturday": "SAT",
+		"sunday": "SUN"
 	},
 	"assignSubjectModal": {
 		"title": "Assign Subject to Grade",
@@ -1145,13 +1152,13 @@
 			"attendance": "Attendance",
 			"loadingData": "Loading attendance data",
 			"weekdays": {
-				"mon": "MON",
-				"tue": "TUE",
-				"wed": "WED",
-				"thu": "THU",
-				"fri": "FRI",
-				"sat": "SAT",
-				"sun": "SUN"
+				"mon": "Mon",
+				"tue": "Tue",
+				"wed": "Wed",
+				"thu": "Thu",
+				"fri": "Fri",
+				"sat": "Sat",
+				"sun": "Sun"
 			},
 			"status": {
 				"present": "Present",
@@ -1764,26 +1771,6 @@
 				"notFound": "Assignment not found",
 				"noAccess": "The assignment you're looking for doesn't exist or you don't have access to it.",
 				"loadingFailed": "Failed to load assignment details"
-			}
-		},
-		"dailyAttendance": {
-			"title": "Daily Attendance",
-			"loading": "Loading attendance data...",
-			"weekdays": {
-				"monday": "MON",
-				"tuesday": "TUE",
-				"wednesday": "WED",
-				"thursday": "THU",
-				"friday": "FRI",
-				"saturday": "SAT",
-				"sunday": "SUN"
-			},
-			"status": {
-				"present": "Present",
-				"late": "Late",
-				"excused": "Excused",
-				"absent": "Absent",
-				"notAssigned": "Not Assigned"
 			}
 		},
 		"grades": {

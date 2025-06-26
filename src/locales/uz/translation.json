@@ -1350,29 +1350,6 @@
 			"synthesis": "Sintez",
 			"evaluation": "Baholash"
 		},
-		"dailyAttendance": {
-			"title": "Kunlik davomat",
-			"selectChild": "Farzandni tanlang",
-			"loadingChildren": "Farzandlar yuklanmoqda",
-			"noChildrenFound": "Farzandlar topilmadi",
-			"attendance": "Davomat",
-			"loadingData": "Davomat ma'lumotlari yuklanmoqda",
-			"weekdays": {
-				"mon": "DU",
-				"tue": "SE",
-				"wed": "CH",
-				"thu": "PA",
-				"fri": "JU",
-				"sat": "SH",
-				"sun": "YA"
-			},
-			"status": {
-				"present": "Hozir",
-				"late": "Kechikish",
-				"excused": "Uzrli",
-				"absent": "Yo'q"
-			}
-		},
 		"students": {
 			"title": "Mening farzandlarim",
 			"description": "Farzandlaringiz haqidagi ma'lumotlarni ko'rish va boshqarish",
@@ -1545,7 +1522,14 @@
 			"cannotLoadSchedule": "Jadvalni yuklab bo'lmadi: O'quvchi ID yo'q.",
 			"unknownCourse": "Noma'lum kurs",
 			"teacherNA": "O'qituvchi belgilanmagan",
-			"unknownLocation": "Noma'lum manzil"
+			"unknownLocation": "Noma'lum manzil",
+			"monday": "DU",
+			"tuesday": "SE",
+			"wednesday": "CH",
+			"thursday": "PA",
+			"friday": "JU",
+			"saturday": "SH",
+			"sunday": "YA"
 		},
 		"notifications": {
 			"title": "Bildirishnomalar",
@@ -2074,26 +2058,6 @@
 				"notFound": "Topshiriq topilmadi",
 				"noAccess": "Siz qidirayotgan topshiriq mavjud emas yoki unga kirish huquqingiz yo'q.",
 				"loadingFailed": "Topshiriq tafsilotlarini yuklashda xatolik"
-			}
-		},
-		"dailyAttendance": {
-			"title": "Kunlik davomat",
-			"loading": "Davomat ma'lumotlari yuklanmoqda...",
-			"weekdays": {
-				"monday": "DU",
-				"tuesday": "SE",
-				"wednesday": "CH",
-				"thursday": "PA",
-				"friday": "JU",
-				"saturday": "SH",
-				"sunday": "YA"
-			},
-			"status": {
-				"present": "Hozir",
-				"late": "Kechikish",
-				"excused": "Uzrli",
-				"absent": "Yo'q",
-				"notAssigned": "Tayinlanmagan"
 			}
 		},
 		"grades": {
