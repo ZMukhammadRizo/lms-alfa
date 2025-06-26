@@ -553,15 +553,15 @@ const AttendanceCalendarModal: React.FC<AttendanceCalendarModalProps> = ({
 
 					<WeekdayHeader>
 						{[
-							t('calendar.monday').substring(0, 3),
-							t('calendar.tuesday').substring(0, 3),
-							t('calendar.wednesday').substring(0, 3),
-							t('calendar.thursday').substring(0, 3),
-							t('calendar.friday').substring(0, 3),
-							t('calendar.saturday').substring(0, 3),
-							t('calendar.sunday').substring(0, 3)
+							t('calendar.monday'),
+							t('calendar.tuesday'),
+							t('calendar.wednesday'),
+							t('calendar.thursday'),
+							t('calendar.friday'),
+							t('calendar.saturday'),
+							t('calendar.sunday')
 						].map((day, index) => (
-							<Weekday key={day} isWeekend={index >= 5}>
+							<Weekday key={index} isWeekend={index >= 5}>
 								{day}
 							</Weekday>
 						))}
